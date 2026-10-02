@@ -155,3 +155,7 @@ The action bar, spellbook and talent icons are hand-placed 20×20 pixel art in `
 The story bible is `docs/lore.md`: the world of Corvalis, the cast, the secret timeline, the acts and endings, bestiary, relics, Victoria's diary pages and notes for building quests. Read it in the browser at http://localhost:3000/lore.html while the server runs: `server.js` renders the Markdown (with `marked`) into the `docs/lore-viewer.html` template on every request, so the page holds the full text (browser reading mode works) and edits show up on reload. The raw file is at `/lore.md`.
 
 The lore's illustrated plates (map, Thornhallow, the Blackthorn stages, portraits and more) are sepia-ink SVGs in `docs/lore-art/`, drawn by `tools/lore/plates.py` (`python3 tools/lore/plates.py [name ...]`) and placed in the Markdown as `<figure class="plate">`. A shareable copy is published as a claude.ai artifact: `npm run share:lore -- <out.html>` builds one self-contained page (`docs/lore-share.html` template, plates inlined), which is then republished to the same artifact.
+
+## License
+
+Quest for Victoria (the code, the art and the story) is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE.md). You may play, read, modify and share it for any noncommercial purpose (personal use, study, research, hobby projects, non-profits). You may not use it, or anything made from it, to make money. For any other use, ask the author.
