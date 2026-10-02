@@ -1,0 +1,28 @@
+{
+  "name": "quest-for-victoria",
+  "version": "0.1.0",
+  "description": "Quest For Victoria - a co-op campaign game",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "node build.js",
+    "dev": "WATCH=1 node build.js & node --watch server.js",
+    "type-check": "tsc --noEmit",
+    "verify": "npm run type-check && npm run build",
+    "share:art-board": "node tools/build-art-board.js",
+    "share:lore": "node tools/build-lore-artifact.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "^4.19.2",
+    "marked": "^12.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "esbuild": "^0.23.0",
+    "phaser": "^3.80.1",
+    "prettier": "^3.3.0",
+    "typescript": "^5.5.0"
+  }
+}

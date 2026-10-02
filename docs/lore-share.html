@@ -1,0 +1,165 @@
+<title>Quest for Victoria Lore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&family=IM+Fell+English:ital@0;1&family=Pixelify+Sans:wght@500;700&family=Silkscreen&display=swap">
+<style>
+  /* Layout: a lore book, a parchment page on dark wood, the contents list beside it.
+     One deliberate look (the game's own parchment and wood) for both host themes. */
+  :root {
+    --wood: #2e180a;
+    --wood2: #4a2810;
+    --frame: #1e0f05;
+    --edge: #8a5a36;
+    --parch: #f4e4bc;
+    --parch2: #ead4a0;
+    --parch3: #e8cf98;
+    --note: #fbf2d8;
+    --ink: #3a1f0e;
+    --ink2: #4a2a12;
+    --muted: #8a5a30;
+    --gold: #c8901e;
+    --gold2: #f2c14e;
+    --red: #a8301e;
+    --barText: #f4e4bc;
+    --barMuted: #b8956a;
+    --display: Silkscreen, 'Courier New', monospace;
+    --heading: 'Pixelify Sans', 'Trebuchet MS', sans-serif;
+    --body: Alegreya, Georgia, 'Times New Roman', serif;
+    --hand: 'IM Fell English', Georgia, 'Times New Roman', serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background-color: var(--wood);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.12) 0 2px, transparent 2px 46px),
+      linear-gradient(180deg, var(--wood2), var(--wood));
+    background-attachment: fixed;
+    font: 19px/1.62 var(--body);
+  }
+  a { color: var(--red); }
+  a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  .bar {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 10px 20px;
+    background: var(--frame); border-bottom: 3px solid #5a3418;
+    font: 12px var(--display); letter-spacing: 0.06em; color: var(--barText);
+  }
+  .bar .title { text-transform: uppercase; }
+  .bar .meta { color: var(--barMuted); white-space: nowrap; }
+  .progress { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; height: 3px; width: 0; background: var(--gold2); z-index: 6; }
+
+  .wrap {
+    display: grid; grid-template-columns: 250px minmax(0, 800px); justify-content: center;
+    gap: 28px; padding: 28px 16px 96px;
+  }
+  .toc {
+    position: sticky; top: calc(env(safe-area-inset-top, 0px) + 64px); align-self: start;
+    max-height: calc(100vh - 96px); overflow: auto;
+    background: var(--parch2); border: 3px solid var(--frame); box-shadow: inset 0 0 0 2px var(--edge);
+    padding: 14px 12px;
+    font: 500 15px/1.35 var(--heading); color: var(--ink);
+  }
+  .toc b { display: block; font: 11px var(--display); letter-spacing: 0.08em; color: var(--muted); margin: 0 4px 8px; }
+  .toc ol { list-style: none; margin: 0; padding: 0; }
+  .toc ol ol { margin: 2px 0 6px 12px; font-size: 14px; }
+  .toc a { display: block; padding: 3px 6px; color: var(--ink); text-decoration: none; border-left: 3px solid transparent; }
+  .toc a:hover { background: rgba(200, 144, 30, 0.18); }
+  .toc a.on { border-left-color: var(--gold); background: rgba(200, 144, 30, 0.25); }
+
+  .page {
+    min-width: 0;
+    background: radial-gradient(ellipse at 50% 20%, var(--parch) 60%, var(--parch3) 100%);
+    border: 4px solid var(--frame);
+    box-shadow: inset 0 0 0 3px var(--edge), inset 0 0 80px rgba(120, 70, 20, 0.25), 0 12px 40px rgba(0, 0, 0, 0.5);
+    padding: 44px 60px 64px;
+  }
+  article h1 { margin: 0 0 6px; text-align: center; font: 40px/1.15 var(--display); color: var(--wood2); letter-spacing: 0.02em; text-wrap: balance; }
+  article h1 + p { text-align: center; color: var(--muted); margin-top: 0; }
+  article h2 { margin: 2.2em 0 0.6em; padding-bottom: 6px; font: 700 28px/1.2 var(--heading); color: var(--wood2); border-bottom: 3px double var(--gold); text-wrap: balance; }
+  article h3 { margin: 1.8em 0 0.4em; font: 700 21px/1.25 var(--heading); color: #6a3a18; text-wrap: balance; }
+  article p, article li { text-wrap: pretty; }
+  article strong { color: #2a1406; }
+  article em { color: var(--ink2); }
+  article ul, article ol { padding-left: 1.3em; }
+  article li { margin: 0.25em 0; }
+  article hr { border: 0; height: 18px; margin: 2.4em 0; background: center / 120px 2px no-repeat linear-gradient(90deg, transparent, var(--gold), transparent); }
+  article blockquote {
+    margin: 1.1em 0; padding: 0.7em 1.1em; background: var(--note);
+    border-left: 4px solid var(--gold); box-shadow: 0 2px 0 rgba(90, 52, 24, 0.25);
+    font: italic 19px/1.55 var(--hand); color: #3a2010;
+  }
+  article blockquote p { margin: 0.3em 0; }
+  article blockquote strong { font-style: normal; font-family: var(--heading); font-size: 15px; color: var(--red); letter-spacing: 0.02em; }
+  article figure.plate { margin: 1.8em 0; padding: 0; text-align: center; }
+  article figure.plate img { display: block; width: 100%; max-width: 100%; height: auto; margin: 0 auto; }
+  article figure.plate img[alt^="A cameo"], article figure.plate img[alt^="A sinister portrait"] { max-width: 360px; }
+  article figure.plate img[alt^="A hand-drawn map"] { max-width: 640px; }
+  article figure.plate figcaption { margin-top: 0.5em; font: italic 15px/1.45 var(--hand); color: var(--muted); }
+  article figure.plate figcaption b { font: 600 13px var(--heading); color: var(--wood2); letter-spacing: 0.04em; }
+  .table { overflow-x: auto; margin: 1.2em 0; border: 2px solid var(--edge); }
+  article table { width: 100%; border-collapse: collapse; font-size: 16px; line-height: 1.45; background: rgba(251, 242, 216, 0.55); }
+  article th { text-align: left; padding: 8px 10px; background: var(--wood2); color: var(--parch); font: 500 15px var(--heading); letter-spacing: 0.02em; }
+  article td { padding: 8px 10px; vertical-align: top; border-top: 1px dotted #b8956a; }
+  article tr:nth-child(even) td { background: rgba(200, 144, 30, 0.08); }
+
+  @media (max-width: 960px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .toc { position: static; max-height: 40vh; }
+    .page { padding: 28px 22px 48px; }
+    article h1 { font-size: 30px; }
+  }
+  @media (max-width: 520px) {
+    body { font-size: 17px; }
+    .bar { padding: 8px 12px; }
+    .bar .meta { display: none; }
+    .page { padding: 22px 16px 40px; }
+    article table { font-size: 14px; }
+  }
+</style>
+
+<div class="progress" id="progress"></div>
+<header class="bar">
+  <span class="title">Quest for Victoria · The Lore</span>
+  <span class="meta">{{META}}</span>
+</header>
+<div class="wrap">
+  <nav class="toc" id="toc" aria-label="Contents"><b>Contents</b>{{TOC}}</nav>
+  <main class="page"><article id="doc">
+{{LORE}}
+  </article></main>
+</div>
+<script>
+  // Light up the section being read, keep it in view in the contents list, show progress,
+  // and remember where this reader was (in their own browser only).
+  const doc = document.getElementById('doc');
+  const toc = document.getElementById('toc');
+  const KEY = 'qfv-lore-scroll';
+  const links = new Map([...toc.querySelectorAll('a')].map(a => [a.getAttribute('href').slice(1), a]));
+  const seen = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      links.forEach(a => a.classList.remove('on'));
+      const a = links.get(e.target.id);
+      if (!a) continue;
+      a.classList.add('on');
+      if (a.offsetTop < toc.scrollTop + 30 || a.offsetTop > toc.scrollTop + toc.clientHeight - 40) toc.scrollTop = a.offsetTop - toc.clientHeight / 3;
+    }
+  }, { rootMargin: '-80px 0px -70% 0px' });
+  doc.querySelectorAll('h2, h3').forEach(h => seen.observe(h));
+  if (!location.hash) {
+    try { const y = Number(localStorage.getItem(KEY)); if (y > 0) window.scrollTo(0, y); } catch {}
+  }
+  let t = 0;
+  window.addEventListener('scroll', () => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    document.getElementById('progress').style.width = (max > 0 ? (scrollY / max) * 100 : 0) + '%';
+    clearTimeout(t);
+    t = setTimeout(() => { try { localStorage.setItem(KEY, String(Math.round(scrollY))); } catch {} }, 200);
+  }, { passive: true });
+</script>

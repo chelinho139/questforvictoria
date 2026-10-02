@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}} · Quest for Victoria</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&family=IM+Fell+English:ital@0;1&family=Pixelify+Sans:wght@500;700&family=Silkscreen&display=swap">
+<style>
+  /* A book of lore in the game's colours: dark wood around a parchment page. */
+  :root {
+    --wood: #2e180a;
+    --wood2: #4a2810;
+    --frame: #1e0f05;
+    --parch: #f4e4bc;
+    --parch2: #ead4a0;
+    --note: #fbf2d8;
+    --ink: #3a1f0e;
+    --muted: #8a5a30;
+    --gold: #c8901e;
+    --gold2: #f2c14e;
+    --red: #a8301e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background:
+      repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.12) 0 2px, transparent 2px 46px),
+      linear-gradient(180deg, var(--wood2), var(--wood));
+    background-attachment: fixed;
+    font: 19px/1.62 Alegreya, Georgia, serif;
+  }
+  a { color: var(--red); }
+
+  /* top bar */
+  .bar {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; align-items: center; gap: 16px;
+    padding: 10px 20px;
+    background: var(--frame);
+    border-bottom: 3px solid #5a3418;
+    font: 12px Silkscreen, monospace; letter-spacing: 0.06em;
+    color: var(--parch);
+  }
+  .bar a { color: var(--gold2); text-decoration: none; white-space: nowrap; }
+  .bar a:hover { text-decoration: underline; }
+  .bar .title { flex: 1; text-align: center; text-transform: uppercase; }
+  .bar .meta { color: #b8956a; white-space: nowrap; }
+  .bar button {
+    font: inherit; color: var(--frame); background: var(--gold2); border: 2px solid #8a5a18;
+    padding: 3px 8px; cursor: pointer;
+  }
+  .progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: var(--gold2); z-index: 6; }
+
+  /* layout: contents on the left, the page on the right */
+  .wrap {
+    display: grid; grid-template-columns: 250px minmax(0, 800px); justify-content: center;
+    gap: 28px; padding: 28px 16px 96px;
+  }
+  .toc {
+    position: sticky; top: 72px; align-self: start;
+    max-height: calc(100vh - 96px); overflow: auto;
+    background: var(--parch2); border: 3px solid var(--frame);
+    box-shadow: inset 0 0 0 2px #8a5a36;
+    padding: 14px 12px;
+    font: 500 15px/1.35 'Pixelify Sans', sans-serif;
+  }
+  .toc b { display: block; font: 11px Silkscreen, monospace; letter-spacing: 0.08em; color: var(--muted); margin: 0 4px 8px; }
+  .toc ol { list-style: none; margin: 0; padding: 0; }
+  .toc ol ol { margin: 2px 0 6px 12px; font-size: 14px; }
+  .toc a { display: block; padding: 3px 6px; color: var(--ink); text-decoration: none; border-left: 3px solid transparent; }
+  .toc a:hover { background: rgba(200, 144, 30, 0.18); }
+  .toc a.on { border-left-color: var(--gold); background: rgba(200, 144, 30, 0.25); }
+
+  .page {
+    min-width: 0;
+    background: radial-gradient(ellipse at 50% 20%, var(--parch) 60%, #e8cf98 100%);
+    border: 4px solid var(--frame);
+    box-shadow: inset 0 0 0 3px #8a5a36, inset 0 0 80px rgba(120, 70, 20, 0.25), 0 12px 40px rgba(0, 0, 0, 0.5);
+    padding: 44px 60px 64px;
+  }
+
+  /* the text */
+  article h1 {
+    margin: 0 0 6px; text-align: center;
+    font: 40px/1.15 Silkscreen, monospace; color: var(--wood2); letter-spacing: 0.02em;
+  }
+  article h1 + p { text-align: center; color: var(--muted); margin-top: 0; }
+  article h2 {
+    margin: 2.2em 0 0.6em; padding-bottom: 6px;
+    font: 700 28px/1.2 'Pixelify Sans', sans-serif; color: var(--wood2);
+    border-bottom: 3px double var(--gold);
+  }
+  article h3 {
+    margin: 1.8em 0 0.4em;
+    font: 700 21px/1.25 'Pixelify Sans', sans-serif; color: #6a3a18;
+  }
+  article p, article li { text-wrap: pretty; }
+  article strong { color: #2a1406; }
+  article em { color: #4a2a12; }
+  article ul, article ol { padding-left: 1.3em; }
+  article li { margin: 0.25em 0; }
+  article hr { border: 0; height: 18px; margin: 2.4em 0; background: center / 120px 2px no-repeat linear-gradient(90deg, transparent, var(--gold), transparent); }
+  article blockquote {
+    margin: 1.1em 0; padding: 0.7em 1.1em;
+    background: var(--note);
+    border-left: 4px solid var(--gold);
+    box-shadow: 0 2px 0 rgba(90, 52, 24, 0.25);
+    font: italic 19px/1.55 'IM Fell English', Georgia, serif; color: #3a2010;
+  }
+  article blockquote p { margin: 0.3em 0; }
+  article blockquote strong { font-style: normal; font-family: 'Pixelify Sans', sans-serif; font-size: 15px; color: var(--red); letter-spacing: 0.02em; }
+  /* plates: the drawings, set into the page like engravings */
+  article figure.plate { margin: 1.8em 0; padding: 0; text-align: center; }
+  article figure.plate img { display: block; width: 100%; height: auto; margin: 0 auto; }
+  article figure.plate img[src*="victoria"], article figure.plate img[src*="potatoe"] { max-width: 360px; }
+  article figure.plate img[src*="map"] { max-width: 640px; }
+  article figure.plate figcaption { margin-top: 0.5em; font: italic 15px/1.45 'IM Fell English', Georgia, serif; color: var(--muted); }
+  article figure.plate figcaption b { font: 600 13px 'Pixelify Sans', sans-serif; color: var(--wood2); letter-spacing: 0.04em; }
+  /* map sketches in the specs */
+  article pre { line-height: 1.35; overflow-x: auto; margin: 1.2em 0; padding: 10px 12px; background: var(--note); border: 1px solid #c8a46c; box-shadow: inset 0 0 20px rgba(160, 110, 50, 0.15); }
+  article pre code { font: 13px/1.35 'Courier New', monospace; color: #4a2a12; }
+  .table { overflow-x: auto; margin: 1.2em 0; border: 2px solid #8a5a36; }
+  article table { width: 100%; border-collapse: collapse; font-size: 16px; line-height: 1.45; background: rgba(251, 242, 216, 0.55); }
+  article th {
+    text-align: left; padding: 8px 10px; background: var(--wood2); color: var(--parch);
+    font: 500 15px 'Pixelify Sans', sans-serif; letter-spacing: 0.02em;
+  }
+  article td { padding: 8px 10px; vertical-align: top; border-top: 1px dotted #b8956a; }
+  article tr:nth-child(even) td { background: rgba(200, 144, 30, 0.08); }
+  
+  @media (max-width: 960px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .toc { position: static; max-height: 40vh; }
+    .page { padding: 28px 22px 48px; }
+    article h1 { font-size: 30px; }
+    .bar .meta { display: none; }
+  }
+  @media (max-width: 520px) {
+    body { font-size: 17px; }
+    .bar { gap: 10px; padding: 8px 12px; }
+    .bar .title { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<header class="bar">
+  <a href="/" onclick="if (window.opener) { window.close(); return false; }">← Back to the game</a>
+  <span class="title">Quest for Victoria · {{TITLE}}</span>
+  <span class="meta" id="meta">{{META}}</span>
+  <button type="button" id="reload" title="Load the latest version of docs/lore.md">Reload</button>
+</header>
+<div class="wrap">
+  <nav class="toc" id="toc"><b>Contents</b>{{TOC}}</nav>
+  <main class="page"><article id="doc">
+{{LORE}}
+</article></main>
+</div>
+<script>
+  // The story is already in the page (server.js renders docs/lore.md into this template, so
+  // reading mode, search and printing all see it). This only adds the niceties.
+  const doc = document.getElementById('doc');
+  const toc = document.getElementById('toc');
+  const KEY = 'qfv-lore-scroll';
+  const saveSpot = () => { try { localStorage.setItem(KEY, String(Math.round(scrollY))); } catch {} };
+
+  // light up the section being read, and keep it in view in the contents list
+  const links = new Map([...toc.querySelectorAll('a')].map(a => [a.getAttribute('href').slice(1), a]));
+  const seen = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      links.forEach(a => a.classList.remove('on'));
+      const a = links.get(e.target.id);
+      if (!a) continue;
+      a.classList.add('on');
+      if (a.offsetTop < toc.scrollTop + 30 || a.offsetTop > toc.scrollTop + toc.clientHeight - 40) toc.scrollTop = a.offsetTop - toc.clientHeight / 3;
+    }
+  }, { rootMargin: '-80px 0px -70% 0px' });
+  doc.querySelectorAll('h2, h3').forEach(h => seen.observe(h));
+
+  // back to where you were reading (unless the link points at a section)
+  if (!location.hash) {
+    try { const y = Number(localStorage.getItem(KEY)); if (y > 0) window.scrollTo(0, y); } catch {}
+  }
+  document.getElementById('reload').addEventListener('click', () => { saveSpot(); location.reload(); });
+  let t = 0;
+  window.addEventListener('scroll', () => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    document.getElementById('progress').style.width = (max > 0 ? (scrollY / max) * 100 : 0) + '%';
+    clearTimeout(t);
+    t = setTimeout(saveSpot, 200);
+  }, { passive: true });
+</script>
+</body>
+</html>

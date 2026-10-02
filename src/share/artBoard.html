@@ -1,0 +1,335 @@
+<title>Quest For Victoria Art Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap">
+<style>
+  /* Layout: a gallery wall. Each look hangs on a dark mat, with the reviewer's notes beneath it. */
+  :root {
+    --bg: #e4e7ec;
+    --surface: #f7f8fa;
+    --fg: #1b1e24;
+    --muted: #59606c;
+    --line: #cdd2da;
+    --mat: #262a31;
+    --accent: #a8561a;
+    --accent-soft: #f3e3d3;
+    --accent-ink: #ffffff;
+    --pixel: "Silkscreen", "Courier New", monospace;
+    --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+    --step--1: 0.8125rem;
+    --step-0: 0.9375rem;
+    --step-1: 1.125rem;
+    --step-2: 1.5rem;
+    --step-3: clamp(1.75rem, 1.2rem + 2.4vw, 2.75rem);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121418;
+      --surface: #1b1e24;
+      --fg: #eceef2;
+      --muted: #9ba2ae;
+      --line: #2f343d;
+      --mat: #0b0c0f;
+      --accent: #e8a05a;
+      --accent-soft: #3a2a1c;
+      --accent-ink: #1c1207;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121418;
+    --surface: #1b1e24;
+    --fg: #eceef2;
+    --muted: #9ba2ae;
+    --line: #2f343d;
+    --mat: #0b0c0f;
+    --accent: #e8a05a;
+    --accent-soft: #3a2a1c;
+    --accent-ink: #1c1207;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 400 var(--step-0)/1.55 var(--body);
+    padding-inline: 16px;
+    padding-block: 0 88px;
+  }
+  .wrap { max-width: 1240px; margin-inline: auto; }
+  h1, h2, h3 { text-wrap: balance; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------------------------------------------------------------- masthead */
+  .masthead {
+    display: grid;
+    gap: 14px;
+    padding-block: 40px 28px;
+    max-width: 68ch;
+  }
+  .eyebrow {
+    margin: 0;
+    font: 700 var(--step--1)/1 var(--pixel);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 {
+    margin: 0;
+    font: 700 var(--step-3)/1.1 var(--pixel);
+    letter-spacing: 0.01em;
+  }
+  .lede { margin: 0; font-size: var(--step-1); color: var(--fg); }
+  .how {
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 8px;
+    counter-reset: step;
+  }
+  .how li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 10px;
+    align-items: baseline;
+    color: var(--muted);
+  }
+  .how li::before {
+    content: counter(step);
+    font: 700 var(--step--1)/1 var(--pixel);
+    color: var(--accent-ink);
+    background: var(--accent);
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+  }
+  .how strong { color: var(--fg); font-weight: 600; }
+
+  /* ---------------------------------------------------------------- jump nav */
+  .jump {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    padding-block: 10px;
+    margin-bottom: 8px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    font-weight: 600;
+    font-size: var(--step--1);
+  }
+  .jump a { text-decoration: none; color: var(--muted); }
+  .jump a:hover { color: var(--fg); }
+
+  /* ---------------------------------------------------------------- families */
+  .family { padding-block: 28px 12px; scroll-margin-top: 56px; }
+  .family-head {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: baseline;
+    gap: 4px 14px;
+    margin-bottom: 18px;
+  }
+  .family-head h2 { margin: 0; font: 700 var(--step-2)/1.2 var(--pixel); }
+  .family-count { margin: 0; color: var(--muted); font-size: var(--step--1); font-weight: 600; }
+  .family-blurb { grid-column: 1 / -1; margin: 0; color: var(--muted); max-width: 68ch; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    gap: 20px;
+  }
+
+  /* ---------------------------------------------------------------- cards */
+  .card {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    min-width: 0;
+    scroll-margin-top: 56px;
+  }
+  .card.picked { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .art {
+    display: grid;
+    gap: 6px;
+    padding: 6px;
+    background: var(--mat);
+  }
+  .art canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    image-rendering: pixelated;
+  }
+  .meta { display: grid; align-content: start; gap: 10px; padding: 14px 16px 16px; min-width: 0; }
+  .meta h3 {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font: 600 var(--step-1)/1.3 var(--body);
+  }
+  .code {
+    font: 700 var(--step--1)/1 var(--pixel);
+    color: var(--accent);
+    min-width: 2.2em;
+  }
+  .tag {
+    font: 600 0.6875rem/1 var(--body);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 4px 6px 3px;
+  }
+  .blurb { margin: 0; color: var(--muted); font-size: var(--step--1); }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  button {
+    font: 600 var(--step--1)/1 var(--body);
+    cursor: pointer;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--fg);
+  }
+  button:hover { border-color: var(--muted); }
+  .star[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .primary:hover { filter: brightness(1.08); border-color: var(--accent); }
+
+  .note-label { font-size: var(--step--1); font-weight: 600; color: var(--muted); margin-bottom: -4px; }
+  textarea, input[type="text"] {
+    width: 100%;
+    font: 400 var(--step-0)/1.45 var(--body);
+    color: var(--fg);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    padding: 8px 10px;
+    resize: vertical;
+  }
+  textarea:focus, input[type="text"]:focus { border-color: var(--accent); outline: none; }
+
+  /* ---------------------------------------------------------------- earlier rounds */
+  .earlier { margin-top: 28px; border-top: 1px solid var(--line); scroll-margin-top: 56px; }
+  .earlier > summary {
+    cursor: pointer;
+    padding-block: 18px;
+    font: 700 var(--step-1)/1.3 var(--pixel);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+  }
+  .earlier > summary span { font: 500 var(--step--1)/1.4 var(--body); color: var(--muted); }
+  .earlier .family { padding-block: 8px 12px; }
+
+  /* ---------------------------------------------------------------- feedback */
+  .feedback {
+    margin-top: 36px;
+    padding: 24px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    display: grid;
+    gap: 14px;
+    scroll-margin-top: 56px;
+  }
+  .feedback h2 { margin: 0; font: 700 var(--step-2)/1.2 var(--pixel); }
+  .feedback p { margin: 0; color: var(--muted); max-width: 68ch; }
+  .field { display: grid; gap: 6px; font-weight: 600; font-size: var(--step--1); }
+  .field input { max-width: 340px; }
+  #summary { font: 400 var(--step--1)/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--muted); }
+  .copy-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .status { color: var(--muted); font-size: var(--step--1); }
+
+  /* ---------------------------------------------------------------- bottom bar */
+  .bar {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 16px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    font-size: var(--step--1);
+  }
+  .bar #tally { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .bar a { font-weight: 600; }
+
+  @media (max-width: 520px) {
+    .masthead { padding-block: 28px 20px; }
+    .feedback { padding: 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">Quest For Victoria</p>
+    <h1>Help pick the art style</h1>
+    <p class="lede">Quest For Victoria is a co-op adventure game with an isometric view. Every card draws the same little forest: a hero, a cow, a slime, some trees and a path. We have settled on the Silhouette style. Below is the shortlist of eight looks, followed by six new variants built from them. The full round and earlier rounds are further down.</p>
+    <ol class="how">
+      <li><span><strong>Mark your favourites</strong> with the Favourite button. Pick as many as you like.</span></li>
+      <li><span><strong>Leave a note</strong> on any card: what works, what doesn’t, what you would change.</span></li>
+      <li><span><strong>Copy your feedback</strong> with the button at the bottom and paste it into your reply.</span></li>
+    </ol>
+  </header>
+
+  <nav class="jump" id="jump" aria-label="Style families"></nav>
+
+  <main id="groups"></main>
+
+  <details class="earlier" id="full-round">
+    <summary>Full Silhouette round <span id="round-count">Every look from this round, row by row</span></summary>
+    <div id="round"></div>
+  </details>
+
+  <details class="earlier" id="earlier-rounds">
+    <summary>Earlier rounds <span id="earlier-count">Looks we explored before this round</span></summary>
+    <div id="earlier"></div>
+  </details>
+
+  <section class="feedback" id="feedback" aria-labelledby="feedback-title">
+    <h2 id="feedback-title">Your feedback</h2>
+    <p>Your favourites and notes are gathered here. Add anything general, then copy it all in one go.</p>
+    <label class="field" for="reviewer">Your name
+      <input type="text" id="reviewer" autocomplete="name" placeholder="So I know who it’s from">
+    </label>
+    <label class="field" for="overall">Overall thoughts
+      <textarea id="overall" rows="4" placeholder="Which direction feels right for a cosy co-op adventure? Anything to mix?"></textarea>
+    </label>
+    <label class="field" for="summary">What will be copied
+      <textarea id="summary" rows="8" readonly></textarea>
+    </label>
+    <div class="copy-row">
+      <button type="button" class="primary" id="copy">Copy my feedback</button>
+      <span class="status" id="copy-status" role="status"></span>
+    </div>
+  </section>
+</div>
+
+<div class="bar" role="region" aria-label="Feedback">
+  <span id="tally">0 favourites · 0 notes</span>
+  <button type="button" class="primary" id="bar-copy">Copy my feedback</button>
+  <a href="#feedback">Review</a>
+  <span class="status" id="bar-status" role="status"></span>
+</div>
+
+<script>/*__BUNDLE__*/</script>
