@@ -337,14 +337,16 @@ test('everyone who talks has a voice of their own', () => {
   assert.equal(new Set(voices.map(v => SOUNDS[v as SoundId].make)).size, voices.length);
 });
 
-test('a voice is a short hum, and a scene says aloud only the lines that matter', () => {
+test('a voice is a word or two, and a scene says aloud only the lines that matter', () => {
   for (const who of [...Object.keys(NPCS), 'bellringer'])
     for (let k = 0; k < (SOUNDS[`${who}Voice` as SoundId].takes ?? 1); k++) {
       const d = renderSound(`${who}Voice` as SoundId, k);
       const top = peak(d);
       let last = 0;
       for (let i = 0; i < d.length; i++) if (Math.abs(d[i]) > top * 0.05) last = i;
-      assert.ok(last / RATE < 1.1, `${who}Voice take ${k}: ${(last / RATE).toFixed(2)}s`);
+      // the Bell-Ringer echoes round his belfry
+      const most = who === 'bellringer' ? 1.3 : 0.85;
+      assert.ok(last / RATE < most, `${who}Voice take ${k}: ${(last / RATE).toFixed(2)}s`);
     }
   // the opening scene: only Aldric's first words are heard
   const game = new Game();
