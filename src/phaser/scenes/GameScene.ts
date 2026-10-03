@@ -123,19 +123,26 @@ export class GameScene extends Phaser.Scene {
     this.sceneBox = new SceneBox(this.sim, this.sfx);
     this.bossBar = new BossBar(this.sim);
     this.shown = this.windows().map(w => w.isOpen);
-    this.sim.events.on('sceneFade', ({ dir, s }) => (dir === 'out' ? this.cameras.main.fadeOut(s * 1000, 0, 0, 0) : this.cameras.main.fadeIn(s * 1000, 0, 0, 0)));
+    // a scene's fades win over any fade already running (a new game's opening scene starts in
+    // black while the fade up from the loading screen is still going: Phaser would ignore it)
+    this.sim.events.on('sceneFade', ({ dir, s }) => this.cameras.main.fadeEffect.start(dir === 'out', s * 1000, 0, 0, 0, true));
     let inScene = false;
-    this.sim.events.on('scene', () => {
+    const onScene = () => {
       // a scene starting clears the screen: every window is put away (dialog and trade close themselves)
       if (this.sim.scene && !inScene) {
         for (const w of [this.inventory, this.crafting, this.questLog, this.controls, this.talents, this.spellbook]) if (w.isOpen) w.toggle(false);
         if (this.dev.isOpen) this.dev.setOpen(false);
       }
       inScene = !!this.sim.scene;
+      // the quest list steps aside with the HUD (see update)
+      document.body.classList.toggle('in-scene', inScene);
       // a scene that ended (or was cut short by loading a save) never leaves the screen black
       const fade = this.cameras.main.fadeEffect;
       if (!this.sim.scene && !this.sim.exiting && fade.isComplete && fade.direction) this.cameras.main.fadeIn(400, 0, 0, 0);
-    });
+    };
+    this.sim.events.on('scene', onScene);
+    // a new game's opening scene has already started (in startAs, above)
+    onScene();
     this.sim.events.on('journal', ({ doc }) => {
       if (this.sim.flags['journalHint']) return;
       this.sim.setFlag('journalHint');
@@ -169,6 +176,7 @@ export class GameScene extends Phaser.Scene {
       this.talents.destroy();
       this.spellbook.destroy();
       this.sceneBox.destroy();
+      document.body.classList.remove('in-scene');
       this.bossBar.destroy();
       this.sim.events.clear();
     });
@@ -466,6 +474,9 @@ export class GameScene extends Phaser.Scene {
 
     this.sim.tick(dt);
     this.soundWindows();
+    // the HUD steps aside while a scene plays (the black bars would cut through it)
+    const hud = this.scene.get(PLATFORM === 'pc' ? SceneKeys.PcHud : SceneKeys.MobileHud);
+    if (hud && hud.sys.settings.visible === !!this.sim.scene) hud.sys.setVisible(!this.sim.scene);
 
     // the camera follows the hero, or eases over to what a scene is showing
     const look = this.sim.scene?.look;

@@ -288,9 +288,9 @@ function rattle(s: Track, at: number, d: number, v: number, n: number): void {
 interface Speaker {
   /** Pitch, Hz. */
   f: number;
-  /** Mouth size: formants scaled (a woman's higher, a big man's lower). */
+  /** Mouth size: resonances scaled (a woman's higher, a big man's lower). */
   mouth: number;
-  /** Seconds a syllable. */
+  /** Pace: a syllable of a hum lasts about 0.1 + 1.2 × this, in seconds. */
   syl: number;
   /** How far each syllable strays up or down. */
   lilt: number;
@@ -298,48 +298,138 @@ interface Speaker {
   breath?: number;
   /** An old voice's tremble. */
   vib?: number;
-  /** How far the phrase falls by its end. */
+  /** How far the last syllable falls. */
   fall?: number;
   drive?: number;
   /** An echo: a chapel, a belfry. */
   room?: number;
 }
 
+/** How much a mouth lets through at `f`: 1 at its resonance `fc`, half at `bw` either side. */
+const res = (f: number, fc: number, bw: number) => 1 / (1 + ((f - fc) / bw) ** 2);
+
+/** The vowels a hum opens into for a moment (oh, uh, eh, ah): [F1, F2] in Hz. */
+const OPEN: [number, number][] = [
+  [520, 920],
+  [620, 1150],
+  [450, 1700],
+  [700, 1220],
+];
+
+/** Seconds a syllable of a hum lasts. */
+const humSyl = (o: Speaker) => 0.1 + o.syl * 1.2;
+/** Room for the longest hum (three syllables, the last drawn out) and its echo. */
+const humLen = (o: Speaker) => 0.02 + 3 * humSyl(o) * 1.33 + 0.12 + (o.room ? 1 : 0);
+
 /**
- * Talking, in no language at all: a handful of syllables, each a mouth shape with a little
- * consonant in front, wandering up and down and falling at the end of the phrase.
+ * Someone saying something, without words: a short hum of one to three syllables
+ * ("hm.", "mm-hm", "hm-hm-hmm?"), more grunt than speech. The lips mostly stay closed: a
+ * soft, rounded tone with the nose's resonance, opening now and then into a vowel. The
+ * syllables run into each other, the pitch gliding from one to the next, and the last one
+ * falls (or, now and then, lifts, as if asking).
  */
-function babble(s: Track, o: Speaker): void {
-  const mouths = [AH, EH, EE, OH, UH];
-  const n = 5 + Math.floor(s.random() * 4);
-  let t = 0.02;
-  for (let i = 0; i < n; i++) {
-    const p = i / (n - 1);
-    const f = o.f * (1.06 - (0.06 + (o.fall ?? 0.1)) * p) * (1 + (s.random() * 2 - 1) * o.lilt);
-    const d = o.syl * (0.75 + 0.5 * s.random());
-    const shape = mouths[Math.floor(s.random() * mouths.length)];
-    const mouth: Formants = shape.map(([ff, g, q]) => [ff * o.mouth, g, q]);
-    // a hiss (s, sh), a stop (t, k, p), or straight into the vowel
-    const c = s.random();
-    if (c < 0.3) s.noise({ at: t, v: 0.2, d: 0.035, filter: 'highpass', f: 3500 * o.mouth });
-    else if (c < 0.65)
-      s.noise({ at: t, v: 0.3, d: 0.012, filter: 'bandpass', f: 1200 + 2400 * s.random(), q: 1.5 });
-    voice(s, {
-      at: t + 0.012,
+function hum(s: Track, o: Speaker): void {
+  // mostly one or two syllables; now and then three
+  const r = s.random();
+  const n = r < 0.4 ? 1 : r < 0.85 ? 2 : 3;
+  const syl = humSyl(o);
+  const ask = s.random() < 0.25;
+  let t0 = 0;
+  const parts = Array.from({ length: n }, (_, i) => {
+    const last = i === n - 1;
+    const d = syl * (last ? 1.15 : 0.8) * (0.85 + 0.3 * s.random());
+    // a third stay closed ("mm"); the rest open a little, into one vowel
+    const open = s.random() < 0.35 ? 0 : 0.25 + 0.45 * s.random();
+    const part = {
+      at: t0,
       d,
-      f,
-      peak: f * 1.03,
-      f1: f * 0.97,
-      mouth,
-      v: 1,
-      rough: o.rough,
-      breath: o.breath ?? 0.2,
-      vib: o.vib,
-      a: Math.min(0.03, d * 0.3),
-    });
-    // a little pause now and then
-    t += d * 0.9 + (s.random() < 0.15 ? 0.07 : 0);
+      f: o.f * (1 + o.lilt * (s.random() * 2 - 1)) * (1 - 0.03 * i),
+      open,
+      vowel: OPEN[Math.floor(s.random() * OPEN.length)],
+      // the last syllable falls away, or lifts into a question
+      end: last ? (ask ? 0.14 : -(o.fall ?? 0.1) - 0.04) : 0,
+    };
+    t0 += d * 0.92;
+    return part;
+  });
+  const total = parts[n - 1].at + parts[n - 1].d;
+  const len = Math.round(total * RATE);
+  const out = new Float32Array(len);
+  const m = o.mouth;
+  const vib = o.vib ?? 0.01;
+  const breath = new Biquad('bandpass', 1400 * m, 0.8);
+  const maxK = 32;
+  const gains = new Float32Array(maxK + 1);
+  let top = 1;
+  let f = parts[0].f * 0.95;
+  let ph = 0;
+  let drift = 0;
+  let amp = 0;
+  let open = 0;
+  let vowel = parts[0].vowel;
+  for (let i = 0; i < len; i++) {
+    const t = i / RATE;
+    // which syllable we're in, and how far through it
+    let p = parts[0];
+    for (const q of parts) if (t >= q.at) p = q;
+    const u = t - p.at;
+    const last = p === parts[n - 1];
+    // its note: scooped up into at the start, bent at the end of the last one
+    const want =
+      p.f * (1 - 0.05 * Math.exp(-u / 0.04)) * (1 + p.end * Math.pow(Math.min(1, u / p.d), 1.5));
+    f += (want - f) * (1 - Math.exp(-1 / (0.03 * RATE)));
+    if (i % 256 === 0) drift = drift * 0.8 + (s.random() - 0.5) * 0.012;
+    const wobble = 1 + drift + vib * Math.min(1, t / 0.15) * Math.sin(2 * Math.PI * 5.2 * t);
+    ph += (f * wobble) / RATE;
+    ph -= Math.floor(ph);
+    // loudness: each syllable swells in and out; between them it only dips (legato)
+    const rise = Math.min(1, u / 0.035);
+    const fade = last
+      ? Math.min(1, (p.d - u) / Math.min(0.12, p.d * 0.5))
+      : 1 - 0.55 * Math.pow(u / p.d, 4);
+    const a = Math.max(0, (p === parts[0] ? rise : 0.4 + 0.6 * rise) * fade);
+    amp += (a - amp) * (last && u > p.d * 0.5 ? 1 : 1 - Math.exp(-1 / (0.008 * RATE)));
+    // the lips part in the middle of a syllable
+    const o1 = p.open * Math.pow(Math.sin((Math.PI * Math.min(u, p.d)) / p.d), 2);
+    open += (o1 - open) * 0.002;
+    if (u < 0.01) vowel = p.vowel;
+    // the tone: harmonics shaped by the nose (closed) or the vowel (open)
+    if (i % 32 === 0) {
+      const [f1, f2] = vowel;
+      top = Math.min(maxK, Math.floor(4500 / f));
+      for (let k = 1; k <= top; k++) {
+        const hz = k * f;
+        const nose =
+          res(hz, 250 * m, 120) + 0.12 * res(hz, 1100 * m, 300) + 0.1 * res(hz, 2400 * m, 400);
+        const mouthOpen =
+          res(hz, f1 * m, 130) + 0.55 * res(hz, f2 * m, 180) + 0.12 * res(hz, 2600 * m, 400);
+        gains[k] = ((1 - open) * nose + open * mouthOpen) / Math.pow(k, 0.6);
+      }
+    }
+    // sin(k·θ) for every harmonic by the angle-addition recurrence: one sin and one cos a sample
+    const th = 2 * Math.PI * ph;
+    const c2 = 2 * Math.cos(th);
+    let s0 = 0;
+    let s1 = Math.sin(th);
+    let x = 0;
+    for (let k = 1; k <= top; k++) {
+      x += gains[k] * s1;
+      const s2 = c2 * s1 - s0;
+      s0 = s1;
+      s1 = s2;
+    }
+    x += breath.run(s.random() * 2 - 1) * (o.breath ?? 0.2) * 0.6;
+    if (o.rough)
+      x *=
+        1 -
+        o.rough *
+          0.45 *
+          (0.5 + 0.5 * Math.sin(2 * Math.PI * 28 * t + 2 * Math.sin(2 * Math.PI * 6 * t)));
+    out[i] = x * Math.max(0, amp);
   }
+  // never a click at the very end
+  for (let i = Math.max(0, len - 220); i < len; i++) out[i] *= (len - i) / 220;
+  s.mix(0.02, out, 1);
   if (o.drive) s.drive(o.drive);
   if (o.room) s.reverb(o.room, 1.2);
 }
@@ -379,10 +469,10 @@ const VOICES = Object.fromEntries(
   (Object.keys(SPEAKERS) as (keyof typeof SPEAKERS)[]).map(who => {
     const o = SPEAKERS[who];
     const recipe: Recipe = {
-      len: 9 * o.syl + 0.6 + (o.room ? 1 : 0),
-      loud: 0.45,
+      len: humLen(o),
+      loud: 0.4,
       takes: 4,
-      make: s => babble(s, o),
+      make: s => hum(s, o),
     };
     return [`${who}Voice`, recipe];
   })

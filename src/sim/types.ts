@@ -216,6 +216,8 @@ export interface ObjectState {
 export interface SceneLine {
   who: string;
   text: string;
+  /** Said aloud, in the speaker's voice (only the lines that matter are). */
+  voice?: boolean;
 }
 
 /** A building or big prop standing in the region (data/props.ts); (c, r) is its north corner. */

@@ -336,3 +336,31 @@ test('everyone who talks has a voice of their own', () => {
   for (const v of voices) assert.ok(v in SOUNDS, v);
   assert.equal(new Set(voices.map(v => SOUNDS[v as SoundId].make)).size, voices.length);
 });
+
+test('a voice is a short hum, and a scene says aloud only the lines that matter', () => {
+  for (const who of [...Object.keys(NPCS), 'bellringer'])
+    for (let k = 0; k < (SOUNDS[`${who}Voice` as SoundId].takes ?? 1); k++) {
+      const d = renderSound(`${who}Voice` as SoundId, k);
+      const top = peak(d);
+      let last = 0;
+      for (let i = 0; i < d.length; i++) if (Math.abs(d[i]) > top * 0.05) last = i;
+      assert.ok(last / RATE < 1.1, `${who}Voice take ${k}: ${(last / RATE).toFixed(2)}s`);
+    }
+  // the opening scene: only Aldric's first words are heard
+  const game = new Game();
+  const h = game.addHero('h0', 'Ann');
+  const lines: { text: string; voice?: boolean }[] = [];
+  for (let i = 0; i < 400 && h.inScene; i++) {
+    const line = h.region.scene?.line;
+    if (line) {
+      lines.push(line);
+      h.region.sceneNext();
+    }
+    game.tick(0.25);
+  }
+  assert.ok(lines.length > 2);
+  assert.deepEqual(
+    lines.filter(l => l.voice).map(l => l.text),
+    ['Breathe. Come on. Breathe, blast you.']
+  );
+});

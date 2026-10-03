@@ -503,6 +503,8 @@ export class Game {
     h.resetHero();
     h.regionId = '';
     this.moveHero(h, START_REGION, 'start');
+    // a fresh start (a new character is reset twice: as the Sim is made, and as their class)
+    h.logHistory.length = 0;
     h.log('An old man by the road waves you over. Click him to talk.', 'c');
     h.log('Select an enemy to lock it.', '');
   }

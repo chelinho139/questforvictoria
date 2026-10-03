@@ -64,7 +64,8 @@ export class SceneBox {
       this.whoEl.textContent = line.who;
       this.whoEl.hidden = !line.who;
       this.textEl.textContent = line.text;
-      const voice = voiceOf(line.who);
+      // only the lines that matter are said aloud (data/scenes.ts)
+      const voice = line.voice ? voiceOf(line.who) : null;
       if (voice && line.text !== this.said) this.sfx.say(voice);
     }
     this.said = line?.text ?? '';
