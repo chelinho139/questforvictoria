@@ -52,7 +52,7 @@ interface DevSettings {
   skipIntro: boolean;
   /** Advanced: show Rev (the skill sequencer) on the action bar and enable its keys. */
   rev: boolean;
-  /** The backup art styles: their buttons here, and the V / H keys in game. */
+  /** The backup art styles: their buttons here, and the Y / H keys in game. */
   artReview: boolean;
   /** Sound effects, 0 (off) to 1. */
   volume: number;
@@ -299,15 +299,41 @@ export class DevMenu {
     }
     time.append(seg);
 
+    // ---- view: the 2D art, or the experimental 3D views
+    const view = this.section('View (experimental)');
+    const viewSeg = el('div', 'dev-seg');
+    const views: [string, string][] = [['iso', 'Isometric'], ['diorama', 'Diorama 3D'], ['pov', 'Point of view']];
+    for (const [id, label] of views) {
+      const b = this.button(label, () => {
+        (this.game.registry.get('setView') as ((m: string) => void) | undefined)?.(id);
+        this.syncViewButtons();
+      });
+      b.dataset.view = id;
+      this.viewBtns.push(b);
+      viewSeg.append(b);
+    }
+    view.append(viewSeg);
+    view.append(el('p', 'dev-note', `${PC_KEYS.view.bind} or the button left of the day dial switches. In 3D: , and . turn, right-drag turns and tilts, the wheel zooms; in point of view ${PC_KEYS.povTurnLeft.bind} and ${PC_KEYS.povTurnRight.bind} turn and A and D step sideways.`));
+    const v3 = el('div', 'dev-btns');
+    v3.append(
+      this.button('Sharp / chunky pixels', () => {
+        const v = this.game.registry.get('view3d') as { chunky: boolean; setChunky(v: boolean): void } | null;
+        v?.setChunky(!v.chunky);
+      }),
+      this.button('Reset camera', () => (this.game.registry.get('view3d') as { resetCamera(): void } | null)?.resetCamera())
+    );
+    view.append(v3);
+    this.syncViewButtons();
+
     // ---- look
     const look = this.section('Graphics');
-    look.append(this.switchRow('Backup art styles (V / H)', 'artReview'));
+    look.append(this.switchRow(`Backup art styles (${PC_KEYS.artStyle.bind} / ${PC_KEYS.hdHero.bind})`, 'artReview'));
     const review = el('div', 'dev-review');
     review.hidden = !this.s.artReview;
     this.reviewEl = review;
     look.append(review);
     const styleRow = el('div', 'dev-row');
-    styleRow.append(el('span', 'dev-k', 'Art style (V cycles)'));
+    styleRow.append(el('span', 'dev-k', `Art style (${PC_KEYS.artStyle.bind} cycles)`));
     review.append(styleRow);
     const styleSeg = el('div', 'dev-btns');
     for (const style of CANDIDATE_STYLES) {
@@ -473,6 +499,14 @@ export class DevMenu {
     this.setOpen(this.s.open);
   }
 
+  private readonly viewBtns: HTMLButtonElement[] = [];
+
+  /** Mark the view in use. */
+  syncViewButtons(): void {
+    const cur = (this.game.registry.get('getView') as (() => string) | undefined)?.() ?? 'iso';
+    for (const b of this.viewBtns) b.setAttribute('aria-pressed', String(b.dataset.view === cur));
+  }
+
   // ---------- building blocks ----------
   private section(title: string): HTMLElement {
     const sec = el('section');
@@ -623,7 +657,11 @@ export class DevMenu {
   }
 
   update(): void {
-    if (this.isOpen) this.syncClock();
+    if (this.isOpen) {
+      this.syncClock();
+      // U changes the view outside the menu
+      this.syncViewButtons();
+    }
     // the V key changes the style outside the menu
     if (this.shownStyle !== spriteStyle() || this.shownHero !== hdHeroId()) this.syncStyleButtons();
     if (this.s.fps) {

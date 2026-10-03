@@ -8,6 +8,29 @@ import { artScale } from './art';
 
 const WHITE = 0xffffff;
 
+/** The drawing calls effects use: a Phaser Graphics, or a 2D canvas standing in for one (3D views). */
+export interface Gfx {
+  clear(): unknown;
+  fillStyle(color: number, alpha?: number): unknown;
+  fillRect(x: number, y: number, w: number, h: number): unknown;
+  fillCircle(x: number, y: number, r: number): unknown;
+  fillTriangle(x0: number, y0: number, x1: number, y1: number, x2: number, y2: number): unknown;
+  lineStyle(width: number, color: number, alpha?: number): unknown;
+  lineBetween(x0: number, y0: number, x1: number, y1: number): unknown;
+  strokeCircle(x: number, y: number, r: number): unknown;
+  beginPath(): unknown;
+  moveTo(x: number, y: number): unknown;
+  lineTo(x: number, y: number): unknown;
+  arc(x: number, y: number, r: number, a0: number, a1: number, anticlockwise?: boolean): unknown;
+  strokePath(): unknown;
+}
+
+/** Where a world point (x, y) at height h (art px) is on screen, and how many screen px an art px is there. */
+export type At = (x: number, y: number, h: number) => { x: number; y: number; k: number };
+
+/** The isometric view: the projection, one to one. */
+const isoAt: At = (x, y, h) => ({ x: isoX(x, y), y: isoY(x, y) - h, k: 1 });
+
 /**
  * Draws the simulation's transient effects and particles every frame.
  *
@@ -34,10 +57,22 @@ export class Effects {
   }
 
   draw(): void {
-    const g = this.flat;
-    const b = this.bill;
-    g.clear();
-    b.clear();
+    this.flat.clear();
+    this.bill.clear();
+    this.render(this.flat, this.bill, isoAt, true);
+  }
+
+  /**
+   * The 3D views: ground effects onto `g` (in world px, a canvas laid on the ground), the
+   * ones in the air onto `b` (screen px) through `at`.
+   */
+  draw3d(g: Gfx, b: Gfx, at: At): void {
+    this.flat.clear();
+    this.bill.clear();
+    this.render(g, b, at, false);
+  }
+
+  private render(g: Gfx, b: Gfx, at: At, ghosts: boolean): void {
 
     for (const p of this.sim.parts) {
       g.fillStyle(hex(p.col), Math.max(0, p.life / p.max));
@@ -151,6 +186,7 @@ export class Effects {
           break;
         }
         case 'dash': {
+          if (!ghosts) break;
           live.add(f);
           let imgs = this.ghosts.get(f);
           if (!imgs) {
@@ -168,30 +204,36 @@ export class Effects {
           break;
         }
         case 'bolt': {
-          const ox = isoX(f.x!, f.y!) - f.x!;
-          const oy = isoY(f.x!, f.y!) - f.y!;
-          const pts = f.pts!;
+          // the points are screen offsets from the target: across, and up into the sky
+          const pt = (q: [number, number]) => {
+            const s = at(f.x!, f.y!, f.y! - q[1]);
+            return [s.x + (q[0] - f.x!) * s.k, s.y];
+          };
+          const pts = f.pts!.map(pt);
           const draw = (w: number, col: number) => {
             b.lineStyle(w, col, 1 - p * 0.8);
             b.beginPath();
-            b.moveTo(pts[0][0] + ox, pts[0][1] + oy);
-            for (const q of pts) b.lineTo(q[0] + ox, q[1] + oy);
+            b.moveTo(pts[0][0], pts[0][1]);
+            for (const q of pts) b.lineTo(q[0], q[1]);
             b.strokePath();
           };
           draw(5, hex(f.col!));
           draw(2, WHITE);
+          const c = at(f.x!, f.y!, 0);
           b.fillStyle(hex(f.col!), (1 - p) * 0.7);
-          b.fillCircle(isoX(f.x!, f.y!), isoY(f.x!, f.y!), 8 + p * 22);
+          b.fillCircle(c.x, c.y, (8 + p * 22) * c.k);
           break;
         }
         case 'arrow': {
           // an arrow on a shallow arc: dark shaft, steel head, fletching in the spell's colour
-          const ax = isoX(f.x0!, f.y0!), ay = isoY(f.x0!, f.y0!);
-          const bx = isoX(f.x1!, f.y1!), by = isoY(f.x1!, f.y1!);
-          const arc = Math.min(14, Math.hypot(bx - ax, by - ay) * 0.08);
-          const at = (q: number): [number, number] => [ax + (bx - ax) * q, ay + (by - ay) * q - Math.sin(q * Math.PI) * arc];
-          const [x, y] = at(p);
-          const [px, py] = at(Math.max(0, p - 0.05));
+          const arc = Math.min(14, Math.hypot(isoX(f.x1!, f.y1!) - isoX(f.x0!, f.y0!), isoY(f.x1!, f.y1!) - isoY(f.x0!, f.y0!)) * 0.08);
+          const lift = ghosts ? 0 : 12;
+          const fly = (q: number): [number, number] => {
+            const s = at(f.x0! + (f.x1! - f.x0!) * q, f.y0! + (f.y1! - f.y0!) * q, lift + Math.sin(q * Math.PI) * arc);
+            return [s.x, s.y];
+          };
+          const [x, y] = fly(p);
+          const [px, py] = fly(Math.max(0, p - 0.05));
           const d = Math.hypot(x - px, y - py) || 1;
           const dx = (x - px) / d;
           const dy = (y - py) / d;
@@ -204,19 +246,15 @@ export class Effects {
           break;
         }
         case 'fireball': {
-          const ax = isoX(f.x0!, f.y0!), ay = isoY(f.x0!, f.y0!);
-          const bx = isoX(f.x1!, f.y1!), by = isoY(f.x1!, f.y1!);
+          const fly = (q: number) => at(f.x0! + (f.x1! - f.x0!) * q, f.y0! + (f.y1! - f.y0!) * q, Math.sin(q * Math.PI) * 24);
           for (let k = 3; k >= 0; k--) {
-            const q = Math.max(0, p - k * 0.06);
-            const tx = ax + (bx - ax) * q;
-            const ty = ay + (by - ay) * q - Math.sin(q * Math.PI) * 24;
+            const t = fly(Math.max(0, p - k * 0.06));
             b.fillStyle(k ? hex('#a78bfa') : hex('#c9b6ff'), k ? 0.35 - k * 0.08 : 1);
-            b.fillCircle(tx, ty, k ? 4 : 7);
+            b.fillCircle(t.x, t.y, (k ? 4 : 7) * t.k);
           }
-          const x = ax + (bx - ax) * p;
-          const y = ay + (by - ay) * p - Math.sin(p * Math.PI) * 24;
+          const t = fly(p);
           b.fillStyle(WHITE, 1);
-          b.fillCircle(x, y, 3);
+          b.fillCircle(t.x, t.y, 3 * t.k);
           break;
         }
       }
@@ -230,14 +268,14 @@ export class Effects {
     }
   }
 
-  private arc(g: Phaser.GameObjects.Graphics, x: number, y: number, r: number, a0: number, a1: number, w: number, col: number, alpha: number): void {
+  private arc(g: Gfx, x: number, y: number, r: number, a0: number, a1: number, w: number, col: number, alpha: number): void {
     g.lineStyle(w, col, alpha);
     g.beginPath();
     g.arc(x, y, r, a0, a1, false);
     g.strokePath();
   }
 
-  private star(g: Phaser.GameObjects.Graphics, x: number, y: number, r: number, col: number, lw: number, alpha: number): void {
+  private star(g: Gfx, x: number, y: number, r: number, col: number, lw: number, alpha: number): void {
     g.lineStyle(lw, col, alpha);
     g.lineBetween(x - r, y, x + r, y);
     g.lineBetween(x, y - r, x, y + r);
@@ -246,7 +284,7 @@ export class Effects {
     g.lineBetween(x - q, y + q, x + q, y - q);
   }
 
-  private crescent(g: Phaser.GameObjects.Graphics, x: number, y: number, r: number, rot: number, col: number, p: number): void {
+  private crescent(g: Gfx, x: number, y: number, r: number, rot: number, col: number, p: number): void {
     const a = Math.max(0, 1 - p);
     this.arc(g, x, y, r + p * 6, rot - 1.1, rot + 1.1, 7 * (1 - p) + 2, col, a);
     this.arc(g, x, y, r + p * 6, rot - 0.8, rot + 0.8, 2, WHITE, a);

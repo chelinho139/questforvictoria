@@ -109,7 +109,22 @@ export class Clouds {
     }
   }
 
+  private wanted = true;
+  private suppressed = false;
+
   setVisible(v: boolean): void {
+    this.wanted = v;
+    this.show();
+  }
+
+  /** Hidden whatever the setting (a 3D view has no 2D sky to drift over). */
+  setSuppressed(v: boolean): void {
+    this.suppressed = v;
+    this.show();
+  }
+
+  private show(): void {
+    const v = this.wanted && !this.suppressed;
     for (const cl of this.clouds) {
       cl.shadow.setVisible(v);
       cl.body.setVisible(v);

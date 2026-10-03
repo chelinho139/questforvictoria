@@ -2,7 +2,7 @@ import { SKILLS, ACTIONS, isSkill, isShot } from '../data/skills';
 import { CLASSES, AIM_HOLD, ARROW_SPEED } from '../data/classes';
 import type { ClassId } from '../data/classes';
 import type { Key, SkillKey, ActionKey, WheelKey } from '../data/skills';
-import { T, isoDir, isoSpeedFactor, Tile } from './map';
+import { T, isoDir, isoSpeedFactor, Tile, faceToward } from './map';
 import type { RegionMap } from './map';
 import { RECIPES, STRUCTURES, STATION_REACH, STATION_NAMES } from '../data/crafting';
 import type { Recipe, StructureKind } from '../data/crafting';
@@ -855,7 +855,7 @@ export class Hero {
     const hit = (base: number, e?: Enemy) =>
       Math.round(base * this.dmgMult(e) * (crit ? this.critMult : 1));
     if (k === 'sunder' && tg) {
-      this.face = tg.x < this.x ? -1 : 1;
+      this.face = faceToward(this.x, this.y, tg.x, tg.y, this.face);
       R.fx({ type: 'slash', x: tg.x, y: tg.y - 6, rot: 0.4, col: '#c8d2e0', dur: 0.35 });
       this.burst(tg.x, tg.y - 8, 10, '#c8d2e0', 90, 0.5, 2, 160);
       this.dmgEnemy(tg, hit(6), crit ? 'crit' : '');
@@ -863,7 +863,7 @@ export class Hero {
       this.atkAnimT = ATK_ANIM;
       this.log(`${tg.n} is sundered: it takes 20% more damage for 10 s.`, 'c');
     } else if (k === 'deathblow' && tg) {
-      this.face = tg.x < this.x ? -1 : 1;
+      this.face = faceToward(this.x, this.y, tg.x, tg.y, this.face);
       R.fx({ type: 'xslash', x: tg.x, y: tg.y - 6, col: '#e0504b', dur: 0.5 });
       this.burst(tg.x, tg.y - 6, 18, '#c8302a', 130, 0.6, 3, 200);
       this.shake = 0.25;
@@ -886,7 +886,7 @@ export class Hero {
       R.fx({ type: 'shout', x: this.x, y: this.y, col: '#ff8c42', dur: 0.7 });
       this.burst(this.x, this.y - 14, 14, '#ff8c42', 70, 0.7, 2, -50);
     } else if (k === 'shieldbash' && tg) {
-      this.face = tg.x < this.x ? -1 : 1;
+      this.face = faceToward(this.x, this.y, tg.x, tg.y, this.face);
       R.fx({ type: 'shield', x: tg.x, y: tg.y, col: '#c4cedc', dur: 0.4 });
       this.burst(tg.x, tg.y - 8, 10, '#fff0a0', 90, 0.4, 2, 60);
       this.shake = 0.15;
@@ -979,7 +979,7 @@ export class Hero {
     const len = d + 60;
     const x0 = this.x;
     const y0 = this.y;
-    this.face = tg.x < this.x ? -1 : 1;
+    this.face = faceToward(this.x, this.y, tg.x, tg.y, this.face);
     R.fx({
       type: 'arrow',
       x0: x0 + this.face * 6,
@@ -1013,8 +1013,9 @@ export class Hero {
   /** Disengage: leap back away from the target (or from where you face), stopping short of walls. */
   private disengage(tg: Enemy | null): void {
     const R = this.region;
-    let ux = -this.face;
-    let uy = 0;
+    // back along the screen (screen-right is world (+1, -1))
+    let ux = -this.face * Math.SQRT1_2;
+    let uy = this.face * Math.SQRT1_2;
     if (tg) {
       const d = this.dist(this, tg) || 1;
       ux = (this.x - tg.x) / d;
@@ -1145,7 +1146,7 @@ export class Hero {
         this.y = tg.y - ((tg.y - this.y) / d) * 28;
         this.tp++;
       }
-      this.face = tg.x < this.x ? -1 : 1;
+      this.face = faceToward(this.x, this.y, tg.x, tg.y, this.face);
       R.fx({ type: 'dash', x0, y0, x1: this.x, y1: this.y, face: this.face, dur: 0.35 });
       this.burst(x0, y0 + 4, 8, '#b8956a', 60, 0.5, 3, -20);
       R.fx({ type: 'hit', x: tg.x, y: tg.y - 8, col: sk.col, dur: 0.25 });
@@ -1180,7 +1181,7 @@ export class Hero {
       tg.markT = 15 + this.tal.markDur;
       tg.markBy = this.id;
       tg.markK = 0.2 + this.tal.markBonus;
-      this.face = tg.x < this.x ? -1 : 1;
+      this.face = faceToward(this.x, this.y, tg.x, tg.y, this.face);
       R.fx({ type: 'ring', x: tg.x, y: tg.y - 10, r0: 20, r1: 6, col: sk.col, lw: 2, dur: 0.5 });
       this.floater(tg.x, tg.y - 14 * tg.def.scale - 12, 'MARKED', 'name', sk.col);
       this.log(
@@ -1250,7 +1251,7 @@ export class Hero {
               : 'hitArrow'
       );
     } else if (tg) {
-      this.face = tg.x < this.x ? -1 : 1;
+      this.face = faceToward(this.x, this.y, tg.x, tg.y, this.face);
       if (key === 'thrust')
         R.fx({
           type: 'stab',
@@ -1318,7 +1319,7 @@ export class Hero {
   ): void {
     const R = this.region;
     const t = Math.max(0.08, this.dist(this, tg) / ARROW_SPEED);
-    this.face = tg.x < this.x ? -1 : 1;
+    this.face = faceToward(this.x, this.y, tg.x, tg.y, this.face);
     R.fx({
       type: 'arrow',
       x0: this.x + this.face * 6,
@@ -1598,7 +1599,7 @@ export class Hero {
     this.useTarget = null;
     const o = this.region.objects.find(x => x.id === id);
     if (!o || Math.hypot(o.x - this.x, o.y - this.y) > TALK_REACH + 4) return;
-    this.face = o.x < this.x ? -1 : 1;
+    this.face = faceToward(this.x, this.y, o.x, o.y, this.face);
     if (this.driven === 'replica') this.net?.('useObject', [id]);
     else this.region.use(o, this);
   }
@@ -1821,7 +1822,7 @@ export class Hero {
     const { item, n = 1 } = r.makes;
     this.give(item, n);
     const at = r.station === 'hand' ? this : (this.nearStation(r.station) ?? this);
-    this.face = at.x < this.x ? -1 : at.x > this.x ? 1 : this.face;
+    this.face = faceToward(this.x, this.y, at.x, at.y, this.face);
     this.burst(at.x, at.y - 10, 8, r.station === 'hand' ? '#f2c14e' : '#ffa040', 60, 0.5, 2, -40);
     const name = ITEMS[item].name;
     this.floater(this.x, this.y - 28, `+${n} ${name}`, 'name', ITEMS[item].col);
@@ -1888,7 +1889,7 @@ export class Hero {
 
   private build(kind: StructureKind, c: number, r: number): void {
     const s = this.region.build(kind, c, r);
-    this.face = s.x < this.x ? -1 : 1;
+    this.face = faceToward(this.x, this.y, s.x, s.y, this.face);
     this.log(
       kind === 'campfire'
         ? 'You build a campfire. Cook raw food at it.'
@@ -2048,7 +2049,7 @@ export class Hero {
     this.talkTarget = null;
     const n = this.region.npcs.find(x => x.id === id);
     if (!n || Math.hypot(n.x - this.x, n.y - this.y) > TALK_REACH + 4) return;
-    this.face = n.x < this.x ? -1 : 1;
+    this.face = faceToward(this.x, this.y, n.x, n.y, this.face);
     if (this.driven === 'replica') this.net?.('talkTo', [id]);
     else this.events.emit('talk', { npc: id });
   }
@@ -2246,7 +2247,7 @@ export class Hero {
     this.gatherT = this.gatherLen =
       (this.gear.chop > 0 ? CHOP.period / (1 + this.gear.chop) : CHOP.period * CHOP.noTool) /
       (1 + this.tal.gather);
-    this.face = tr.x < this.x ? -1 : 1;
+    this.face = faceToward(this.x, this.y, tr.x, tr.y, this.face);
     this.atkAnimT = ATK_ANIM;
     tr.hp--;
     tr.shakeT = 0.25;
@@ -2311,7 +2312,7 @@ export class Hero {
     this.gatherT = this.gatherLen =
       (this.gear.mine > 0 ? MINE.period / (1 + this.gear.mine) : MINE.period * MINE.noTool) /
       (1 + this.tal.gather);
-    this.face = rk.x < this.x ? -1 : 1;
+    this.face = faceToward(this.x, this.y, rk.x, rk.y, this.face);
     this.atkAnimT = ATK_ANIM;
     rk.hp--;
     rk.shakeT = 0.2;
@@ -2404,11 +2405,22 @@ export class Hero {
     this.stuckT = 0;
   }
 
+  /**
+   * Walk the same speed every way across the ground (the 3D views) rather than every way across
+   * the 2D screen (isoSpeedFactor). Only how this hero's player sees it: the rules don't change.
+   */
+  walkFlat = false;
+
+  /** Speed multiplier for a walk along world (dx, dy): see walkFlat. */
+  private walkK(dx: number, dy: number): number {
+    return this.walkFlat ? 1 / isoSpeedFactor(dx, dy) : 1;
+  }
+
   /** Advance along the path. Returns the direction moved, or null if nothing moved. */
   private followPath(dt: number): { x: number; y: number } | null {
     const path = this.path;
     if (!path) return null;
-    const spd = this.playerSpeed;
+    const base = this.playerSpeed;
     let budget = dt;
     let dir: { x: number; y: number } | null = null;
     // loop so a short leg doesn't waste the rest of the frame's movement
@@ -2424,12 +2436,13 @@ export class Hero {
       const ux = dx / d;
       const uy = dy / d;
       dir = { x: ux, y: uy };
+      const spd = base * this.walkK(ux, uy);
       const step = spd * isoSpeedFactor(ux, uy) * budget;
       if (step >= d && !this.map.blocked(w.x, w.y, 9, 8)) {
         // reach the waypoint exactly, then spend what's left on the next leg
         this.x = w.x;
         this.y = w.y;
-        if (ux) this.face = ux < 0 ? -1 : 1;
+        this.face = faceToward(0, 0, ux, uy, this.face);
         this.walk += budget * 10 * (d / step);
         budget *= 1 - d / step;
         path.shift();
@@ -2455,7 +2468,7 @@ export class Hero {
   dodge(): void {
     if (this.dodgeCd > 0 || this.dead) return;
     this.stopMoving();
-    const m = this.lastMove ?? { x: this.face, y: 0 };
+    const m = this.lastMove ?? { x: this.face, y: -this.face };
     const l = Math.hypot(m.x, m.y) || 1;
     const dx = m.x / l;
     const dy = m.y / l;
@@ -2496,7 +2509,7 @@ export class Hero {
       const d = isoDir(this.inputMove.x, this.inputMove.y);
       mx = d.x;
       my = d.y;
-      if (!this.dead) this.region.moveEntity(this, mx, my, this.playerSpeed, dt, 9, 8);
+      if (!this.dead) this.region.moveEntity(this, mx, my, this.playerSpeed * this.walkK(mx, my), dt, 9, 8);
     } else if (this.path && !this.dead && !drawing) {
       const d = this.followPath(dt);
       if (d) {
@@ -2669,7 +2682,7 @@ export class Hero {
         this.aaT -= dt;
         if (this.aaT <= 0) {
           this.aaT = AA_PERIOD / (1 + this.tal.aaSpeed) / (this.berserkT > 0 ? 1.5 : 1);
-          this.face = tg.x < this.x ? -1 : 1;
+          this.face = faceToward(this.x, this.y, tg.x, tg.y, this.face);
           this.region.fx({ type: 'swing', x: this.x, y: this.y, face: this.face, dur: 0.18 });
           this.sound('autoSwing');
           this.atkAnimT = ATK_ANIM;

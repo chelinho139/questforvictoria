@@ -43,6 +43,14 @@ export class ControlsWindow {
         ${row(k(PC_KEYS.controls.bind), 'Controls (this window)')}
         ${row(k('Esc'), 'Close a window')}
       </ul></section>
+      <section><h3><span>View (experimental)</span></h3><ul>
+        ${row(k(PC_KEYS.view.bind), 'Isometric, 3D diorama, or point of view')}
+        ${row(`${k(PC_KEYS.turnLeft.bind)}${k(PC_KEYS.turnRight.bind)}`, 'Turn the 3D view')}
+        ${row('Right-drag', 'Turn and tilt the 3D view (a right-click still walks)')}
+        ${row('Wheel', 'Zoom the 3D view')}
+        ${row(`${k(PC_KEYS.povTurnLeft.bind)}${k(PC_KEYS.povTurnRight.bind)}`, 'Point of view: turn (those bar slots then cast with a click)')}
+        ${row(`${k('A')}${k('D')}`, 'Point of view: step sideways')}
+      </ul></section>
       <section><h3><span>Advanced</span></h3><ul>
         ${row(`${k(PC_KEYS.revStep.bind)}${k(PC_KEYS.revToggle.bind)}${k(PC_KEYS.revAuto.bind)}`, 'Rev: next step, on/off, auto (turn Rev on in Settings)')}
         ${row(`${k(PC_KEYS.timeCycle.bind)}${k(PC_KEYS.lightToggle.bind)}`, 'Time of day, lighting')}
