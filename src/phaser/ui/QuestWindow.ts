@@ -62,6 +62,11 @@ export class QuestWindow {
     this.open = force ?? !this.open;
     this.root.hidden = !this.open;
     if (this.open) {
+      // opened from the menu bar or J while pages wait unread: straight to the journal
+      if (force === undefined && this.sim.journal.some(id => !this.sim.flags['read:' + id])) {
+        this.tab = 'journal';
+        this.reading = null;
+      }
       openedLeft(this);
       this.render();
     }

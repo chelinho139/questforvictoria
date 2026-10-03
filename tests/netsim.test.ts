@@ -90,3 +90,29 @@ test('online, a warrior swings and walks as before', () => {
   run(0.5);
   assert.ok(Math.abs(sim.hero.x - x0) > 20);
 });
+
+test('online, the browser has the same rain and the same lightning as the server', () => {
+  const { game, sim, run } = online('warrior');
+  game.weather.forced = 'storm';
+  run(20);
+  assert.equal(sim.weather.kind, 'storm');
+  assert.ok(Math.abs(sim.weather.rain - game.weather.rain) < 0.01);
+  assert.equal(sim.weather.seed, game.weather.seed);
+  // from here on, strike for strike (the browser runs the same schedule between snapshots)
+  const seen = (w: typeof game.weather, out: string[], last: { id: number }) => {
+    for (const s of w.strikes) if (s.id > last.id) out.push(`${s.dist} ${s.u.toFixed(4)} ${s.v.toFixed(4)}`);
+    last.id = w.strikes.at(-1)?.id ?? last.id;
+  };
+  const a: string[] = [];
+  const b: string[] = [];
+  const la = { id: game.weather.strikes.at(-1)?.id ?? 0 };
+  const lb = { id: sim.weather.strikes.at(-1)?.id ?? 0 };
+  for (let i = 0; i < 60; i++) {
+    run(1);
+    seen(game.weather, a, la);
+    seen(sim.weather, b, lb);
+  }
+  assert.ok(a.length >= 3, `${a.length} strikes in a minute`);
+  // (one at the very end may still be on its way to the server)
+  assert.deepEqual(b.slice(0, a.length - 1), a.slice(0, a.length - 1));
+});

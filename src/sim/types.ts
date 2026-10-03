@@ -60,6 +60,13 @@ export interface Enemy {
   markK: number;
   /** Hit lately: keeps after whoever hit it, however far away they shot from. */
   angerT: number;
+  /**
+   * Gave up a chase and is walking back to its post: seconds left before it is simply there
+   * (0 when it isn't). Meanwhile nothing touches it, and it heals as it goes.
+   */
+  homeT: number;
+  /** Its way back, a few straight legs (pathfind.ts). */
+  homePath?: { x: number; y: number }[];
   /** The Bell-Ringer: seconds to the next toll, and tolls so far. */
   tollT?: number;
   tollN?: number;
@@ -300,7 +307,7 @@ export interface HeroEvents extends Record<string, unknown> {
  * bear trap springing, the horse arriving and being left. Everyone nearby hears those, and
  * the world's sounds and the creatures' (data/enemies.ts) too.
  */
-export type SoundId = SpellKey | FollowSound | WorldSound | CreatureSound | UiSound | VoiceSound;
+export type SoundId = SpellKey | FollowSound | WorldSound | CreatureSound | UiSound | VoiceSound | WeatherSound;
 /** Out in the world, heard nearby: the auto-attacks, a blow landing on a hero, felling a tree, breaking a rock, the shaman's fireball, the bell. */
 export type WorldSound =
   | 'autoSwing'
@@ -313,6 +320,8 @@ export type WorldSound =
   | 'fireball'
   | 'fireballHit'
   | 'bellToll';
+/** Thunder after lightning: a strike close by, one out of sight, one far off (the screen plays it, delayed, for everyone). */
+export type WeatherSound = 'thunderNear' | 'thunder' | 'thunderFar';
 /** Someone talking, in a conversation or a scene: each a voice of their own. */
 export type VoiceSound = `${NpcId | 'bellringer'}Voice`;
 export type FollowSound =

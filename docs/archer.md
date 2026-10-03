@@ -8,7 +8,7 @@
 
 - **From afar.** The auto-shot reaches **200**, spells **220** (the warrior's reach is 48 and 56). Each arrow **flies** to its mark at 600 a second and hits when it lands, so creatures take arrows on the way in.
 - **Stand still to shoot.** An archer only shoots with feet planted. If you're walking somewhere with a click, a shot stops you and fires. If you're holding a movement key, the shot is refused ("Stand still to shoot"). After each arrow you hold still for 0.3 s while you draw and loose; a plain auto-shot holds you for 0.2 s.
-- **Lighter.** An archer starts with **130 health** against the warrior's 160, and has no shield. The off hand holds a **quiver**, which adds damage.
+- **Lighter.** An archer starts with **130 health** against the warrior's 175, and has no shield. The off hand holds a **quiver**, which adds damage.
 - **Creatures fight back.** A creature you shoot stays angry for 10 s, however far away you shot from. Without this, an archer could shoot slimes from outside their sight for free.
 - **Classes are chosen when you make a character**, in single player and multi player alike (the New character screen: Warrior | Archer). The class is saved with the character; characters from before classes are warriors.
 
@@ -102,9 +102,9 @@ Each fight runs over five random seeds. Two numbers per fight:
 
 | Mirrored builds | Average time × | Average cost × | Deaths |
 |---|---|---|---|
-| Blade warrior / Marksman archer | 1.02 | 0.91 | none |
-| Fury warrior / Hunter archer | 1.04 | 0.96 | none |
-| Warden warrior / Ranger archer | 1.02 | 1.03 | none |
+| Blade warrior / Marksman archer | 1.01 | 0.91 | none |
+| Fury warrior / Hunter archer | 1.06 | 1.00 | none |
+| Warden warrior / Ranger archer | 1.03 | 1.10 | none |
 
 The bands the tests enforce:
 - for each pair, average time between 0.95 and 1.10, and average cost between 0.90 and 1.10;
@@ -116,7 +116,7 @@ The fights (level, gear tier, creatures): L1 slime · L3 goblin · L6 two goblin
 **What the numbers say.**
 - Archers kill about as fast as warriors (1.02–1.04×).
 - Archers take less damage, because creatures walk through arrows to reach them. That's the archer's identity.
-- To pay for it, archers are lighter (130 health against 160) and have no shield.
+- To pay for it, archers are lighter (130 health against 175) and have no shield.
 - Marksman stays a little ahead on cost (0.91): it trades a slightly slower kill for safety, since things die before they arrive.
 - Fast creatures (bonehounds) and groups (three skeletons) are the archer's hardest fights (1.12–1.20×): they close the gap quickly, and Volley covers less than a Whirlwind in the middle of a crowd. That's what Concussive Shot, Bear Trap and Disengage are for.
 
@@ -131,6 +131,7 @@ The fights (level, gear tier, creatures): L1 slime · L3 goblin · L6 two goblin
   - Steady Aim +0.25 → +0.2;
   - Deadeye 30 → 26.
 - **Creatures hit three times as hard** (playtesting: fights carried no risk). The heavier the hits, the more an archer saves by shooting creatures on the way in: Blade / Marksman fell to 0.88 on cost. So **warrior health** went 140 → 160: the one who stands in the middle of the group can take it.
+- **Creatures hit about 40% harder again** (goblins 9 → 13, skeletons and bone hounds 12 → 17, slimes 6 → 8, the shaman's fireball 25 → 35; ogres only 18 → 22) and have about 10% more health. Blade / Marksman fell to 0.87 on cost again, so **warrior health** went 160 → 175. The pairs now sit near the edges of the band (Blade 0.91, Warden 1.10): the heavier the hits, the more the health lost weighs in the cost.
 
 **What the simulation doesn't capture.**
 - Player skill: perfect-timing crits, kiting with Concussive Shot, and using Disengage and Bear Trap well.

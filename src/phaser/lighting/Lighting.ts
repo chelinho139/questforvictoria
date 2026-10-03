@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { ambientDarkness, ringDarkness } from '../../sim/daylight';
-import type { DayCycle } from '../../sim/daylight';
+import type { DayCycle, Rgb } from '../../sim/daylight';
 import { LightingPostFX } from './LightingPostFX';
 
 type TexWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper;
@@ -10,6 +10,10 @@ const RADIAL_SIZE = 256;
 /** Lightmap resolution = camera size ÷ this. Bigger is softer and cheaper. */
 const DOWNSCALE = 4;
 const MAX_LIGHTS = 32;
+/** The darkness a full overcast adds (cool: it takes more red and green than blue). */
+const GLOOM: Rgb = { r: 125, g: 115, b: 88 };
+/** How much of the darkness a lightning flash lifts at its brightest. */
+const FLASH_LIFT = 0.85;
 
 /**
  * A point light in the game scene's (projected) coordinates. `r/g/b` (0..1) is the
@@ -27,6 +31,9 @@ export interface LightSource {
   intensity: number;
   flickerHz?: number;
   flickerAmount?: number;
+  /** Where it stands on the ground (world px), for the 3D views; default: under (x, y). */
+  wx?: number;
+  wy?: number;
 }
 
 /**
@@ -83,7 +90,14 @@ export class Lighting {
 
   setEnabled(v: boolean): void {
     this.enabled = v;
-    this.pipeline?.setStrength(v ? this.strength : 0);
+    this.pipeline?.setStrength(v && !this.suspended ? this.strength : 0);
+  }
+
+  private suspended = false;
+  /** A 3D view draws the light itself: the 2D pass stands aside (settings are kept). */
+  setSuspended(v: boolean): void {
+    this.suspended = v;
+    this.pipeline?.setStrength(this.enabled && !v ? this.strength : 0);
   }
 
   /** How deep into the Blackthorn the current region is (0-5); darkens the light. */
@@ -98,7 +112,7 @@ export class Lighting {
   /** How strongly the darkness applies, 0..1. */
   setStrength(v: number): void {
     this.strength = Math.max(0, Math.min(1, v));
-    if (this.enabled) this.pipeline?.setStrength(this.strength);
+    if (this.enabled && !this.suspended) this.pipeline?.setStrength(this.strength);
   }
 
   getStrength(): number {
@@ -142,6 +156,50 @@ export class Lighting {
     }
   }
 
+  private gloom = 0;
+  private flash = 0;
+  /** The weather (WeatherFx): an overcast sky's gloom and a lightning flash, 0..1 each. */
+  setWeather(gloom: number, flash: number): void {
+    this.gloom = gloom;
+    this.flash = flash;
+  }
+
+  /** The darkness of the hour, the region's ring and indoors, before the weather. */
+  private hour(): Rgb {
+    return this.indoor ? ringDarkness(ambientDarkness(0.83), this.ring) : ringDarkness(ambientDarkness(this.day.t), this.ring);
+  }
+
+  /** The darkness colour (0-255): the hour's, under the overcast, lifted by lightning. */
+  ambient(): Rgb {
+    const h = this.hour();
+    const g = this.gloom;
+    const k = 1 - FLASH_LIFT * this.flash;
+    // the overcast darkens on top of the hour (as screens do: never past full)
+    const add = (a: number, b: number) => (255 - ((255 - a) * (255 - b * g)) / 255) * k;
+    return { r: add(h.r, GLOOM.r), g: add(h.g, GLOOM.g), b: add(h.b, GLOOM.b) };
+  }
+
+  /**
+   * The darkness left inside a light's pool (0-255): a light takes away the night's darkness
+   * down to its own colour, but not the overcast's, and never adds darkness.
+   */
+  residual(L: LightSource, amb = this.ambient()): Rgb {
+    const h = this.hour();
+    const k = 1 - FLASH_LIFT * this.flash;
+    const ch = (lc: number, hc: number, gc: number, ac: number) => Math.min(ac, Math.max(Math.min(lc * 255, hc) * k, gc * this.gloom * k));
+    return { r: ch(L.r, h.r, GLOOM.r, amb.r), g: ch(L.g, h.g, GLOOM.g, amb.g), b: ch(L.b, h.b, GLOOM.b, amb.b) };
+  }
+
+  /** A light's strength this moment, 0..1, with its flicker (the 3D views light by it too). */
+  lightAlpha(L: LightSource): number {
+    return flickerAlpha(L.intensity, L.flickerHz ?? 0, L.flickerAmount ?? 0, this.elapsed, L.id);
+  }
+
+  /** Lighting is drawn by someone else (the 3D views): keep the flicker clock running, draw nothing. */
+  tick(dt: number): void {
+    this.elapsed += dt;
+  }
+
   /** Call once per frame after the camera has been positioned. */
   update(dt: number): void {
     if (!this.pipeline || !this.enabled) return;
@@ -150,7 +208,7 @@ export class Lighting {
     const target = this.rt;
     if (!target) return;
 
-    const amb = this.indoor ? ringDarkness(ambientDarkness(0.83), this.ring) : ringDarkness(ambientDarkness(this.day.t), this.ring);
+    const amb = this.ambient();
     const ambR = Math.round(amb.r);
     const ambG = Math.round(amb.g);
     const ambB = Math.round(amb.b);
@@ -179,12 +237,8 @@ export class Lighting {
       if (L.x < left || L.x > right || L.y < top || L.y > bottom || !(L.radius > 0)) continue;
       const alpha = flickerAlpha(L.intensity, L.flickerHz ?? 0, L.flickerAmount ?? 0, this.elapsed, L.id);
       if (alpha <= 0.001) continue;
-      // a light can only lessen darkness, never add it: cap the residual at the ambient
-      const tint = Phaser.Display.Color.GetColor(
-        Math.min(Math.round(L.r * 255), ambR),
-        Math.min(Math.round(L.g * 255), ambG),
-        Math.min(Math.round(L.b * 255), ambB)
-      );
+      const res = this.residual(L, amb);
+      const tint = Phaser.Display.Color.GetColor(Math.round(res.r), Math.round(res.g), Math.round(res.b));
       const img = this.pool[n++];
       img.setPosition(L.x, L.y).setScale(L.radius / texHalf).setAlpha(alpha).setTint(tint);
     }

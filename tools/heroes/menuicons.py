@@ -1,5 +1,6 @@
 """Icons for the menu bar and skills: a skull (Execute), a sealed scroll (Quests), an iron
-cog (Settings) and a book with a question mark (Controls). 20×20, lit from the top-left."""
+cog (Settings) and a book with a question mark (Controls); and the view button's three
+(a map tile, a turning block, a camera). 20×20, lit from the top-left."""
 import sys
 import math
 from tool import G, render, sheet
@@ -191,6 +192,76 @@ TOME = [
 ]
 
 
+# ---------------------------------------------------------------- the view button (left of the day dial)
+# Isometric: one tile of the map, flat, a path across it and a tree on it.
+VIEW_ISO_PAL = {"G": "#c8e494", "g": "#98c870", "h": "#72a256", "P": "#f2dcaa", "p": "#d0ae74", "L": "#b47e4c", "R": "#7c5438", "T": "#78bc5a", "U": "#4a8a40", "V": "#2e5e2e", "t": "#6a4428", "k": "#4e6a3a"}
+VIEW_ISO = [
+    '.....TTT............',
+    '....TTTTU...........',
+    '...TTTTUU...........',
+    '...TTUUUV...........',
+    '....UUtVVGG.........',
+    '......tGGGGGh.......',
+    '.....kkkGGhhhh......',
+    '....GGGGggggPPPp....',
+    '..GGGGggggPPPphhhh..',
+    '.LGGggggPPPpgggghhR.',
+    '.LLLggPPPpggggggRRR.',
+    '.LLLLPPpggggggRRRRR.',
+    '..LLLLLggggggRRRRR..',
+    '....LLLLLggRRRRR....',
+    '.....LLLLLRRRR......',
+    '.......LLLRRR.......',
+    '.........LR.........',
+]
+
+# Diorama: a block of the world, a gold arrow turning round its foot.
+VIEW_3D_PAL = {"G": "#c8e494", "g": "#98c870", "h": "#72a256", "k": "#4e7a3e", "L": "#c08a56", "l": "#a4703e", "R": "#7c5438", "r": "#64422c", "T": "#78bc5a", "U": "#4a8a40", "V": "#2e5e2e", "t": "#6a4428", "A": "#ffe48a", "a": "#e8b038", "b": "#a87020"}
+VIEW_3D = [
+    '....................',
+    '....................',
+    '.......TTU..........',
+    '......TTTUU.........',
+    '......TTUUV.........',
+    '.......UVVGhh.......',
+    '.....GGGtggghhh.....',
+    '...GGGGgtkgggghhh...',
+    '...hhggggggggggkk...',
+    '...LLhhggggggkkRR...',
+    '...LLLLhhggkkRRRR...',
+    '...LLLLLLhkRRRRRR...',
+    '...LLllLLLRRRRRRR...',
+    'a..LLLLLLLRRRrrRR...',
+    'aa...LLLlLRRRRR.....',
+    'baa....LLLRRr.A.....',
+    '.baaa....LR...AAA...',
+    '..bbaaaaaaaaaaaAAAA.',
+    '....bbbbbbbbbbaAAb..',
+    '..............ab....',
+]
+
+# Point of view: a camera from the front, its big lens catching the light.
+VIEW_POV_PAL = {"K": "#4e4856", "k": "#2e2834", "S": "#eef2f8", "s": "#aab2c4", "m": "#7a8296", "L": "#16141e", "B": "#4a7ad0", "b": "#2a4a90", "H": "#cfe8ff", "R": "#f0483c"}
+VIEW_POV = [
+    '....................',
+    '....................',
+    '....................',
+    '..sss......sssss....',
+    '.sSSSs....sSSSSSs...',
+    'sSSSSSSSSSSSSSSSSsm.',
+    'KKKKKKKmmmmmKKKKKKk.',
+    'KKKKKKmLLLLLmKKRKKk.',
+    'KKKKKmLbbbbbLmKKKKk.',
+    'KKKKmLbbHHbbbLmKKKk.',
+    'KKKKmLbbHBbbbLmKKKk.',
+    'KKKKmLbbbbbbbLmKKKk.',
+    'KKKKmLbbbbbbbLmKKKk.',
+    'KKKKKmLbbbbbLmKKKKk.',
+    'KKKKKKmLLLLLmKKKKKk.',
+    'kkkkkkkmmmmmkkkkkkk.',
+]
+
+
 def rows_grid(rows, top=1):
     g = G(20, 20)
     for y, r in enumerate(rows): g.at(0, y + top, r)
@@ -206,6 +277,9 @@ ICONS = {
     'heart': (rows_grid(HEART, 1), HEART_PAL),
     'star': (star(), STAR_PAL),
     'spellbook': (rows_grid(TOME, 2), TOME_PAL),
+    'view_iso': (rows_grid(VIEW_ISO, 0), VIEW_ISO_PAL),
+    'view_3d': (rows_grid(VIEW_3D, 0), VIEW_3D_PAL),
+    'view_pov': (rows_grid(VIEW_POV, 0), VIEW_POV_PAL),
 }
 
 if __name__ == '__main__':

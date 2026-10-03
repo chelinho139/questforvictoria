@@ -15,7 +15,7 @@ import { itemIcon, itemDrop, backpackIcon, hammerIcon } from './itemArt';
 import { campfireFrames, forgeFrames } from './structureArt';
 import { npcFrames } from './npcArt';
 import { creatureFrames } from './creatureArt';
-import { scrollIcon, cogIcon, bookIcon, eyeIcon, flameIcon, heartIcon, starIcon, spellbookIcon } from './uiIcons';
+import { scrollIcon, cogIcon, bookIcon, eyeIcon, flameIcon, heartIcon, starIcon, spellbookIcon, view_isoIcon, view_3dIcon, view_povIcon } from './uiIcons';
 import { SKILL_ICONS } from './skillIcons';
 import type { NpcId } from '../../data/npcs';
 import { NPC_IDS } from '../../data/npcs';
@@ -555,6 +555,9 @@ export function textureJobs(scene: Phaser.Scene): TextureJob[] {
         add(Tex.icon('quests'), scrollIcon());
         add(Tex.icon('settings'), cogIcon());
         add(Tex.icon('help'), bookIcon());
+        add(Tex.icon('view_iso'), view_isoIcon());
+        add(Tex.icon('view_diorama'), view_3dIcon());
+        add(Tex.icon('view_pov'), view_povIcon());
         add(Tex.icon('menu'), menuIcon());
         add(Tex.icon('talents'), starIcon());
         add(Tex.icon('spellbook'), spellbookIcon());

@@ -92,6 +92,8 @@ export function createConfig(scenes: (typeof Phaser.Scene)[]): Phaser.Types.Core
     width: w,
     height: h,
     render: { pixelArt: true, antialias: false, roundPixels: true },
+    // see-through where nothing is drawn: the 3D views draw the world on a canvas underneath
+    transparent: true,
     // We size the canvas in physical pixels ourselves and shrink it to CSS size with zoom.
     scale: { mode: Phaser.Scale.NONE, zoom: 1 / dpr() },
     input: { activePointers: 3 },

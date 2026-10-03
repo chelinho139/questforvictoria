@@ -115,7 +115,7 @@ About 20 × 30 tiles, entered through the chapel door.
 
 **Why the grey postman can't be fought:** he is a ghost bound to his round, not a creature of flesh. Walking up to him or clicking him says so: *"The grey postman turns his blank face toward you and is gone, like breath on a window. Whatever he is, steel can't reach him yet."* Nan and Father Odo both know him: *"Folk call him the Unsent. He's been walking the lanes since the bells. He never takes anything. He only leaves letters."* In Act III the heroes learn how to corner him.
 
-**Buying and selling:** talk to Tobin or Bram and choose *"Let me see what you have."* A trade window lists what they sell with prices; your bag is on the other side, and anything in it can be sold (for about a third of its price).
+**Buying and selling:** talk to Tobin or Bram and choose *"Let me see what you have."* A trade window lists what they sell with prices; your bag is on the other side, and anything worth a coin to them can be sold (for a twentieth of its price).
 
 ---
 
