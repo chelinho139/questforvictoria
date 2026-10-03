@@ -2,10 +2,11 @@ import Phaser from 'phaser';
 import type { Sim } from '../../sim/Sim';
 import { RISE_DUR } from '../../sim/Sim';
 import type { Enemy, Drop, Structure, NpcState, ObjectState, WandererState } from '../../sim/types';
+import type { Hero } from '../../sim/Hero';
 import { NPCS } from '../../data/npcs';
-import { Tile, T, isoX, isoY, MAP } from '../../sim/map';
+import { Tile, T, isoX, isoY } from '../../sim/map';
 import { Fonts, hex, PIXEL_SCALE } from '../config';
-import { Tex, WALL_H, TOWER_TOP } from './textures';
+import { Tex, WALL_H, TOWER_TOP, heroLookTexture } from './textures';
 import type { BuiltWorld } from './textures';
 import { artScale, artFrames, artAnim, frameKey, animKey, riderFit } from './art';
 import { PROPS } from '../../data/props';
@@ -51,6 +52,9 @@ export class WorldRenderer {
   private readonly structureViews = new Map<Structure, { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image }>();
   private readonly objectViews = new Map<ObjectState, Phaser.GameObjects.Image>();
   private readonly wandererViews = new Map<WandererState, Phaser.GameObjects.Image>();
+  /** The other players' heroes (online). */
+  private readonly otherViews = new Map<Hero, { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image; name: Phaser.GameObjects.Text; walkSeen: number; walkingT: number }>();
+  private lastNow = 0;
   private readonly npcViews = new Map<NpcState, { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image; name: Phaser.GameObjects.Text; mark: Phaser.GameObjects.Text }>();
   /** Static world sprites whose texture changes with the art style. */
   private readonly statics: { img: Phaser.GameObjects.Image; key: string; scaled: boolean }[] = [];
@@ -116,7 +120,7 @@ export class WorldRenderer {
         const c = Math.floor(o.wx / T);
         const r = Math.floor(o.wy / T);
         const open = (cc: number, rr: number) => {
-          const t = MAP[rr]?.[cc];
+          const t = sim.map.tile(cc, rr);
           return t !== undefined && t !== Tile.Wall && t !== Tile.Void && t !== Tile.Tower;
         };
         // a back wall faces a room (floor to its south or east) and has no room close in front of
@@ -197,6 +201,7 @@ export class WorldRenderer {
     this.npcViews.clear();
     this.objectViews.clear();
     this.wandererViews.clear();
+    this.otherViews.clear();
   }
 
   private mark(size: string, color: string): Phaser.GameObjects.Text {
@@ -240,9 +245,71 @@ export class WorldRenderer {
     this.drawStructures(now);
     this.drawObjects(now);
     this.drawNpcs(now);
+    this.drawOthers(now, g);
     this.drawWanderers(now);
     this.drawDrops(now);
     this.drawPlayer(now, g);
+  }
+
+  /** The other players' heroes: their look and gear, walking, swinging, jumping; a name and a health bar. */
+  private drawOthers(now: number, g: Phaser.GameObjects.Graphics): void {
+    const dt = this.lastNow ? Math.min(0.1, (now - this.lastNow) / 1000) : 0;
+    this.lastNow = now;
+    const others = this.sim.others;
+    for (const [o, v] of this.otherViews) {
+      if (others.includes(o)) continue;
+      for (const x of [v.img, v.shadow, v.name]) x.destroy();
+      this.otherViews.delete(o);
+    }
+    for (const o of others) {
+      const key = heroLookTexture(this.scene, o.look, o.equip);
+      let v = this.otherViews.get(o);
+      if (!v) {
+        v = {
+          img: this.image(0, 0, key).setOrigin(0.5, 1),
+          shadow: this.image(0, 0, Tex.shadow).setAlpha(0.3),
+          name: this.mark('8px', '#bfe0ff').setOrigin(0.5, 1),
+          walkSeen: o.walk,
+          walkingT: 0,
+        };
+        this.otherViews.set(o, v);
+      }
+      // walking while its walk counter keeps moving
+      if (o.walk !== v.walkSeen) {
+        v.walkSeen = o.walk;
+        v.walkingT = 0.2;
+      } else v.walkingT = Math.max(0, v.walkingT - dt);
+      const n = (group: string) => artAnim(key, group);
+      const jp = o.jumpT >= 0 ? Math.min(1, o.jumpT / 0.38) : -1;
+      let fk: string;
+      if (jp >= 0 && n('jump')) fk = animKey(key, 'jump', jp < 0.35 ? 0 : Math.min(n('jump') - 1, jp < 0.7 ? 1 : n('jump') - 1));
+      else if (o.atkAnimT > 0 && n('attack')) fk = animKey(key, 'attack', Math.min(n('attack') - 1, Math.floor((1 - o.atkAnimT / 0.36) * n('attack'))));
+      else if (v.walkingT > 0 && artFrames(key) > 1) fk = frameKey(key, Math.floor(now / 95) % artFrames(key));
+      else if (n('idle')) fk = animKey(key, 'idle', Math.floor(now / 380) % n('idle'));
+      else fk = frameKey(key, 0);
+      const qx = isoX(o.x, o.y);
+      const qy = isoY(o.x, o.y);
+      const z = jp >= 0 ? 16 * 4 * jp * (1 - jp) : 0;
+      const depth = this.depthAt(o.x, o.y);
+      v.img
+        .setTexture(fk)
+        .setPosition(Math.round(qx), Math.round(qy + 8 - z))
+        .setFlipX(o.face < 0)
+        .setDepth(depth)
+        .setAlpha(o.dead ? 0.35 : 1)
+        .setRotation(o.dead ? 0.6 : 0);
+      if (o.flash > 0) v.img.setTintFill(0xffffff);
+      else v.img.clearTint();
+      v.shadow.setPosition(qx, qy + 5).setDisplaySize(26, 13).setDepth(depth - 0.5);
+      const top = qy + 8 - z - v.img.frame.height;
+      v.name.setText(`${o.name} · ${o.level}`).setPosition(Math.round(qx), Math.round(top - 6)).setVisible(true);
+      // a small health bar under the name
+      const w = 22;
+      const x0 = Math.round(qx - w / 2);
+      const y0 = Math.round(top - 4);
+      g.fillStyle(hex('#0a0d14')).fillRect(x0 - 1, y0 - 1, w + 2, 4);
+      g.fillStyle(hex('#5fc46a')).fillRect(x0, y0, Math.round((w * Math.max(0, o.hp)) / Math.max(1, o.hpMax)), 2);
+    }
   }
 
   /** The grey postman: walking his round, fading as you come near. */

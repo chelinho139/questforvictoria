@@ -20,8 +20,8 @@ app.get(['/lore', '/lore.html'], (req, res) => {
 });
 
 // Build specs (docs/<name>.md) read the same way: /act1.html shows docs/act1.md.
-const SPECS = { act1: 'Prologue & Act I spec' };
-app.get(/^\/(act1)(\.html)?$/, (req, res) => {
+const SPECS = { act1: 'Prologue & Act I spec', online: 'Online co-op plan' };
+app.get(/^\/(act1|online)(\.html)?$/, (req, res) => {
   const name = req.params[0];
   try {
     res.setHeader('Cache-Control', 'no-cache');
@@ -51,6 +51,24 @@ app.use(
   })
 );
 
-app.listen(PORT, () => {
+const http = app.listen(PORT, () => {
   console.log(`Quest For Victoria at http://localhost:${PORT}`);
 });
+
+// The online game: rooms and play over a WebSocket at /ws (built by build.js into dist/server).
+// Dev commands (the settings panel's cheats) are on unless NODE_ENV is production.
+try {
+  const { attachGameServer } = require('./dist/server/game-server.js');
+  // characters live in server-data/ (or QFV_DATA_DIR: on a server, somewhere a deploy doesn't replace)
+  const dataDir = process.env.QFV_DATA_DIR || path.join(__dirname, 'server-data');
+  const game = attachGameServer(http, { dev: process.env.NODE_ENV !== 'production', dataDir });
+  console.log('Online play on /ws');
+  // stopping (a deploy, Ctrl+C, a dev restart): write everyone's character first
+  for (const signal of ['SIGINT', 'SIGTERM'])
+    process.once(signal, () => {
+      game.close();
+      process.exit(0);
+    });
+} catch (err) {
+  console.warn(`Online play is off (run npm run build first): ${err.message}`);
+}

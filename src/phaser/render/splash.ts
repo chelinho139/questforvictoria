@@ -325,6 +325,11 @@ export class Splash {
     this.bg.setTexture(BG_KEY);
   }
 
+  /** The menu is up: the loading bar and its label have done their job. */
+  hideBar(): void {
+    this.scene.tweens.add({ targets: [this.frame, this.inset, this.bar, this.label], alpha: 0, duration: 300 });
+  }
+
   setLabel(text: string): void {
     this.label.setText(text);
   }

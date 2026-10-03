@@ -63,7 +63,15 @@ export const HD_HERO_LABELS: Record<HdHeroId, string> = {
 export const HD_HERO_IDS = Object.keys(HD_HERO_LABELS) as HdHeroId[];
 const HERO_KEY = 'qfv-hd-hero';
 
+/** The look of the character being played (single player or online), for this visit. */
+let playingLook: HdHeroId | null = null;
+
+export function playLook(id: string): void {
+  playingLook = (HD_HERO_IDS as string[]).includes(id) ? (id as HdHeroId) : HD_HERO_IDS[0];
+}
+
 export function hdHeroId(): HdHeroId {
+  if (playingLook) return playingLook;
   try {
     const v = localStorage.getItem(HERO_KEY) as HdHeroId | null;
     return v && HD_HERO_IDS.includes(v) ? v : HD_HERO_IDS[0];
@@ -73,6 +81,7 @@ export function hdHeroId(): HdHeroId {
 }
 
 export function setHdHeroId(id: HdHeroId): void {
+  if (playingLook) playingLook = id;
   try {
     localStorage.setItem(HERO_KEY, id);
   } catch {

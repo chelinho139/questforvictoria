@@ -4,7 +4,7 @@
     "module": "ES2020",
     "moduleResolution": "bundler",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "rootDir": "./src",
+    "rootDir": ".",
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
@@ -16,5 +16,5 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "tests/**/*"]
 }

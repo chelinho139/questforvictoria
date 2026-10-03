@@ -44,16 +44,6 @@ export const TILE_CHARS: Record<string, TileId> = {
   '&': Tile.Void,
 };
 
-/**
- * The map of the region you are in. These are live bindings: entering a region swaps
- * them (loadMap), and every module that imports them sees the new map.
- */
-export let MAP: number[][] = [[Tile.Grass]];
-export let COLS = 1;
-export let ROWS = 1;
-export let MAP_W = T;
-export let MAP_H = T;
-
 /** Turn a region layout into tiles. Every row must be the same width. */
 export function parseLayout(rows: string[], name = 'layout'): number[][] {
   const w = rows[0]?.length ?? 0;
@@ -65,46 +55,6 @@ export function parseLayout(rows: string[], name = 'layout'): number[][] {
       return t;
     });
   });
-}
-
-/** Tiles under buildings and big props (data/props.ts). */
-const propSolid = new Set<number>();
-
-/** Mark a tile as covered by a building (cleared by loadMap). */
-export function setPropSolid(c: number, r: number): void {
-  propSolid.add(r * COLS + c);
-}
-
-/** True when a building stands on tile (c, r). */
-export function propAt(c: number, r: number): boolean {
-  return propSolid.has(r * COLS + c);
-}
-
-/** Edge tiles you may walk onto (the exits); every other edge tile is a wall. */
-const openEdge = new Set<number>();
-
-/** Off the map, or on its edge where there is no exit. */
-export function edgeClosed(c: number, r: number): boolean {
-  if (r < 0 || c < 0 || r >= ROWS || c >= COLS) return true;
-  const edge = r === 0 || c === 0 || r === ROWS - 1 || c === COLS - 1;
-  return edge && !openEdge.has(r * COLS + c);
-}
-
-/**
- * Make `grid` the current map (clears mined rocks and built blockers from the last one).
- * `open` lists the edge tiles that are exits, so you can walk onto them.
- */
-export function loadMap(grid: number[][], open: [number, number][] = []): void {
-  MAP = grid;
-  ROWS = grid.length;
-  COLS = grid[0].length;
-  MAP_W = COLS * T;
-  MAP_H = ROWS * T;
-  brokenRocks.clear();
-  blockers.clear();
-  openEdge.clear();
-  propSolid.clear();
-  for (const [c, r] of open) openEdge.add(r * COLS + c);
 }
 
 /** Tiles that block their whole square. Rocks are not among them: see the rock colliders below. */
@@ -120,77 +70,131 @@ export function isSolidTile(t: number): boolean {
 export const ROCK_R = 9;
 /** The boulder sits a little south of its tile centre (world px along x and y). */
 const ROCK_OFF = 2;
-const brokenRocks = new Set<number>();
 
 /** Centre of the rock on tile (c, r). */
 export function rockCentre(c: number, r: number): { x: number; y: number } {
   return { x: c * T + T / 2 + ROCK_OFF, y: r * T + T / 2 + ROCK_OFF };
 }
 
-/** True while the rock on tile (c, r) stands (it is not rubble). */
-export function rockStands(c: number, r: number): boolean {
-  return MAP[r]?.[c] === Tile.Rock && !brokenRocks.has(r * COLS + c);
-}
-
-/** Mined to rubble (or grown back). */
-export function setRockBroken(c: number, r: number, broken: boolean): void {
-  if (broken) brokenRocks.add(r * COLS + c);
-  else brokenRocks.delete(r * COLS + c);
-}
-
-/** Solid things built in the world (a forge): a circle to collide with, keyed by their tile. */
-const blockers = new Map<number, { x: number; y: number; r: number }>();
-
-export function setBlocker(c: number, r: number, b: { x: number; y: number; r: number } | null): void {
-  if (b) blockers.set(r * COLS + c, b);
-  else blockers.delete(r * COLS + c);
-}
-
-/** True when pathfinding must go around tile (c, r): a standing rock or something built there. */
-export function tileObstructed(c: number, r: number): boolean {
-  return rockStands(c, r) || blockers.has(r * COLS + c);
-}
-
-export function resetRocks(): void {
-  brokenRocks.clear();
-  blockers.clear();
-}
-
 /**
- * True if a mover at (x,y) touches a standing rock. Against rocks a mover counts only its
- * feet (a box at most 5×4), so it stops where the sprites meet, not a body-width early.
+ * One region's ground and everything solid on it: the tiles, the exits through its edge,
+ * buildings, mined rocks and things built or standing there. Every region the game has
+ * open has its own (a server holds many at once).
  */
-function hitsRock(x: number, y: number, bw: number, bh: number): boolean {
-  const hw = Math.min(bw, 5);
-  const hh = Math.min(bh, 4);
-  const reach = ROCK_R + ROCK_OFF + 4;
-  const c0 = Math.floor((x - hw - reach) / T);
-  const c1 = Math.floor((x + hw + reach) / T);
-  const r0 = Math.floor((y - hh - reach) / T);
-  const r1 = Math.floor((y + hh + reach) / T);
-  for (let r = r0; r <= r1; r++)
-    for (let c = c0; c <= c1; c++) {
-      const b = blockers.get(r * COLS + c);
-      const k = b ?? (rockStands(c, r) ? rockCentre(c, r) : null);
-      if (!k) continue;
-      const rad = b ? b.r : ROCK_R;
-      const dx = Math.max(0, Math.abs(k.x - x) - hw);
-      const dy = Math.max(0, Math.abs(k.y - y) - hh);
-      if (dx * dx + dy * dy < rad * rad) return true;
-    }
-  return false;
-}
+export class RegionMap {
+  readonly grid: number[][];
+  readonly cols: number;
+  readonly rows: number;
+  /** Size in world pixels. */
+  readonly w: number;
+  readonly h: number;
+  /** Edge tiles you may walk onto (the exits); every other edge tile is a wall. */
+  private readonly openEdge = new Set<number>();
+  /** Tiles under buildings and big props (data/props.ts). */
+  private readonly propSolid = new Set<number>();
+  private readonly brokenRocks = new Set<number>();
+  /** Solid things built or standing in the world (a forge, a person): a circle to collide with, keyed by their tile. */
+  private readonly blockers = new Map<number, { x: number; y: number; r: number }>();
 
-export function solidAt(x: number, y: number): boolean {
-  const c = Math.floor(x / T);
-  const r = Math.floor(y / T);
-  if (edgeClosed(c, r)) return true;
-  return isSolidTile(MAP[r][c]) || propSolid.has(r * COLS + c);
-}
+  /** `open` lists the edge tiles that are exits, so you can walk onto them. */
+  constructor(grid: number[][], open: [number, number][] = []) {
+    this.grid = grid;
+    this.rows = grid.length;
+    this.cols = grid[0].length;
+    this.w = this.cols * T;
+    this.h = this.rows * T;
+    for (const [c, r] of open) this.openEdge.add(r * this.cols + c);
+  }
 
-/** True if a box of half-size (hw,hh) centred at (x,y) overlaps something solid. */
-export function blocked(x: number, y: number, hw: number, hh: number): boolean {
-  return solidAt(x - hw, y - hh) || solidAt(x + hw, y - hh) || solidAt(x - hw, y + hh) || solidAt(x + hw, y + hh) || hitsRock(x, y, hw, hh);
+  tile(c: number, r: number): number | undefined {
+    return this.grid[r]?.[c];
+  }
+
+  /** Off the map, or on its edge where there is no exit. */
+  edgeClosed(c: number, r: number): boolean {
+    if (r < 0 || c < 0 || r >= this.rows || c >= this.cols) return true;
+    const edge = r === 0 || c === 0 || r === this.rows - 1 || c === this.cols - 1;
+    return edge && !this.openEdge.has(r * this.cols + c);
+  }
+
+  /** Mark a tile as covered by a building. */
+  setPropSolid(c: number, r: number): void {
+    this.propSolid.add(r * this.cols + c);
+  }
+
+  /** True when a building stands on tile (c, r). */
+  propAt(c: number, r: number): boolean {
+    return this.propSolid.has(r * this.cols + c);
+  }
+
+  /** True while the rock on tile (c, r) stands (it is not rubble). */
+  rockStands(c: number, r: number): boolean {
+    return this.grid[r]?.[c] === Tile.Rock && !this.brokenRocks.has(r * this.cols + c);
+  }
+
+  /** Mined to rubble (or grown back). */
+  setRockBroken(c: number, r: number, broken: boolean): void {
+    if (broken) this.brokenRocks.add(r * this.cols + c);
+    else this.brokenRocks.delete(r * this.cols + c);
+  }
+
+  setBlocker(c: number, r: number, b: { x: number; y: number; r: number } | null): void {
+    if (b) this.blockers.set(r * this.cols + c, b);
+    else this.blockers.delete(r * this.cols + c);
+  }
+
+  /** True when pathfinding must go around tile (c, r): a standing rock or something built there. */
+  tileObstructed(c: number, r: number): boolean {
+    return this.rockStands(c, r) || this.blockers.has(r * this.cols + c);
+  }
+
+  /** A tile a walker may step on (for pathfinding). */
+  walkable(c: number, r: number): boolean {
+    return !this.edgeClosed(c, r) && !isSolidTile(this.grid[r][c]) && !this.propAt(c, r) && !this.tileObstructed(c, r);
+  }
+
+  /**
+   * True if a mover at (x,y) touches a standing rock. Against rocks a mover counts only its
+   * feet (a box at most 5×4), so it stops where the sprites meet, not a body-width early.
+   */
+  private hitsRock(x: number, y: number, bw: number, bh: number): boolean {
+    const hw = Math.min(bw, 5);
+    const hh = Math.min(bh, 4);
+    const reach = ROCK_R + ROCK_OFF + 4;
+    const c0 = Math.floor((x - hw - reach) / T);
+    const c1 = Math.floor((x + hw + reach) / T);
+    const r0 = Math.floor((y - hh - reach) / T);
+    const r1 = Math.floor((y + hh + reach) / T);
+    for (let r = r0; r <= r1; r++)
+      for (let c = c0; c <= c1; c++) {
+        const b = this.blockers.get(r * this.cols + c);
+        const k = b ?? (this.rockStands(c, r) ? rockCentre(c, r) : null);
+        if (!k) continue;
+        const rad = b ? b.r : ROCK_R;
+        const dx = Math.max(0, Math.abs(k.x - x) - hw);
+        const dy = Math.max(0, Math.abs(k.y - y) - hh);
+        if (dx * dx + dy * dy < rad * rad) return true;
+      }
+    return false;
+  }
+
+  solidAt(x: number, y: number): boolean {
+    const c = Math.floor(x / T);
+    const r = Math.floor(y / T);
+    if (this.edgeClosed(c, r)) return true;
+    return isSolidTile(this.grid[r][c]) || this.propSolid.has(r * this.cols + c);
+  }
+
+  /** True if a box of half-size (hw,hh) centred at (x,y) overlaps something solid. */
+  blocked(x: number, y: number, hw: number, hh: number): boolean {
+    return (
+      this.solidAt(x - hw, y - hh) ||
+      this.solidAt(x + hw, y - hh) ||
+      this.solidAt(x - hw, y + hh) ||
+      this.solidAt(x + hw, y + hh) ||
+      this.hitsRock(x, y, hw, hh)
+    );
+  }
 }
 
 // ---------- isometric projection ----------

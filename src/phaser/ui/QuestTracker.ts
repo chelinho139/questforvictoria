@@ -41,7 +41,8 @@ export class QuestTracker {
 
   render(): void {
     const s = this.sim;
-    const mine = QUEST_IDS.filter(id => s.quests[id]?.state === 'active');
+    // my quests still to hand in (the party's progress, my own turn-in)
+    const mine = QUEST_IDS.filter(id => ['active', 'ready'].includes(s.questStatus(id)));
     const active = [...mine.filter(id => QUESTS[id].main), ...mine.filter(id => !QUESTS[id].main)];
     const goals = (id: string) =>
       QUESTS[id].goals

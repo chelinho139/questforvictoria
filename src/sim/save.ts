@@ -37,9 +37,20 @@ export interface SaveData {
   built: Record<string, Structure[]>;
 }
 
-/** A short line for the start screen: who, how far, where. */
-export interface SaveSummary {
-  level: number;
-  region: string;
-  at: number;
+/** A save this version of the game can read. */
+export function readableSave(d: SaveData | null | undefined): d is SaveData {
+  return !!d && d.v === SAVE_VERSION && typeof d.region === 'string' && !!d.quests && !!d.flags;
+}
+
+/**
+ * The story a hero knows after playing in someone else's game: everything they knew, plus
+ * what they saw happen there. The room's flags win (a flag can be cleared); a quest never
+ * goes back from done; documents found are kept in the order found.
+ */
+export function mergeStory(own: SaveData, room: SaveData): Pick<SaveData, 'quests' | 'flags' | 'journal'> {
+  const quests: SaveData['quests'] = { ...own.quests };
+  for (const [id, q] of Object.entries(room.quests)) if (quests[id]?.state !== 'done') quests[id] = q;
+  const journal = own.journal.slice();
+  for (const id of room.journal) if (!journal.includes(id)) journal.push(id);
+  return { quests, flags: { ...own.flags, ...room.flags }, journal };
 }

@@ -2,15 +2,17 @@ import Phaser from 'phaser';
 import { SceneKeys } from '../SceneKeys';
 import { textureJobs, applyStyleTextures } from '../render/textures';
 import type { TextureJob } from '../render/textures';
-import { readSpriteStyle, setSpriteStyle, writeSpriteStyle, spriteStyle, hdHeroId, setHdHeroId } from '../render/art';
-import { CharacterSelect } from '../ui/CharacterSelect';
-import type { Choice } from '../ui/CharacterSelect';
-import { playerName, setPlayerName } from '../player';
+import { readSpriteStyle, setSpriteStyle, writeSpriteStyle, spriteStyle, hdHeroId, playLook } from '../render/art';
+import { Lobby } from '../ui/Lobby';
+import { SinglePlayer } from '../ui/SinglePlayer';
+import { MainMenu } from '../ui/MainMenu';
+import type { MenuPick } from '../ui/MainMenu';
+import { playAs } from '../player';
 import { buildUiKit } from '../render/uiKit';
 import { buildLogo, Splash } from '../render/splash';
 import { devSkipIntro, devArtReview } from '../dev/DevMenu';
-import { readSave } from '../saveStore';
-import { REGIONS } from '../../data/regions';
+import { lastLocalChar, createLocalChar, localCharInfos } from '../saveStore';
+import type { CharInfo } from '../../net/protocol';
 
 /** The loading screen stays up at least this long so the logo can be seen. */
 const MIN_SPLASH_MS = 1600;
@@ -44,6 +46,13 @@ export class BootScene extends Phaser.Scene {
     buildUiKit(this);
     this.jobs = textureJobs(this);
     if (devSkipIntro()) {
+      // straight in: the single-player character played last (or a first one)
+      const ch = lastLocalChar() ?? this.firstLocalChar();
+      if (ch) {
+        this.registry.set('localChar', ch.id);
+        playAs(ch.name);
+        playLook(ch.look);
+      }
       for (const j of this.jobs) j.run();
       this.finish();
       return;
@@ -80,7 +89,7 @@ export class BootScene extends Phaser.Scene {
     const elapsed = time - this.startT;
     splash.update(time, elapsed, this.next / this.jobs.length);
     const loaded = this.next >= this.jobs.length && splash.full;
-    if (loaded) splash.setLabel('Ready!');
+    if (loaded && this.chosen === null) splash.setLabel('Ready!');
     if (loaded && (elapsed >= MIN_SPLASH_MS || this.wantsSkip)) {
       if (this.chosen === null) this.openStartScreen();
       if (!this.chosen) return;
@@ -90,30 +99,60 @@ export class BootScene extends Phaser.Scene {
     }
   }
 
-  /** Name and hero, over the still-animating night sky. */
-  private openStartScreen(): void {
-    this.chosen = false;
-    this.splash?.setLabel('');
-    const save = readSave();
-    const saved = save
-      ? { level: save.level, place: REGIONS[save.region]?.name ?? 'somewhere', when: new Date(save.at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) }
-      : null;
-    new CharacterSelect({ name: playerName(), hero: hdHeroId() }, choice => this.applyChoice(choice), saved).open();
+  /** With the start skipped and no characters yet: make one (named Hero). */
+  private firstLocalChar(): CharInfo | null {
+    const made = createLocalChar('Hero', hdHeroId());
+    return typeof made === 'string' ? null : (localCharInfos().find(c => c.id === made.id) ?? null);
   }
 
-  /** Save the name and hero; the HD heroes live in the HD style, so switch to it if needed. */
-  private applyChoice(choice: Choice): void {
-    setPlayerName(choice.name);
-    this.registry.set('startMode', choice.mode);
-    const heroChanged = choice.hero !== hdHeroId();
-    setHdHeroId(choice.hero);
-    const styleChanged = spriteStyle() !== 'hdsil';
-    if (styleChanged) {
+  /** Single Player | Multi Player, under the logo, over the still-animating night sky. */
+  private openStartScreen(first: MenuPick = 'single'): void {
+    this.chosen = false;
+    this.splash?.hideBar();
+    new MainMenu(lastLocalChar(), p => (p === 'single' ? this.openSinglePlayer() : this.openLobby()), first).open();
+  }
+
+  /** Single player: your characters in this browser; Play starts the chosen one's game. */
+  private openSinglePlayer(): void {
+    new SinglePlayer(
+      ch => {
+        this.playLocal(ch);
+        this.chosen = true;
+      },
+      () => this.openStartScreen('single')
+    ).open();
+  }
+
+  /** Play this single-player character: their game, their name and look. */
+  private playLocal(ch: CharInfo): void {
+    this.registry.set('localChar', ch.id);
+    this.wear(ch);
+  }
+
+  /**
+   * Online: your characters, then the rooms. The game starts once the server has shown us
+   * the world, as the chosen character.
+   */
+  private openLobby(): void {
+    new Lobby(
+      (sim, ch) => {
+        this.wear(ch);
+        this.registry.set('netSim', sim);
+        this.chosen = true;
+      },
+      () => this.openStartScreen('multi')
+    ).open();
+  }
+
+  /** Be this character for this visit: their name on the HUD, their look (the HD heroes live in the HD style). */
+  private wear(ch: CharInfo): void {
+    playAs(ch.name);
+    playLook(ch.look);
+    if (spriteStyle() !== 'hdsil') {
       setSpriteStyle('hdsil');
       writeSpriteStyle('hdsil');
     }
-    if (heroChanged || styleChanged) applyStyleTextures(this, spriteStyle());
-    this.chosen = true;
+    applyStyleTextures(this, spriteStyle());
   }
 
   private finish(): void {

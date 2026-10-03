@@ -27,7 +27,9 @@ import type { SpriteStyle } from '../render/art';
 import type { HdHeroId } from '../render/hdHeroes';
 import type { BuiltWorld } from '../render/textures';
 import type { MobileHudScene } from './MobileHudScene';
-import { readSave, writeSave, clearSave } from '../saveStore';
+import { readSave, writeSave } from '../saveStore';
+import type { NetSim } from '../../net/NetSim';
+import { OnlineBadge } from '../ui/OnlineBadge';
 import { SceneBox } from '../ui/SceneBox';
 import { BossBar } from '../ui/BossBar';
 
@@ -61,19 +63,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.sim = new Sim();
+    // online, the lobby has already joined a room: play in it (the server keeps the game)
+    const net = this.registry.get('netSim') as NetSim | undefined;
+    this.registry.remove('netSim');
+    this.sim = net ?? new Sim();
     this.registry.set('sim', this.sim);
-    // carry on from the save (the default, e.g. when the start screen is skipped), or start over
-    const save = readSave();
-    if (this.registry.get('startMode') !== 'new' && save) this.sim.loadSave(save);
-    else clearSave();
+    // single player: the chosen character's adventure (a new one starts on the lakeshore)
+    const charId = net ? null : ((this.registry.get('localChar') as string | undefined) ?? null);
+    if (charId) {
+      const save = readSave(charId);
+      if (save) this.sim.loadSave(save);
+    }
     // the hero wears what the sim has equipped: redraw them whenever the gear changes
     this.wearGear();
     this.sim.events.on('bag', () => this.wearGear());
-    const built = buildRegionGround(this);
+    const built = buildRegionGround(this, this.sim.map);
     this.world = new WorldRenderer(this, this.sim, built);
     this.effects = new Effects(this, this.sim);
-    this.clouds = new Clouds(this);
+    this.clouds = new Clouds(this, this.sim.map.cols, this.sim.map.rows);
     this.cameras.main.setZoom(PIXEL_SCALE).setRoundPixels(true);
     // coming from the loading screen: fade up from black
     if (this.registry.get('fadeIn')) this.cameras.main.fadeIn(500, 0, 0, 0);
@@ -86,7 +93,10 @@ export class GameScene extends Phaser.Scene {
       this.rebuildWorld();
       this.camAt = null;
     });
-    this.setupAutosave();
+    if (net) {
+      const badge = new OnlineBadge(net);
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => badge.destroy());
+    } else if (charId) this.setupAutosave(charId);
     this.dev = new DevMenu(this.game, this.sim, this.lighting, this.clouds, this.effects);
     this.registry.set('dev', this.dev);
     this.inventory = new InventoryWindow(this.game, this.sim);
@@ -231,12 +241,12 @@ export class GameScene extends Phaser.Scene {
    * Autosave: shortly after anything that matters (a quest, a level, a region, gear, a
    * story flag), every 30 seconds while playing, and when the tab is hidden or closed.
    */
-  private setupAutosave(): void {
+  private setupAutosave(charId: string): void {
     let pending = 0;
     const saveNow = () => {
       window.clearTimeout(pending);
       pending = 0;
-      writeSave(this.sim.toSave());
+      writeSave(charId, this.sim.toSave());
     };
     const soon = () => {
       window.clearTimeout(pending);
@@ -265,18 +275,30 @@ export class GameScene extends Phaser.Scene {
     cam.fadeOut(280, 0, 0, 0);
     cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.sim.enterRegion(to, at);
-      cam.fadeIn(380, 0, 0, 0);
+      if (!this.sim.online) {
+        cam.fadeIn(380, 0, 0, 0);
+        return;
+      }
+      // online the server moves the hero: fade in when the new region arrives (or give up waiting)
+      let wait = 0;
+      const done = () => {
+        off();
+        window.clearTimeout(wait);
+        cam.fadeIn(380, 0, 0, 0);
+      };
+      const off = this.sim.events.on('region', done);
+      wait = window.setTimeout(done, 2500);
     });
   }
 
   /** A new region: build its ground, redraw the world, move the lights and clouds. */
   private rebuildWorld(): void {
     this.world.destroy();
-    const built = buildRegionGround(this);
+    const built = buildRegionGround(this, this.sim.map);
     this.world = new WorldRenderer(this, this.sim, built);
     this.placeStaticLights(built);
     this.lighting.setRing(this.sim.regionDef.ring, !!this.sim.regionDef.indoor);
-    this.clouds.relayout();
+    this.clouds.relayout(this.sim.map.cols, this.sim.map.rows);
     this.sim.log(this.sim.regionDef.name + '.', 't');
   }
 
@@ -333,7 +355,7 @@ export class GameScene extends Phaser.Scene {
       }
     });
     const next = DAY_PRESETS[(best + 1) % DAY_PRESETS.length];
-    this.sim.day.set(next.t);
+    this.sim.setDay(next.t);
     this.sim.log('Time set to ' + next.label + '.');
   }
 

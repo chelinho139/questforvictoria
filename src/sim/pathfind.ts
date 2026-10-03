@@ -1,4 +1,5 @@
-import { MAP, COLS, ROWS, T, isSolidTile, blocked, tileObstructed, edgeClosed, propAt } from './map';
+import { T } from './map';
+import type { RegionMap } from './map';
 
 export interface Pt {
   x: number;
@@ -9,10 +10,6 @@ export interface Pt {
 const GOAL_SEARCH_RADIUS = 5;
 /** Line-of-sight sampling step in world pixels. */
 const LOS_STEP = 4;
-
-function walkable(c: number, r: number): boolean {
-  return !edgeClosed(c, r) && !isSolidTile(MAP[r][c]) && !propAt(c, r) && !tileObstructed(c, r);
-}
 
 function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;
@@ -31,15 +28,15 @@ function clampIntoTile(p: Pt, c: number, r: number, hw: number, hh: number): Pt 
  * otherwise the nearest standable point in a nearby walkable tile (e.g. the lakeshore
  * when the lake is clicked). Null if nothing walkable is close.
  */
-export function resolveGoal(to: Pt, hw: number, hh: number): { pt: Pt; c: number; r: number } | null {
+export function resolveGoal(map: RegionMap, to: Pt, hw: number, hh: number): { pt: Pt; c: number; r: number } | null {
   const gc = Math.floor(to.x / T);
   const gr = Math.floor(to.y / T);
-  if (walkable(gc, gr) && !blocked(to.x, to.y, hw, hh)) return { pt: { x: to.x, y: to.y }, c: gc, r: gr };
+  if (map.walkable(gc, gr) && !map.blocked(to.x, to.y, hw, hh)) return { pt: { x: to.x, y: to.y }, c: gc, r: gr };
   let best: { pt: Pt; c: number; r: number } | null = null;
   let bd = Infinity;
   for (let r = gr - GOAL_SEARCH_RADIUS; r <= gr + GOAL_SEARCH_RADIUS; r++)
     for (let c = gc - GOAL_SEARCH_RADIUS; c <= gc + GOAL_SEARCH_RADIUS; c++) {
-      if (!walkable(c, r)) continue;
+      if (!map.walkable(c, r)) continue;
       const pt = clampIntoTile(to, c, r, hw, hh);
       const d = Math.hypot(pt.x - to.x, pt.y - to.y);
       if (d < bd) {
@@ -51,12 +48,12 @@ export function resolveGoal(to: Pt, hw: number, hh: number): { pt: Pt; c: number
 }
 
 /** True if a box of half-size (hw,hh) can slide in a straight line from a to b. */
-export function clearLine(a: Pt, b: Pt, hw: number, hh: number): boolean {
+export function clearLine(map: RegionMap, a: Pt, b: Pt, hw: number, hh: number): boolean {
   const d = Math.hypot(b.x - a.x, b.y - a.y);
   const n = Math.max(1, Math.ceil(d / LOS_STEP));
   for (let i = 1; i <= n; i++) {
     const k = i / n;
-    if (blocked(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k, hw, hh)) return false;
+    if (map.blocked(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k, hw, hh)) return false;
   }
   return true;
 }
@@ -72,14 +69,15 @@ const NEIGHBOURS: [number, number, number][] = [
  * string-pulled so the result is a few straight legs. The last point is the resolved
  * goal. Returns null when there is no route.
  */
-export function findPath(from: Pt, to: Pt, hw: number, hh: number): Pt[] | null {
-  const goal = resolveGoal(to, hw, hh);
+export function findPath(map: RegionMap, from: Pt, to: Pt, hw: number, hh: number): Pt[] | null {
+  const goal = resolveGoal(map, to, hw, hh);
   if (!goal) return null;
-  if (clearLine(from, goal.pt, hw, hh)) return [goal.pt];
+  if (clearLine(map, from, goal.pt, hw, hh)) return [goal.pt];
+  const COLS = map.cols;
 
   const sc = Math.floor(from.x / T);
   const sr = Math.floor(from.y / T);
-  const N = COLS * ROWS;
+  const N = COLS * map.rows;
   const idx = (c: number, r: number) => r * COLS + c;
   const g = new Float64Array(N).fill(Infinity);
   const f = new Float64Array(N).fill(Infinity);
@@ -116,8 +114,8 @@ export function findPath(from: Pt, to: Pt, hw: number, hh: number): Pt[] | null 
     for (const [dc, dr, cost] of NEIGHBOURS) {
       const nc = cc + dc;
       const nr = cr + dr;
-      if (!walkable(nc, nr)) continue;
-      if (dc && dr && (!walkable(cc + dc, cr) || !walkable(cc, cr + dr))) continue;
+      if (!map.walkable(nc, nr)) continue;
+      if (dc && dr && (!map.walkable(cc + dc, cr) || !map.walkable(cc, cr + dr))) continue;
       const ni = idx(nc, nr);
       if (closed[ni]) continue;
       const ng = g[cur] + cost;
@@ -147,7 +145,7 @@ export function findPath(from: Pt, to: Pt, hw: number, hh: number): Pt[] | null 
   let i = 0;
   while (i < pts.length) {
     let j = pts.length - 1;
-    while (j > i && !clearLine(anchor, pts[j], hw, hh)) j--;
+    while (j > i && !clearLine(map, anchor, pts[j], hw, hh)) j--;
     out.push(pts[j]);
     anchor = pts[j];
     i = j + 1;

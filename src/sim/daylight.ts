@@ -25,6 +25,12 @@ export class DayCycle {
     this.t = wrap01(t);
   }
 
+  /** How many times faster than the normal day the clock runs; 0 stops it. */
+  setSpeed(speed: number): void {
+    this.paused = speed === 0;
+    if (speed > 0) this.dayLengthS = DAY_LENGTH_S / speed;
+  }
+
   /** Clock text like "06:30". */
   get clock(): string {
     const mins = Math.floor(this.t * 24 * 60);

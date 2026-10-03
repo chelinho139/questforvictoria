@@ -6,14 +6,35 @@ A co-op campaign videogame. Web build on Phaser 3 + TypeScript.
 
 ```bash
 npm install
-npm run dev      # esbuild watch + static server on http://localhost:3000
-npm run build    # one-off minified bundle to public/dist/game.js
-npm run verify   # type-check + build
+npm run dev      # esbuild watch + server (game page and online play) on http://localhost:3000
+npm run build    # one-off bundles: public/dist/game.js (the browser) and dist/server/ (online play)
+npm test         # the automated tests (see Tests)
+npm run verify   # type-check + tests + build
+npm run bot      # a test player for online play (see Online co-op)
 ```
+
+## Tests
+
+`npm test` runs the tests in `tests/` with Node's own test runner (`node --test`, TypeScript through `tsx`). They take about 7 seconds and need no browser. `npm run verify` runs them too.
+
+| File | What it checks |
+|---|---|
+| `quests.test.ts` | Quests in a party: everyone takes it, anyone's kills count, each hands it in for their own reward once, late joiners, quests carried between games |
+| `save.test.ts` | Saves come back as they were; unreadable or old saves; joining brings only the hero; the story a guest takes home |
+| `rooms.test.ts` | Several heroes in one game: free roaming, regions closing and remembering, the server's check of each step, personal loot, dying and coming back |
+| `commands.test.ts` | The commands a browser may send: junk arguments are ignored, never crash; travel and dev commands |
+| `session.test.ts` | Snapshots: everything at first, then only what changed; who hears which events; changing region |
+| `store.test.ts` | The server's characters on disk: accounts by hashed key, unique names, the limit of 8, deleting, reloading, broken files |
+| `localStore.test.ts` | Single player's characters in the browser, and moving the old save into the first one |
+| `server.test.ts` | The real server over WebSockets: hello, hosting and joining, one room per character, saving on leaving and on stopping, junk messages, refused moves, no cheats in production |
+
+`tests/helpers.ts` has the shared pieces: a game with heroes and the opening scene clicked through, standing next to an NPC, running the clock, and a `localStorage` for Node.
 
 ## Layout
 
-- `src/sim/` — engine-free game rules: map, combat, skills, enemy AI, effects data (`Sim.ts` is the whole game state).
+- `src/sim/` — engine-free game rules. `Game.ts` is one campaign (the story, quests, the day, its regions and heroes); `Region.ts` is one place (its `RegionMap`, creatures, drops, trees, rocks, scenes); `Hero.ts` is one player. `Sim.ts` is the single-player facade the Phaser layer reads.
+- `src/net/` — online play shared by browser and server: the messages (`protocol.ts`), the whitelist of commands a browser may send (`commands.ts`), the browser's socket (`Connection.ts`) and `NetSim`, the Sim a browser plays online.
+- `src/server/` — the game server, bundled to `dist/server/` and started by `server.js`: rooms, the 20-a-second loop, and a `Session` per player that builds their snapshots.
 - `src/data/` — tunables and pixel-art sources: skills, enemies, icon/sprite maps.
 - `src/phaser/` — Phaser layer: `BootScene` is the loading screen (logo, progress bar) and builds every texture in steps, `GameScene` ticks the sim and renders the world, `PcHudScene` is the Stardew/Terraria-style PC HUD (parchment unit frames, wooden action bar, day dial with gold box), `MobileHudScene` is the one-thumb touch HUD kept for a mobile build. `PLATFORM` in `src/phaser/config.ts` picks one. The canvas fills the window at an integer pixel scale.
 - `public/` — static site; `public/dist/` is generated.
@@ -95,7 +116,8 @@ All art is generated in code at load time; there are no image files.
 - **Journal** (`src/data/docs.ts`): diary pages, letters, proclamations, notes and lace favours you find go into the Journal tab of the quest log (`J`), grouped by kind, unread ones marked; click one to read it.
 - **Scenes** (`src/data/scenes.ts`): scripted beats played while you watch: lines (click, Space or Enter for the next), waits, fades, the camera looking at a tile, banners and effects. Input and fighting wait while a scene plays; each scene plays once per game.
 - **Bosses** (`EnemyDef.boss`): a big health bar at the top while you fight one, phases as its health falls (a `bossPhase` event for its behaviour), and a story flag when it dies; give its spawn `when: { not: flag }` so it stays dead.
-- **Saving** (`src/sim/save.ts`, `src/phaser/saveStore.ts`): one campaign save in the browser (localStorage `qfv-save`), written shortly after anything important (a quest, a level, a region, gear, a flag), every 30 seconds, and when the tab is hidden. The start screen offers **Continue** (level, region and when it was saved) or **New game** (asks once more before replacing the save). With the loading screen skipped, the game carries on from the save.
+- **Characters and saving** (`src/sim/save.ts`, `src/phaser/saveStore.ts`): single player has characters like multi player, up to 8, each with their own campaign save in the browser (the list in localStorage `qfv-chars`, each save in `qfv-save:<id>`). A save is written shortly after anything important (a quest, a level, a region, gear, a flag), every 30 seconds, and when the tab is hidden. The old single save (`qfv-save`) becomes the first character the first time the game opens, with its name and hero. With the loading screen skipped, the game carries on as the character played last.
+- **The start** (`src/phaser/ui/`): `MainMenu` (Single Player | Multi Player, under the logo; Single Player shows the character played last). Both modes then use the same two screens: `CharacterList` ("Your characters": a card per character in their own look and gear, with level, place and when last played; New character, Delete (asks once more), Play, Back; arrow keys, Enter, Esc) and `NewCharacter` (a name and one of the HD heroes, with the animated preview). `SinglePlayer` keeps its characters in the browser, and Play starts the game; `Lobby` keeps them on the server, and Play goes on to the rooms.
 - **Specs**: the plan for each slice of the campaign is a Markdown file in `docs/` read in the same book viewer, e.g. http://localhost:3000/act1.html for `docs/act1.md`.
 - **The regions so far**: **the Greenmarch** (72×60, ring 0: Lake Ellory, the shore where you wake, Aldric's camp and tent, the hollow oak and Marcian's willow, two barrows, the goblins' camp; the road north to Millbrook; Ashford closed by the Steward's barricade and the Greyfang Hills by a rockfall), **Millbrook** (64×56, ring 1: the square with the well, Tobin's stall and Bram's smithy, the mill on the Lisle with its turning wheel, the bridge, Nan's cottage, the chapel and churchyard, blighted grass, wilted fields; the north road closed by black thorns), and **the Bell Tower** (indoors: the ground floor, the stair, the belfry). The Test Field and the Art Yard (every building and prop, for checking art) are dev-only.
 - **Maps** are composed by `tools/world/maps.py` (lakes, rivers and roads as strokes, forest edges, fields, scattered trees and rocks, buildings and marks), which writes each region's `layout` and `props`: `python3 maps.py write`, `python3 maps.py preview millbrook out.png`. `python3 check.py greenmarch millbrook belltower` checks that every person, creature, object and spot stands on ground you can walk on.
@@ -115,7 +137,7 @@ All art is generated in code at load time; there are no image files.
   - **Plate** is a future tier (the knights' original grey armour art is kept for it).
 
   Dropped gear lies on the ground as itself (its icon), so you can see what it is before picking it up (the chunky flat styles still show a sack). To test without hunting, the ⚙ panel's **Loot** section has "Drop random loot" and "Drop ×5": random items pop out a few steps away.
-- **Gear on the hero**: in the HD style the heroes are bare by default (skin, linen shorts, bare feet, their own hair and face; Masked is a pale spirit) and every item shows on all eight of them, in every animation (walk, idle, attack, jump, backflip): caps and helms fitted to each head, armour re-shading the chest and shorts, trousers the shorts and legs, boots, both shields, the amulet and each weapon (an empty weapon slot means bare hands). The start screen shows each hero in the starting kit. The knights' original grey plate is kept in `tools/heroes/cast2.py` (`SIG_*`) as the art for a future plate tier. The flat styles (S1h, C2, C3, Silhouette) do not draw gear. Art sources: `tools/heroes/` (see its README).
+- **Gear on the hero**: in the HD style the heroes are bare by default (skin, linen shorts, bare feet, their own hair and face; Masked is a pale spirit) and every item shows on all eight of them, in every animation (walk, idle, attack, jump, backflip): caps and helms fitted to each head, armour re-shading the chest and shorts, trousers the shorts and legs, boots, both shields, the amulet and each weapon (an empty weapon slot means bare hands). The New character screen shows each hero in the starting kit. The knights' original grey plate is kept in `tools/heroes/cast2.py` (`SIG_*`) as the art for a future plate tier. The flat styles (S1h, C2, C3, Silhouette) do not draw gear. Art sources: `tools/heroes/` (see its README).
 - **Drops**: items pop out of whatever dropped them and are picked up by walking over them. Cows drop raw meat.
 - **Food**: click raw meat in the inventory to eat it (+30 health).
 - **Woodcutting**: click a tree (or press `B` next to one; `B` gathers whichever tree or rock is closest) to walk over and chop it. Four chops fell it: it drops 2–3 wood logs and leaves a stump that regrows after 90 seconds. Without an axe every chop takes twice as long.
@@ -155,6 +177,18 @@ The action bar, spellbook and talent icons are hand-placed 20×20 pixel art in `
 The story bible is `docs/lore.md`: the world of Corvalis, the cast, the secret timeline, the acts and endings, bestiary, relics, Victoria's diary pages and notes for building quests. Read it in the browser at http://localhost:3000/lore.html while the server runs: `server.js` renders the Markdown (with `marked`) into the `docs/lore-viewer.html` template on every request, so the page holds the full text (browser reading mode works) and edits show up on reload. The raw file is at `/lore.md`.
 
 The lore's illustrated plates (map, Thornhallow, the Blackthorn stages, portraits and more) are sepia-ink SVGs in `docs/lore-art/`, drawn by `tools/lore/plates.py` (`python3 tools/lore/plates.py [name ...]`) and placed in the Markdown as `<figure class="plate">`. A shareable copy is published as a claude.ai artifact: `npm run share:lore -- <out.html>` builds one self-contained page (`docs/lore-share.html` template, plates inlined), which is then republished to the same artifact.
+
+## Online co-op
+
+The plan, its decisions and where it stands are in `docs/online.md` (in the game: Settings › Documents › Online co-op plan).
+
+- **Playing:** after loading, the main menu offers **Single Player | Multi Player**. Multi Player opens your characters on the server, on the same character screens as single player: make one, delete one, or pick one. Then the room list: open a room or join one, with up to 8 players a room. Other computers on the network open `http://<this computer's address>:3000`. The badge at the top shows the room, who is here and the ping, and **Leave** goes back to the main menu. Online play never touches the single-player save.
+- **The server is the game.** `server.js` serves the page and a WebSocket at `/ws`. Each room is a `Game` ticking 20 times a second, and each player gets a snapshot of their region with only the parts that changed (`src/server/Session.ts`). Messages are JSON, compressed on the wire.
+- **The browser** (`src/net/NetSim.ts`) keeps a copy of the player's region built from the snapshots. It walks the player's own hero at once and tells the server where it went, and the server checks each step: speed, and nothing solid in the way. A refused step sends the hero back. Other heroes and creatures glide between snapshots. Everything else (casting, talking, trading, crafting, travel) goes to the server as a command from the whitelist in `src/net/commands.ts`. The dev settings' cheats work online while the server isn't in production mode.
+- **Characters** (`src/server/Store.ts`) live on the server's disk in `server-data/` (gitignored; `QFV_DATA_DIR` moves it): accounts/, characters/ and deleted/, one JSON file each. A character is a single-player save plus a name and a look, so the same `Game.toSave` / `loadSave` code keeps them. They're saved every 5 seconds, on leaving, and when the server stops. Whoever opens a room brings their whole campaign (`Game.loadSave`); anyone joining brings only their hero (`Game.loadHero`) and keeps the story they see there (`mergeStory` in `src/sim/save.ts`). A browser's characters belong to the random key it keeps in localStorage (`qfv-account`, `src/net/account.ts`); there's no password yet. Rooms aren't kept: one closes 5 minutes after its last player leaves.
+- **Quests in a room** (`Game.questStatus` / `acceptQuest` / `completeQuest`, `Hero.questLog`): the room keeps quest progress (shared kills and places); each hero keeps their own log (on it, or handed in). Accepting gives the quest to the whole party, and each player hands it in for their own reward, once per character. The first hand-in plays the quest's story effects. The log travels with the character (`Game.toSave` writes the hero's view; `loadHero` brings it into the next room).
+- **Staying connected:** the server pings each browser at the WebSocket level every 10 seconds, which the browser answers even from a background tab, and lets a character go after 45 seconds of silence.
+- **Testing alone:** `npm run bot -- host "Bot room"` opens a room with a bot in it; `npm run bot -- join ABCD` sends one into room ABCD; `npm run bot` lists the rooms.
 
 ## License
 

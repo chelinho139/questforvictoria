@@ -7,6 +7,8 @@ import type { SkillKey, ActionKey, Key, WheelKey } from '../data/skills';
 import type { ObjectKind } from '../data/regions/types';
 
 export interface Enemy {
+  /** Unique in its region (the network names creatures by it). */
+  id: number;
   kind: EnemyKind;
   def: EnemyDef;
   n: string;
@@ -44,6 +46,8 @@ export interface Enemy {
   temp: boolean;
   /** Bosses: which phase it is in (0 first; see EnemyDef.boss.phases). */
   phase: number;
+  /** The hero it is after (a hero id), while aggro. */
+  foe?: string;
   /** The Bell-Ringer: seconds to the next toll, and tolls so far. */
   tollT?: number;
   tollN?: number;
@@ -121,6 +125,10 @@ export interface Stack {
 
 /** Items lying on the ground, popping out with a little arc when dropped. */
 export interface Drop {
+  /** Unique in its region. */
+  uid: number;
+  /** Who may pick it up (personal loot): a hero id, or '' for anyone. */
+  owner: string;
   id: ItemId;
   n: number;
   x: number;
@@ -216,6 +224,43 @@ export interface TreeState {
 export type LogClass = '' | 'c' | 'h' | 't';
 export type BannerClass = '' | 'bad' | 'cool';
 export type FloaterClass = '' | 'crit' | 'heal' | 'hurt' | 'dot' | 'aa' | 'name';
+
+/** What one hero hears: their own messages, bag, cooldowns, level, travel. */
+export interface HeroEvents extends Record<string, unknown> {
+  log: { text: string; cls: LogClass };
+  banner: { text: string; cls: BannerClass };
+  castFlash: { btn: ButtonId; key: WheelKey; color: string };
+  nudge: { btn: ButtonId; key: WheelKey; err: boolean };
+  loadout: Record<string, never>;
+  died: Record<string, never>;
+  bag: Record<string, never>;
+  talk: { npc: NpcId };
+  level: Record<string, never>;
+  talents: Record<string, never>;
+  respawned: Record<string, never>;
+  region: { id: string };
+  exit: { to: string; at: string };
+  trade: Record<string, never>;
+}
+
+/** What everyone in a region sees: damage numbers, effects, scenes, bosses. */
+export interface RegionEvents extends Record<string, unknown> {
+  floater: { x: number; y: number; text: string; cls: FloaterClass; color?: string };
+  fx: Omit<Fx, 't' | 'onEnd'>;
+  burst: { x: number; y: number; n: number; col: string; spd: number; life: number; size: number; g: number };
+  scene: Record<string, never>;
+  sceneFade: { dir: 'out' | 'in'; s: number };
+  bossPhase: { kind: EnemyKind; phase: number };
+  /** Something big happened nearby (a toll): shake the camera. */
+  shake: { s: number };
+}
+
+/** What the whole room shares: the story. */
+export interface RoomEvents extends Record<string, unknown> {
+  quests: Record<string, never>;
+  flags: { name: string };
+  journal: { doc: string };
+}
 
 export interface SimEvents extends Record<string, unknown> {
   log: { text: string; cls: LogClass };

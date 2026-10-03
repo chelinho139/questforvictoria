@@ -5,3 +5,5 @@ public/dist/
 .claude/settings.local.json
 public/art-board.html
 __pycache__/
+dist/
+server-data/

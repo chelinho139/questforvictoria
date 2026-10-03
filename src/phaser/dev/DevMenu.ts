@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import type { Sim } from '../../sim/Sim';
 import { KINDS } from '../../data/enemies';
 import type { EnemyKind } from '../../data/enemies';
-import { DAY_LENGTH_S, phaseName } from '../../sim/daylight';
+import { phaseName } from '../../sim/daylight';
 import type { Lighting } from '../lighting/Lighting';
 import type { Clouds } from '../render/Clouds';
 import type { Effects } from '../render/Effects';
@@ -21,6 +21,7 @@ import { REGIONS } from '../../data/regions';
 const DOC_LINKS: [string, string][] = [
   ['The Lore', '/lore.html'],
   ['Prologue & Act I', '/act1.html'],
+  ['Online co-op plan', '/online.html'],
 ];
 
 interface DevSettings {
@@ -182,7 +183,7 @@ export class DevMenu {
     this.clockSlider.addEventListener('pointerdown', () => (this.draggingClock = true));
     this.clockSlider.addEventListener('pointerup', () => (this.draggingClock = false));
     this.clockSlider.addEventListener('input', () => {
-      this.sim.day.set(Number(this.clockSlider.value) / 1440);
+      this.sim.setDay(Number(this.clockSlider.value) / 1440);
       this.syncClock(true);
     });
     this.clockSlider.addEventListener('change', () => {
@@ -194,7 +195,7 @@ export class DevMenu {
     for (const [t, label] of TIMES) {
       presets.append(
         this.button(label, () => {
-          this.sim.day.set(t);
+          this.sim.setDay(t);
           this.syncClock(true);
         })
       );
@@ -404,9 +405,7 @@ export class DevMenu {
   /** Push settings into the game and refresh every control. */
   private apply(): void {
     const s = this.s;
-    const day = this.sim.day;
-    day.paused = s.speed === 0;
-    if (s.speed > 0) day.dayLengthS = DAY_LENGTH_S / s.speed;
+    this.sim.setDaySpeed(s.speed);
     this.lighting.setStrength(s.strength);
     this.lighting.setEnabled(s.lighting);
     this.clouds.setVisible(s.clouds);

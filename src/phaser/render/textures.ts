@@ -2,13 +2,15 @@ import Phaser from 'phaser';
 import { ICONS, ICON_PAL, SUN, MOON } from '../../data/pixelart';
 import type { SpriteMap } from '../../data/pixelart';
 import { SKILLS, ACTIONS } from '../../data/skills';
-import { MAP, COLS, ROWS, T, Tile, isoX, isoY, ISO_OX } from '../../sim/map';
+import { T, Tile, isoX, isoY, ISO_OX } from '../../sim/map';
+import type { RegionMap } from '../../sim/map';
 import * as HD from './hdSprites';
 import { cow as hdCow } from './hdHero';
 import { HD_ICONS } from './hdIcons';
 import { scale2x } from './pixelPainter';
-import { registerArt, frameKey, animKey, spriteStyle, setStyleFit, hdHeroId, heroGear } from './art';
+import { registerArt, frameKey, animKey, spriteStyle, setStyleFit, hdHeroId, heroGear, HD_HERO_IDS } from './art';
 import { HD_HEROES, hdHeroFrames } from './hdHeroes';
+import type { HdHeroId } from './hdHeroes';
 import { itemIcon, itemDrop, backpackIcon, hammerIcon } from './itemArt';
 import { campfireFrames, forgeFrames } from './structureArt';
 import { npcFrames } from './npcArt';
@@ -18,8 +20,8 @@ import { SKILL_ICONS } from './skillIcons';
 import type { NpcId } from '../../data/npcs';
 import { NPC_IDS } from '../../data/npcs';
 import type { StructureKind } from '../../data/crafting';
-import { ITEM_IDS } from '../../data/items';
-import type { ItemId } from '../../data/items';
+import { ITEM_IDS, SLOTS } from '../../data/items';
+import type { ItemId, Slot } from '../../data/items';
 import type { SpriteStyle } from './art';
 import type { StyleArt, Frames, IsoTiles } from './styleArt';
 import { WALL_H, TOWER_H, TOWER_TOP } from './styleArt';
@@ -248,7 +250,8 @@ function shadowCanvas(): HTMLCanvasElement {
  * Pre-render the current region's isometric ground (sim/map.ts MAP), sliced into chunk
  * textures, and collect the standing objects. Call on arrival in a region.
  */
-export function buildRegionGround(scene: Phaser.Scene): BuiltWorld {
+export function buildRegionGround(scene: Phaser.Scene, map: RegionMap): BuiltWorld {
+  const { grid: MAP, cols: COLS, rows: ROWS } = map;
   const tiles = styleTiles;
   if (!tiles) throw new Error('buildRegionGround: style textures not built yet');
   const ox = ISO_OX - ROWS * 32;
@@ -565,6 +568,25 @@ export function applyStyleTextures(scene: Phaser.Scene, style: SpriteStyle): voi
  */
 export function applyHeroTextures(scene: Phaser.Scene, style: SpriteStyle): void {
   putFramesOf(scene, Tex.knight, styleArt(style).heroes().knight);
+}
+
+/**
+ * Frames for another player's hero, in their look and gear, drawn the way the game draws
+ * heroes (HD, recoloured for HD · Silhouette). Built the first time and kept; returns the
+ * texture key (walk frames, and idle / attack / jump / flip animations, like Tex.knight).
+ */
+export function heroLookTexture(scene: Phaser.Scene, look: string, equip: Partial<Record<Slot, ItemId | null>>): string {
+  const id = (HD_HERO_IDS as string[]).includes(look) ? (look as HdHeroId) : 'k1';
+  const key = `hero:${id}:${SLOTS.map(s => equip[s] ?? '').join(',')}`;
+  if (scene.textures.exists(frameKey(key, 0))) return key;
+  const f = hdHeroFrames(id, equip);
+  const re = spriteStyle() === 'hdsil' ? (cv: HTMLCanvasElement) => regrade(cv) : (cv: HTMLCanvasElement) => cv;
+  putFramesOf(scene, key, {
+    frames: f.walk.map(re),
+    anims: Object.fromEntries(Object.entries(f.anims).map(([k, list]) => [k, list.map(re)])),
+    scale: 1,
+  });
+  return key;
 }
 
 /** HD iso tile set. */

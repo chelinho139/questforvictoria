@@ -4,26 +4,30 @@ import { HD_HERO_IDS } from '../render/art';
 import { regrade } from '../render/regrade';
 import { NAME_MAX } from '../player';
 import { STARTER } from '../../data/items';
+import type { ItemId, Slot } from '../../data/items';
 
-export interface Choice {
+/** A new character: what they're called and which hero they look like. */
+export interface NewChoice {
   name: string;
   hero: HdHeroId;
-  /** Carry on from the saved game, or start a new one (which replaces it). */
-  mode: 'continue' | 'new';
 }
 
-/** What the start screen says about the saved game, if there is one. */
-export interface SavedGame {
-  level: number;
-  place: string;
-  when: string;
-}
-
-/** Hero frames in the starting gear, recoloured the way the game shows them (HD · Silhouette colours). */
-function heroArt(id: HdHeroId): HeroCanvases {
-  const f = hdHeroFrames(id, STARTER.worn);
+/** Hero frames in some gear (the starting kit by default), recoloured the way the game shows them (HD · Silhouette colours). */
+export function heroArt(
+  id: HdHeroId,
+  gear: Partial<Record<Slot, ItemId | null>> = STARTER.worn
+): HeroCanvases {
+  const f = hdHeroFrames(id, gear);
   const re = (list: HTMLCanvasElement[]) => list.map(cv => regrade(cv));
-  return { walk: re(f.walk), anims: { idle: re(f.anims.idle), attack: re(f.anims.attack), jump: re(f.anims.jump), flip: re(f.anims.flip) } };
+  return {
+    walk: re(f.walk),
+    anims: {
+      idle: re(f.anims.idle),
+      attack: re(f.anims.attack),
+      jump: re(f.anims.jump),
+      flip: re(f.anims.flip),
+    },
+  };
 }
 
 /** The big preview's show reel: idle, walk, attack, jump and a backflip, then repeat. */
@@ -43,23 +47,31 @@ function reel(a: HeroCanvases): [HTMLCanvasElement, number][] {
 }
 
 /** Draw a frame centred and bottom-aligned (tumble frames centred) at a whole-number scale. */
-function paint(target: HTMLCanvasElement, frame: HTMLCanvasElement, scale: number, centred = false): void {
+export function paint(
+  target: HTMLCanvasElement,
+  frame: HTMLCanvasElement,
+  scale: number,
+  centred = false
+): void {
   const c = target.getContext('2d')!;
   c.imageSmoothingEnabled = false;
   c.clearRect(0, 0, target.width, target.height);
   const w = frame.width * scale;
   const h = frame.height * scale;
   const x = Math.round((target.width - w) / 2);
-  const y = centred ? Math.round((target.height - h) / 2 - scale * 4) : target.height - h - scale * 2;
+  const y = centred
+    ? Math.round((target.height - h) / 2 - scale * 4)
+    : target.height - h - scale * 2;
   c.drawImage(frame, x, y, w, h);
 }
 
 /**
- * The start screen: type a name and pick one of the HD heroes. Every hero card plays its
- * idle animation; the large preview runs the selected hero through every animation.
- * Arrow keys change the hero, Enter starts.
+ * Making a character, the same screen for single player and multi player: a name, and one of
+ * the HD heroes. Every hero card plays its idle animation; the large preview runs the
+ * selected hero through every animation. Arrow keys change the hero, Enter creates, Esc goes
+ * back. Making it may be refused (a name taken), and the screen stays open saying why.
  */
-export class CharacterSelect {
+export class NewCharacter {
   private root: HTMLDivElement | null = null;
   private raf = 0;
   private sel: number;
@@ -70,16 +82,25 @@ export class CharacterSelect {
   private title!: HTMLElement;
   private about!: HTMLElement;
   private input!: HTMLInputElement;
+  private hint!: HTMLElement;
   private reelFrames: [HTMLCanvasElement, number][] = [];
   private reelI = 0;
   private reelT = 0;
+  /** Waiting for the character to be made (online, the server). */
+  private busy = false;
   private readonly onKey = (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      this.finish(this.saved ? 'continue' : 'new');
+      this.make();
       return;
     }
-    if (document.activeElement === this.input && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      this.back();
+      return;
+    }
+    if (document.activeElement === this.input && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))
+      return;
     const cols = 4;
     const n = HD_HERO_IDS.length;
     const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -cols, ArrowDown: cols }[e.key];
@@ -89,15 +110,19 @@ export class CharacterSelect {
     }
   };
 
-  /** Pressed New game once over an existing save: the next press confirms. */
-  private confirmNew = false;
-
   constructor(
-    private readonly start: Omit<Choice, 'mode'>,
-    private readonly onDone: (c: Choice) => void,
-    private readonly saved: SavedGame | null = null
+    private readonly opts: {
+      /** 'Single Player' or 'Multi Player', for the title. */
+      mode: string;
+      /** The hero picked at first. */
+      hero: HdHeroId;
+      /** Make the character: null when made (the screen closes), or why not (it stays open). */
+      onCreate: (c: NewChoice) => Promise<string | null> | string | null;
+      /** Back to your characters. */
+      onBack: () => void;
+    }
   ) {
-    this.sel = Math.max(0, HD_HERO_IDS.indexOf(start.hero));
+    this.sel = Math.max(0, HD_HERO_IDS.indexOf(opts.hero));
   }
 
   private artOf(id: HdHeroId): HeroCanvases {
@@ -114,7 +139,7 @@ export class CharacterSelect {
     root.className = 'select';
     root.innerHTML = `
       <div class="select-panel" role="dialog" aria-labelledby="select-title">
-        <header id="select-title">Choose your hero</header>
+        <header id="select-title">${this.opts.mode} · New character</header>
         <div class="select-body">
           <div class="select-show">
             <canvas class="select-big" width="216" height="216" aria-hidden="true"></canvas>
@@ -122,18 +147,14 @@ export class CharacterSelect {
             <p class="select-about"></p>
           </div>
           <div class="select-side">
-            <label class="select-field" for="select-input">Your name
-              <input id="select-input" type="text" maxlength="${NAME_MAX}" autocomplete="off" spellcheck="false">
+            <label class="select-field" for="select-input">Name
+              <input id="select-input" type="text" maxlength="${NAME_MAX}" autocomplete="off" spellcheck="false" placeholder="Name your character">
             </label>
             <div class="select-grid" role="listbox" aria-label="Heroes"></div>
-            <p class="select-hint">Arrow keys pick a hero · Enter starts</p>
+            <p class="select-hint">Arrow keys pick a hero · Enter creates</p>
           </div>
         </div>
-        <footer>${
-          this.saved
-            ? `<button type="button" class="select-continue">Continue · Level ${this.saved.level}, ${this.saved.place}<small>saved ${this.saved.when}</small></button><button type="button" class="select-go select-new">New game</button>`
-            : `<button type="button" class="select-go">Start adventure</button>`
-        }</footer>
+        <footer><button type="button" class="lobby-back">← Back</button><button type="button" class="select-go">Create character</button></footer>
       </div>`;
     document.body.append(root);
     this.root = root;
@@ -141,7 +162,7 @@ export class CharacterSelect {
     this.title = root.querySelector('.select-name')!;
     this.about = root.querySelector('.select-about')!;
     this.input = root.querySelector('#select-input')!;
-    this.input.value = this.start.name;
+    this.hint = root.querySelector('.select-hint')!;
     const grid = root.querySelector('.select-grid')!;
     HD_HERO_IDS.forEach((id, i) => {
       const b = document.createElement('button');
@@ -155,17 +176,16 @@ export class CharacterSelect {
       label.textContent = HD_HEROES[id].label;
       b.append(cv, label);
       b.addEventListener('click', () => this.select(i));
-      b.addEventListener('dblclick', () => this.finish(this.saved ? 'continue' : 'new'));
+      b.addEventListener('dblclick', () => this.make());
       grid.append(b);
       this.cards.push(b);
       this.cardCanvases.push(cv);
     });
-    root.querySelector('.select-go')!.addEventListener('click', () => this.finish('new'));
-    root.querySelector('.select-continue')?.addEventListener('click', () => this.finish('continue'));
+    root.querySelector('.select-go')!.addEventListener('click', () => this.make());
+    root.querySelector('.lobby-back')!.addEventListener('click', () => this.back());
     window.addEventListener('keydown', this.onKey);
     this.select(this.sel);
     this.input.focus();
-    this.input.select();
     let last = performance.now();
     const tick = (now: number) => {
       this.draw(now, now - last);
@@ -180,7 +200,8 @@ export class CharacterSelect {
     const id = HD_HERO_IDS[i];
     this.cards.forEach((b, k) => b.setAttribute('aria-selected', String(k === i)));
     this.title.textContent = HD_HEROES[id].label;
-    this.about.textContent = HD_HEROES[id].about.charAt(0).toUpperCase() + HD_HEROES[id].about.slice(1) + '.';
+    this.about.textContent =
+      HD_HEROES[id].about.charAt(0).toUpperCase() + HD_HEROES[id].about.slice(1) + '.';
     this.reelFrames = reel(this.artOf(id));
     this.reelI = 0;
     this.reelT = 0;
@@ -203,19 +224,30 @@ export class CharacterSelect {
     paint(this.big, frame, 4, flip);
   }
 
-  private finish(mode: Choice['mode']): void {
+  /** Ask for the character, and stay open with the reason if it can't be made. */
+  private make(): void {
+    if (!this.root || this.busy) return;
+    const name = this.input.value.trim();
+    if (!name) return this.say('Give your character a name.');
+    this.busy = true;
+    this.say('Making your character…', false);
+    void Promise.resolve(this.opts.onCreate({ name, hero: HD_HERO_IDS[this.sel] })).then(err => {
+      this.busy = false;
+      if (err) this.say(err);
+      else this.close();
+    });
+  }
+
+  private say(text: string, bad = true): void {
     if (!this.root) return;
-    // a new game over a save asks once more, on the button itself
-    if (mode === 'new' && this.saved && !this.confirmNew) {
-      this.confirmNew = true;
-      const b = this.root.querySelector<HTMLButtonElement>('.select-new')!;
-      b.textContent = 'Replace the saved game?';
-      b.classList.add('warn');
-      return;
-    }
-    const choice: Choice = { name: this.input.value.trim().slice(0, NAME_MAX) || this.start.name, hero: HD_HERO_IDS[this.sel], mode };
+    this.hint.textContent = text;
+    this.hint.classList.toggle('bad', bad);
+    if (bad) this.input.focus();
+  }
+
+  private back(): void {
     this.close();
-    this.onDone(choice);
+    this.opts.onBack();
   }
 
   close(): void {

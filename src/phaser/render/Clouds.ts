@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLS, ROWS, ISO_OX } from '../../sim/map';
+import { ISO_OX } from '../../sim/map';
 import { Rng } from '../../sim/rng';
 
 const MARGIN = 260;
@@ -30,7 +30,7 @@ export class Clouds {
   private w = 0;
   private h = 0;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, cols: number, rows: number) {
     const rng = new Rng(777);
     const keys = [0, 1, 2].map(i => Clouds.texture(scene, i, rng));
     for (let i = 0; i < COUNT; i++) {
@@ -46,14 +46,14 @@ export class Clouds {
         body,
       });
     }
-    this.relayout();
+    this.relayout(cols, rows);
   }
 
   /** Spread the clouds over the region you are in (call after changing region). */
-  relayout(): void {
-    this.x0 = ISO_OX - ROWS * 32;
-    this.w = (COLS + ROWS) * 32;
-    this.h = (COLS + ROWS) * 16 + 48;
+  relayout(cols: number, rows: number): void {
+    this.x0 = ISO_OX - rows * 32;
+    this.w = (cols + rows) * 32;
+    this.h = (cols + rows) * 16 + 48;
     for (const cl of this.clouds) {
       cl.x = this.x0 - MARGIN + this.rng.next() * (this.w + MARGIN * 2);
       cl.y = -MARGIN + this.rng.next() * (this.h + MARGIN * 2);
