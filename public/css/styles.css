@@ -7,8 +7,10 @@
 }
 
 html, body { height: 100%; margin: 0; background: #0c1018; overflow: hidden; }
-#game { width: 100vw; height: 100vh; }
-#game canvas { image-rendering: pixelated; touch-action: none; }
+#game { width: 100vw; height: 100vh; position: relative; }
+#game canvas { image-rendering: pixelated; touch-action: none; position: relative; z-index: 1; }
+/* the 3D views draw the world here, under the game canvas (which keeps the HUD) */
+#game canvas.view3d { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; }
 
 /* ---------- dev settings panel: parchment in a wooden frame, like the HUD ---------- */
 .dev {

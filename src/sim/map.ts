@@ -221,6 +221,16 @@ export function isoSpeedFactor(dx: number, dy: number): number {
   return l > 0 ? 1 / l : 1;
 }
 
+/**
+ * Which way a sprite at (x, y) faces to look at (tx, ty): -1 left, 1 right on screen.
+ * Compares screen x (x - y), not world x: by world x a hero walking up-right faced left.
+ * Straight up or down the screen keeps `cur`.
+ */
+export function faceToward(x: number, y: number, tx: number, ty: number, cur: 1 | -1): 1 | -1 {
+  const d = tx - ty - (x - y);
+  return d < -1e-6 ? -1 : d > 1e-6 ? 1 : cur;
+}
+
 /** Inverse of isoX/isoY: projected (screen-space world) coordinates back to world. */
 export function fromIso(sx: number, sy: number): { x: number; y: number } {
   const a = sx - ISO_OX; // x - y

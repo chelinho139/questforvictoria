@@ -19,6 +19,8 @@ import { playerName } from '../player';
 import { xpToNext } from '../../data/talents';
 import type { TreeState, RockState, NpcState, ObjectState } from '../../sim/types';
 import { CLASSES } from '../../data/classes';
+import { VIEW_MODES, VIEW_NAMES } from '../view3d/View3D';
+import type { View3D, ViewMode } from '../view3d/View3D';
 
 type NineSlice = Phaser.GameObjects.NineSlice;
 type Image = Phaser.GameObjects.Image;
@@ -31,6 +33,8 @@ const PANEL_H = 64;
 const D = { panel: 10, slot: 11, bars: 12, art: 13, sweep: 14, ring: 15, text: 16, list: 50, tipPanel: 60, tipText: 61, floater: 80, banner: 90, overlay: 100, dead: 110 };
 /** The touch menu button's size. */
 const MENU_BTN = 34;
+/** The view button left of the day dial (the menu button's size on a touch screen). */
+const VIEW_BTN = 30;
 
 /** Bar fill ramps: highlight row, body, shade row. */
 const FILL = {
@@ -147,6 +151,9 @@ export class PcHudScene extends Phaser.Scene {
    */
   private readonly compact = TOUCH;
   private menuBtn!: SlotView;
+  /** Left of the day dial: which view is on (its icon); a click moves to the next. */
+  private viewBtn!: SlotView;
+  private viewHover = false;
   private menuOpen = false;
   private menuNames: Text[] = [];
   /** One badge per menu button, and one on the touch menu button (everything waiting, added up). */
@@ -163,6 +170,13 @@ export class PcHudScene extends Phaser.Scene {
   private offs: Array<() => void> = [];
   /** Pointer that started a click-to-move and is still held: the goal keeps following it. */
   private steering: { pointer: Phaser.Input.Pointer; lastT: number } | null = null;
+  /** Right button held in a 3D view: dragging turns the camera; let go without dragging, it clicks. */
+  private looking: { pointer: Phaser.Input.Pointer; x: number; y: number; moved: number; p: { x: number; y: number } } | null = null;
+
+  /** The 3D view, while one is on (null in the 2D view). */
+  private view3d(): View3D | null {
+    return (this.registry.get('view3d') as View3D | null | undefined) ?? null;
+  }
 
   constructor() {
     super(SceneKeys.PcHud);
@@ -235,6 +249,8 @@ export class PcHudScene extends Phaser.Scene {
     });
     this.menuBtn = mkSlot('rev', '');
     this.menuBtn.icon.setTexture(Tex.icon('menu'));
+    this.viewBtn = mkSlot('rev', PC_KEYS.view.bind);
+    this.viewBtn.icon.setTexture(Tex.icon('view_' + this.viewMode()));
     this.menuNames = this.menu.map(m => this.text(0, 0, m.name, 12, '#fce6b4', { bold: true, stroke: true }).setOrigin(0, 0.5));
     // badges sit over the buttons (and over the dropped-down list on a touch screen)
     const badgeDepth = this.compact ? D.list + 4 : D.text;
@@ -309,7 +325,8 @@ export class PcHudScene extends Phaser.Scene {
 
     // unit frames shrink on narrow windows so they never reach the dial; on a phone held
     // upright there is no room for two side by side, so the target's goes under yours
-    const frameRoom = w - 24 - 130 - (this.compact ? MENU_BTN + 8 : 0);
+    const VB = this.compact ? MENU_BTN : VIEW_BTN;
+    const frameRoom = w - 24 - 130 - (this.compact ? MENU_BTN + 8 : 0) - (VB + 8);
     const stacked = this.compact && frameRoom - 8 < 2 * 200;
     this.panelW = stacked ? Math.max(160, Math.min(262, frameRoom)) : Math.max(200, Math.min(262, Math.floor((frameRoom - 8) / 2)));
     this.placeFrame(this.player, 12, 12);
@@ -323,6 +340,8 @@ export class PcHudScene extends Phaser.Scene {
     const infoY = this.dial.cy + DIAL_R + 9;
     this.info.setPosition(infoX, infoY).setSize(infoW, 42);
     this.dial.placeLabel(this.dial.cx, infoY + 7);
+    // the view button left of the dial (on a touch screen, left of the menu button)
+    this.placeSlot(this.viewBtn, infoX - 8 - (this.compact ? MENU_BTN + 6 : 0) - VB, 12, VB);
     const colW = (infoW - 16) / 3;
     this.tally.forEach((t, i) => {
       const x = infoX + 9 + i * colW;
@@ -410,8 +429,25 @@ export class PcHudScene extends Phaser.Scene {
 
   /** World coordinates to HUD (logical screen) coordinates via the game camera. */
   private worldToHud(wx: number, wy: number): { x: number; y: number } {
+    const v = this.view3d();
+    if (v) return v.toScreen(wx, wy);
     const wv = this.scene.get(SceneKeys.Game).cameras.main.worldView;
     return { x: isoX(wx, wy) - wv.x, y: isoY(wx, wy) - wv.y };
+  }
+
+  /**
+   * Point `p` relative to something standing at world (wx, wy), in art px: across from it, and
+   * up from its feet. The hit boxes below are in art px, so in a 3D view (where nearer is
+   * bigger) they still fit the sprites.
+   */
+  private local(p: { x: number; y: number }, wx: number, wy: number): { x: number; y: number } {
+    const v = this.view3d();
+    if (v) {
+      const s = v.toScreen(wx, wy);
+      return { x: (p.x - s.x) / s.k, y: (s.y - p.y) / s.k };
+    }
+    const s = this.worldToHud(wx, wy);
+    return { x: p.x - s.x, y: s.y - p.y };
   }
 
   // ---------- sim events ----------
@@ -591,13 +627,18 @@ export class PcHudScene extends Phaser.Scene {
 
   /** HUD panels that should swallow clicks instead of moving the player. */
   private overHud(p: { x: number; y: number }): boolean {
-    return [this.player.panel, this.target.panel, this.castTag, this.info, this.barBack, this.revBack, this.revTag, this.menuBack, this.menuBtn.bg].some(o => this.inside(p, o));
+    return [this.player.panel, this.target.panel, this.castTag, this.info, this.barBack, this.revBack, this.revTag, this.menuBack, this.menuBtn.bg, this.viewBtn.bg].some(o => this.inside(p, o));
   }
 
   private onDown(pointer: Phaser.Input.Pointer): void {
     // clicks on DOM overlays (the dev panel) are not game clicks
     if (pointer.downElement !== this.game.canvas) return;
     const p = this.toLogical(pointer);
+    if (this.inside(p, this.viewBtn.bg)) {
+      // the next view (a right-click goes back one)
+      (this.registry.get('cycleView') as ((dir: 1 | -1) => void) | undefined)?.(pointer.rightButtonDown() ? -1 : 1);
+      return;
+    }
     if (this.compact) {
       // the menu button opens and closes the list; a row opens its window; a tap anywhere
       // else while it is open only closes it
@@ -645,6 +686,16 @@ export class PcHudScene extends Phaser.Scene {
       return;
     }
     if (this.overHud(p)) return;
+    if (this.view3d() && pointer.rightButtonDown()) {
+      this.looking = { pointer, x: pointer.x, y: pointer.y, moved: 0, p };
+      this.view3d()?.setDragging(true);
+      return;
+    }
+    this.clickWorld(p, pointer, true);
+  }
+
+  /** A click on the world: a creature, a thing, a person, a tree, a rock, or the ground to walk to. */
+  private clickWorld(p: { x: number; y: number }, pointer: Phaser.Input.Pointer, steer: boolean): void {
     const hit = this.hitEnemy(p);
     if (hit) {
       this.sim.setTarget(hit);
@@ -662,8 +713,8 @@ export class PcHudScene extends Phaser.Scene {
     }
     for (const w of this.sim.wanderers) {
       if (w.alpha < 0.1) continue;
-      const sp = this.worldToHud(w.x, w.y);
-      if (Math.abs(p.x - sp.x) <= 12 && sp.y + 6 - p.y >= -2 && sp.y + 6 - p.y <= 40) {
+      const l = this.local(p, w.x, w.y);
+      if (Math.abs(l.x) <= 12 && l.y + 6 >= -2 && l.y + 6 <= 40) {
         this.sim.touchWanderer(w.id);
         return;
       }
@@ -679,17 +730,27 @@ export class PcHudScene extends Phaser.Scene {
       return;
     }
     // ground: walk there; keep holding to steer toward the cursor
-    this.moveToPointer(pointer, true);
-    this.steering = { pointer, lastT: performance.now() };
+    this.moveToPointer(pointer, true, p);
+    if (steer) this.steering = { pointer, lastT: performance.now() };
   }
 
   private onMove(pointer: Phaser.Input.Pointer): void {
+    const lk = this.looking;
+    if (lk && pointer === lk.pointer) {
+      const dx = (pointer.x - lk.x) / PIXEL_SCALE;
+      const dy = (pointer.y - lk.y) / PIXEL_SCALE;
+      lk.x = pointer.x;
+      lk.y = pointer.y;
+      lk.moved += Math.abs(dx) + Math.abs(dy);
+      this.view3d()?.look(dx, dy);
+    }
     const p = this.toLogical(pointer);
     const slot = this.slotAt(p);
     this.hover = slot ? slot.key : null;
     this.hoverSlot = slot;
     this.menuHover = this.menuAt(p);
     this.xpHover = this.inside(p, this.xpBg);
+    this.viewHover = this.inside(p, this.viewBtn.bg);
   }
 
   private onUp(pointer: Phaser.Input.Pointer): void {
@@ -700,8 +761,16 @@ export class PcHudScene extends Phaser.Scene {
       this.hoverSlot = null;
       this.menuHover = -1;
       this.xpHover = false;
+      this.viewHover = false;
     }
     if (this.steering && pointer === this.steering.pointer) this.steering = null;
+    const lk = this.looking;
+    if (lk && pointer === lk.pointer) {
+      this.looking = null;
+      this.view3d()?.setDragging(false);
+      // hardly moved: it was a right-click, which walks or picks like a left one
+      if (lk.moved < 4) this.clickWorld(lk.p, pointer, false);
+    }
   }
 
   /**
@@ -723,7 +792,14 @@ export class PcHudScene extends Phaser.Scene {
   }
 
   /** Screen pointer -> game camera -> world ground point -> click-to-move. */
-  private moveToPointer(pointer: Phaser.Input.Pointer, marker: boolean): void {
+  private moveToPointer(pointer: Phaser.Input.Pointer, marker: boolean, at?: { x: number; y: number }): void {
+    const v = this.view3d();
+    if (v) {
+      const p = at ?? this.toLogical(pointer);
+      const g = v.toGround(p.x, p.y);
+      if (g) this.sim.moveTo(g.x, g.y, marker);
+      return;
+    }
     const cam = this.scene.get(SceneKeys.Game).cameras.main;
     const wp = cam.getWorldPoint(pointer.x, pointer.y);
     const w = fromIso(wp.x, wp.y);
@@ -735,9 +811,9 @@ export class PcHudScene extends Phaser.Scene {
   /** A page, notice board or chest under the pointer. */
   private hitObject(p: { x: number; y: number }): ObjectState | null {
     for (const o of this.sim.objects) {
-      const sp = this.worldToHud(o.x, o.y);
-      const dx = Math.abs(p.x - sp.x);
-      const dy = sp.y + 6 - p.y;
+      const l = this.local(p, o.x, o.y);
+      const dx = Math.abs(l.x);
+      const dy = l.y + 6;
       const tall = o.kind === 'board' ? 36 : o.kind === 'chest' || o.kind === 'thorn' ? 18 : 10;
       if (dx <= (o.kind === 'page' || o.kind === 'letter' ? 10 : 13) && dy >= -6 && dy <= tall) return o;
     }
@@ -746,9 +822,9 @@ export class PcHudScene extends Phaser.Scene {
 
   private hitNpc(p: { x: number; y: number }): NpcState | null {
     for (const n of this.sim.npcs) {
-      const sp = this.worldToHud(n.x, n.y);
-      const dx = Math.abs(p.x - sp.x);
-      const dy = sp.y + 6 - p.y;
+      const l = this.local(p, n.x, n.y);
+      const dx = Math.abs(l.x);
+      const dy = l.y + 6;
       if (dx <= 12 && dy >= -2 && dy <= 40) return n;
     }
     return null;
@@ -760,9 +836,9 @@ export class PcHudScene extends Phaser.Scene {
     let bd = Infinity;
     for (const k of this.sim.rocks) {
       if (k.brokenT > 0) continue;
-      const sp = this.worldToHud(k.x, k.y);
-      const dx = Math.abs(p.x - sp.x);
-      const dy = sp.y - p.y;
+      const l = this.local(p, k.x, k.y);
+      const dx = Math.abs(l.x);
+      const dy = l.y;
       if (dx > 15 || dy < -6 || dy > 20) continue;
       const d = dx + Math.abs(dy - 6) * 0.5;
       if (d < bd) {
@@ -778,9 +854,9 @@ export class PcHudScene extends Phaser.Scene {
     let bd = Infinity;
     for (const t of this.sim.trees) {
       if (t.stumpT > 0) continue;
-      const sp = this.worldToHud(t.x, t.y);
-      const dx = Math.abs(p.x - sp.x);
-      const dy = sp.y + 6 - p.y;
+      const l = this.local(p, t.x, t.y);
+      const dx = Math.abs(l.x);
+      const dy = l.y + 6;
       if (dx > 13 || dy < -4 || dy > 46) continue;
       const d = dx + Math.abs(dy - 18) * 0.3;
       if (d < bd) {
@@ -796,8 +872,8 @@ export class PcHudScene extends Phaser.Scene {
     let bd = 30;
     for (const e of this.sim.enemies) {
       if (!e.alive) continue;
-      const sp = this.worldToHud(e.x, e.y);
-      const d = Math.hypot(sp.x - p.x, sp.y - 6 * e.def.scale - p.y);
+      const l = this.local(p, e.x, e.y);
+      const d = Math.hypot(l.x, l.y - 6 * e.def.scale);
       if (d < bd + 6 * e.def.scale) {
         bd = d;
         hit = e;
@@ -817,6 +893,7 @@ export class PcHudScene extends Phaser.Scene {
     this.drawChips();
     this.drawBar(time);
     this.drawBagBtn();
+    this.drawViewBtn();
     this.drawTooltip();
     this.drawOverlays();
     const s = this.sim;
@@ -1002,9 +1079,33 @@ export class PcHudScene extends Phaser.Scene {
     if (this.revShown !== s.revEnabled) this.layout();
     this.syncBar();
     for (const sl of this.slots) this.drawSlot(sl, now);
+    // in the point-of-view view Q and E turn: their key letters fade (the slots still cast with a click)
+    const pov = this.viewMode() === 'pov';
+    for (const sl of this.slots) sl.bind.setAlpha(pov && this.turnKey(sl.index) ? 0.3 : 1);
     if (!this.revShown) return;
     this.drawSlot(this.revSlot, now);
     this.revState.setText(s.rev ? (s.revAuto ? 'REV AUTO' : 'REV ON') : 'REV OFF').setColor(s.rev ? '#a8701e' : Ink.mid);
+  }
+
+  /** True for a bar slot whose key turns the point-of-view view (Q and E). */
+  private turnKey(index: number): boolean {
+    const code = BAR_KEYS[index]?.code;
+    return code === PC_KEYS.povTurnLeft.code || code === PC_KEYS.povTurnRight.code;
+  }
+
+  /** The view in use (iso until the scene says otherwise). */
+  private viewMode(): ViewMode {
+    return (this.registry.get('getView') as (() => ViewMode) | undefined)?.() ?? 'iso';
+  }
+
+  /** The view button shows the view in use; a gold ring while a 3D view is on, lit on hover. */
+  private drawViewBtn(): void {
+    const mode = this.viewMode();
+    const b = this.viewBtn;
+    const key = Tex.icon('view_' + mode);
+    if (b.icon.texture.key !== key) b.icon.setTexture(key);
+    b.bg.setTexture(this.viewHover ? UI.slotHot : UI.slot);
+    b.ring.setVisible(this.viewHover || mode !== 'iso').setTint(hex(mode !== 'iso' ? Colors.gold : '#fce6b4'));
   }
 
   /** What a menu button's badge counts: talent points to spend, journal pages not yet read. */
@@ -1088,6 +1189,30 @@ export class PcHudScene extends Phaser.Scene {
       this.tipDesc.setPosition(x + 11, y + 9 + this.tipName.height);
       return;
     }
+    if (k === null && this.viewHover) {
+      const mode = this.viewMode();
+      const next = VIEW_MODES[(VIEW_MODES.indexOf(mode) + 1) % VIEW_MODES.length];
+      const b = this.viewBtn;
+      this.tipPanel.setVisible(true);
+      this.tipName.setVisible(true).setText(`View: ${VIEW_NAMES[mode]}  [${PC_KEYS.view.bind}]`);
+      const K = PC_KEYS;
+      const turn =
+        mode === 'pov'
+          ? `\nTurn with ${K.povTurnLeft.bind} and ${K.povTurnRight.bind}, step aside with A and D; right-drag looks round; the wheel zooms.`
+          : mode === 'diorama'
+            ? `\nTurn it with the ${K.turnLeft.bind} ${K.turnRight.bind} keys or by right-dragging; the wheel zooms.`
+            : '';
+      this.tipDesc.setVisible(true).setText(`Click for ${VIEW_NAMES[next]}.${turn}`).setColor(Ink.mid);
+      const w = Math.ceil(Math.max(this.tipName.width, this.tipDesc.width)) + 22;
+      const h = Math.ceil(this.tipName.height + this.tipDesc.height) + 18;
+      const S = b.bg.width;
+      const x = Math.round(Math.max(8, Math.min(this.W - w - 8, b.x + S / 2 - w / 2)));
+      const y = Math.round(b.y + S + 6);
+      this.tipPanel.setPosition(x, y).setSize(w, h);
+      this.tipName.setPosition(x + 11, y + 8);
+      this.tipDesc.setPosition(x + 11, y + 9 + this.tipName.height);
+      return;
+    }
     if (k === null && this.menuHover >= 0 && !this.compact) {
       const m = this.menu[this.menuHover];
       const b = m.view;
@@ -1125,7 +1250,8 @@ export class PcHudScene extends Phaser.Scene {
       const inf = s.info(k);
       const why = s.canDo(k);
       const at = this.slots.find(x => x.key === k);
-      const bind = at ? BAR_KEYS[at.index].bind : '';
+      let bind = at ? BAR_KEYS[at.index].bind : '';
+      if (at && this.viewMode() === 'pov' && this.turnKey(at.index)) bind = `click · ${bind} turns the view`;
       this.tipName.setText(inf.n + '  [' + bind + ']');
       this.tipDesc.setText(why ?? inf.desc).setColor(why ? Ink.red : Ink.mid);
     }

@@ -35,8 +35,8 @@ export const PC_KEYS = {
   timeCycle: { bind: 'T', code: 'T' },
   /** Dev convenience: toggle the lighting effect. */
   lightToggle: { bind: 'L', code: 'L' },
-  /** Art review: cycle the candidate art styles (Shift+V goes back). */
-  artStyle: { bind: 'V', code: 'V' },
+  /** Art review: cycle the candidate art styles (Shift+Y goes back). */
+  artStyle: { bind: 'Y', code: 'Y' },
   /** Art review: cycle the HD heroes (Shift+H goes back); switches to an HD style if needed. */
   hdHero: { bind: 'H', code: 'H' },
   /** Gather: chop the nearest tree or mine the nearest rock in reach (or click one). */
@@ -55,4 +55,15 @@ export const PC_KEYS = {
   settings: { bind: 'O', code: 'O' },
   /** Open or close the controls list. */
   controls: { bind: '/', code: 'FORWARD_SLASH' },
+  /** The view: isometric, the 3D diorama, or point of view (Shift goes back). */
+  view: { bind: 'V', code: 'V' },
+  /** Turn a 3D view. */
+  turnLeft: { bind: ',', code: 'COMMA' },
+  turnRight: { bind: '.', code: 'PERIOD' },
+  /**
+   * Turn in the point-of-view view (A and D step sideways there). These are bar keys too: in
+   * that view they turn instead, and their slots cast with a click.
+   */
+  povTurnLeft: { bind: 'Q', code: 'Q' },
+  povTurnRight: { bind: 'E', code: 'E' },
 } as const;

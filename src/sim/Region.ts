@@ -1,6 +1,6 @@
 import { KINDS, RESPAWN } from '../data/enemies';
 import type { EnemyKind, CreatureSounds } from '../data/enemies';
-import { T, Tile, rockCentre, RegionMap, parseLayout, isoX, isoSpeedFactor } from './map';
+import { T, Tile, rockCentre, RegionMap, parseLayout, isoX, isoSpeedFactor, faceToward } from './map';
 import { findPath } from './pathfind';
 import { propSolidTiles } from '../data/props';
 import { REGIONS } from '../data/regions';
@@ -799,7 +799,7 @@ export class Region {
     const ny = e.y + dy * v;
     if (!this.map.blocked(nx, e.y, hw, hh)) e.x = nx;
     if (!this.map.blocked(e.x, ny, hw, hh)) e.y = ny;
-    if (dx) e.face = dx < 0 ? -1 : 1;
+    e.face = faceToward(0, 0, dx, dy, e.face);
     e.walk += dt * 10;
   }
 
@@ -1079,7 +1079,7 @@ export class Region {
           this.moveEntity(e, (foe.x - e.x) / d, (foe.y - e.y) / d, spd, dt, hw, hh);
         }
       } else {
-        e.face = foe.x < e.x ? -1 : 1;
+        e.face = faceToward(e.x, e.y, foe.x, foe.y, e.face);
         e.atkT -= dt;
         if (e.atkT <= 0.7) e.tele = true;
         if (e.atkT <= 0) {

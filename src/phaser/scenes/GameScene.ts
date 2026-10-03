@@ -34,6 +34,20 @@ import { OnlineBadge } from '../ui/OnlineBadge';
 import { SceneBox } from '../ui/SceneBox';
 import { BossBar } from '../ui/BossBar';
 import { Sfx } from '../audio/Sfx';
+import { View3D, VIEW_MODES, VIEW_NAMES } from '../view3d/View3D';
+import type { ViewMode } from '../view3d/View3D';
+import { fromIso } from '../../sim/map';
+
+const VIEW_KEY = 'qfv-view';
+
+function readView(): ViewMode {
+  try {
+    const v = localStorage.getItem(VIEW_KEY) as ViewMode | null;
+    return v && VIEW_MODES.includes(v) ? v : 'iso';
+  } catch {
+    return 'iso';
+  }
+}
 
 /** Runs the simulation, renders the world and handles keyboard input. */
 export class GameScene extends Phaser.Scene {
@@ -59,7 +73,12 @@ export class GameScene extends Phaser.Scene {
   private camAt: { x: number; y: number } | null = null;
   /** Seconds left of easing back to the hero after a scene. */
   private camEase = 0;
-  private keys!: Record<'W' | 'A' | 'S' | 'D' | 'UP' | 'DOWN' | 'LEFT' | 'RIGHT', Phaser.Input.Keyboard.Key>;
+  private keys!: Record<'W' | 'A' | 'S' | 'D' | 'UP' | 'DOWN' | 'LEFT' | 'RIGHT' | 'COMMA' | 'PERIOD' | 'Q' | 'E', Phaser.Input.Keyboard.Key>;
+  /** The world in 3D (the diorama and PoV views), while one of them is on. */
+  private view3d: View3D | null = null;
+  private viewMode: ViewMode = 'iso';
+  /** The region's ground as built for the 2D view (the 3D views lay the same art flat). */
+  private built!: BuiltWorld;
 
   constructor() {
     super(SceneKeys.Game);
@@ -83,10 +102,11 @@ export class GameScene extends Phaser.Scene {
     this.wearGear();
     this.sim.events.on('bag', () => this.wearGear());
     const built = buildRegionGround(this, this.sim.map);
+    this.built = built;
     this.world = new WorldRenderer(this, this.sim, built);
     this.effects = new Effects(this, this.sim);
     this.clouds = new Clouds(this, this.sim.map.cols, this.sim.map.rows);
-    this.cameras.main.setZoom(PIXEL_SCALE).setRoundPixels(true);
+    this.cameras.main.setZoom(PIXEL_SCALE).setRoundPixels(true).setBackgroundColor('#0b1220');
     // coming from the loading screen: fade up from black
     if (this.registry.get('fadeIn')) this.cameras.main.fadeIn(500, 0, 0, 0);
     this.lighting = new Lighting(this, this.cameras.main, this.sim.day);
@@ -159,12 +179,19 @@ export class GameScene extends Phaser.Scene {
     if (PLATFORM === 'pc') this.setupPcKeyboard();
     else this.setupMobileKeyboard();
     this.scene.launch(PLATFORM === 'pc' ? SceneKeys.PcHud : SceneKeys.MobileHud);
+    this.registry.set('setView', (m: ViewMode) => this.setView(m));
+    this.registry.set('getView', () => this.viewMode);
+    this.registry.set('cycleView', (dir: 1 | -1) => this.cycleView(dir));
+    this.setView(readView(), true);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
       this.effects.destroy();
       this.clouds.destroy();
       this.lighting.destroy();
       this.sfx.destroy();
+      this.view3d?.destroy();
+      this.view3d = null;
+      this.registry.set('view3d', null);
       this.dev.destroy();
       this.inventory.destroy();
       this.crafting.destroy();
@@ -194,6 +221,8 @@ export class GameScene extends Phaser.Scene {
         id,
         x: isoX(s.x, s.y),
         y: isoY(s.x, s.y) - (fire ? 8 : 12),
+        wx: s.x,
+        wy: s.y,
         radius: (fire ? 130 : 80) * (0.4 + 0.6 * k),
         r: 0,
         g: 0.05,
@@ -227,7 +256,55 @@ export class GameScene extends Phaser.Scene {
 
   /** Draw the hero in their current equipment (HD styles show gear on the sprite). */
   private wearGear(): void {
-    if (setHeroGear(this.sim.equip) && isHdStyle(spriteStyle())) applyHeroTextures(this, spriteStyle());
+    if (setHeroGear(this.sim.equip) && isHdStyle(spriteStyle())) {
+      applyHeroTextures(this, spriteStyle());
+      this.view3d?.refreshTextures();
+    }
+  }
+
+  /**
+   * How the world is seen: the 2D isometric art, or the 3D views (render/view3d): a diorama
+   * that turns (`,` and `.`, right-drag, the wheel zooms) or close behind the hero.
+   */
+  setView(mode: ViewMode, quiet = false): void {
+    this.viewMode = mode;
+    try {
+      localStorage.setItem(VIEW_KEY, mode);
+    } catch {
+      // private browsing: the view just isn't remembered
+    }
+    const three = mode !== 'iso';
+    if (three && !this.view3d) {
+      try {
+        this.view3d = new View3D(this, this.sim, this.lighting, this.effects);
+        this.view3d.setRegion(this.world, this.built);
+      } catch (e) {
+        // no WebGL for a second canvas: stay in 2D
+        console.warn('3D view unavailable', e);
+        this.view3d = null;
+        if (!quiet) this.sim.log('The 3D views need WebGL.', 'h');
+        this.viewMode = 'iso';
+        return this.setView('iso', true);
+      }
+    }
+    if (!three && this.view3d) {
+      this.view3d.destroy();
+      this.view3d = null;
+    }
+    this.view3d?.setMode(mode as Exclude<ViewMode, 'iso'>);
+    this.registry.set('view3d', this.view3d);
+    // the 2D world steps aside; the camera stays (its fades still cover the 3D view)
+    this.world.layer.setVisible(!three);
+    this.clouds.setSuppressed(three);
+    this.lighting.setSuspended(three);
+    this.cameras.main.setBackgroundColor(three ? 'rgba(0,0,0,0)' : '#0b1220');
+    this.sim.hero.walkFlat = three;
+    if (!quiet) this.sim.log(`View: ${VIEW_NAMES[mode]}  (${PC_KEYS.view.bind} for the next one${three ? ', , and . turn it' : ''})`, 't');
+  }
+
+  private cycleView(dir: 1 | -1): void {
+    const n = VIEW_MODES.length;
+    this.setView(VIEW_MODES[(VIEW_MODES.indexOf(this.viewMode) + dir + n) % n]);
   }
 
   /**
@@ -240,7 +317,8 @@ export class GameScene extends Phaser.Scene {
     setSpriteStyle(style);
     applyStyleTextures(this, style);
     this.world.refreshStyle();
-    this.sim.log(`Art style: ${STYLE_LABELS[style]}  (V for the next one)`);
+    this.view3d?.refreshTextures();
+    this.sim.log(`Art style: ${STYLE_LABELS[style]}  (${PC_KEYS.artStyle.bind} for the next one)`);
   }
 
   /**
@@ -255,6 +333,7 @@ export class GameScene extends Phaser.Scene {
     } else {
       applyStyleTextures(this, style);
       this.world.refreshStyle();
+      this.view3d?.refreshTextures();
     }
     this.sim.log(`Hero: ${HD_HERO_LABELS[id]}  (H for the next one)`);
   }
@@ -266,7 +345,7 @@ export class GameScene extends Phaser.Scene {
     this.setHdHero(isHdStyle(spriteStyle()) ? HD_HERO_IDS[(i + dir + n) % n] : HD_HERO_IDS[i]);
   }
 
-  /** V: step through the art styles. */
+  /** Y (with the backup art styles switched on): step through the art styles. */
   private cycleArtStyle(dir: 1 | -1): void {
     const n = CANDIDATE_STYLES.length;
     this.setArtStyle(CANDIDATE_STYLES[(CANDIDATE_STYLES.indexOf(spriteStyle()) + dir + n) % n]);
@@ -274,6 +353,7 @@ export class GameScene extends Phaser.Scene {
 
   private onResize(): void {
     this.cameras.main.setZoom(PIXEL_SCALE);
+    this.view3d?.resize();
   }
 
   /**
@@ -334,7 +414,10 @@ export class GameScene extends Phaser.Scene {
   private rebuildWorld(): void {
     this.world.destroy();
     const built = buildRegionGround(this, this.sim.map);
+    this.built = built;
     this.world = new WorldRenderer(this, this.sim, built);
+    this.world.layer.setVisible(!this.view3d);
+    this.view3d?.setRegion(this.world, built);
     this.placeStaticLights(built);
     this.lighting.setRing(this.sim.regionDef.ring, !!this.sim.regionDef.indoor);
     this.clouds.relayout(this.sim.map.cols, this.sim.map.rows);
@@ -356,6 +439,8 @@ export class GameScene extends Phaser.Scene {
         id,
         x: isoX(o.wx, o.wy),
         y: isoY(o.wx, o.wy) - TOWER_H - 10,
+        wx: o.wx,
+        wy: o.wy,
         radius: 150,
         r: 0, g: 0.05, b: 0.35,
         intensity: 1,
@@ -367,7 +452,7 @@ export class GameScene extends Phaser.Scene {
     for (const [c, r] of this.sim.regionDef.lights ?? []) {
       const id = 'torch' + i++;
       this.staticLights.push(id);
-      this.lighting.setLight({ id, x: isoX(c * T + 16, r * T + 16), y: isoY(c * T + 16, r * T + 16) - 20, radius: 130, r: 0, g: 0.05, b: 0.32, intensity: 1, flickerHz: 7, flickerAmount: 0.14 });
+      this.lighting.setLight({ id, x: isoX(c * T + 16, r * T + 16), y: isoY(c * T + 16, r * T + 16) - 20, wx: c * T + 16, wy: r * T + 16, radius: 130, r: 0, g: 0.05, b: 0.32, intensity: 1, flickerHz: 7, flickerAmount: 0.14 });
     }
     // lit windows spill a little warm light in front of the house
     for (const p of this.sim.props) {
@@ -377,7 +462,7 @@ export class GameScene extends Phaser.Scene {
       this.staticLights.push(id);
       const wx = (p.c + def.w / 2) * T;
       const wy = (p.r + def.h) * T + 6;
-      this.lighting.setLight({ id, x: isoX(wx, wy), y: isoY(wx, wy) - 26, radius: 84, r: 0, g: 0.06, b: 0.3, intensity: 0.75, flickerHz: 3, flickerAmount: 0.05 });
+      this.lighting.setLight({ id, x: isoX(wx, wy), y: isoY(wx, wy) - 26, wx, wy, radius: 84, r: 0, g: 0.06, b: 0.3, intensity: 0.75, flickerHz: 3, flickerAmount: 0.05 });
     }
   }
 
@@ -402,7 +487,7 @@ export class GameScene extends Phaser.Scene {
     const kb = this.input.keyboard;
     if (!kb) return null;
     const KC = Phaser.Input.Keyboard.KeyCodes;
-    this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT') as GameScene['keys'];
+    this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,COMMA,PERIOD,Q,E') as GameScene['keys'];
     kb.addCapture([KC.SPACE, KC.TAB, KC.UP, KC.DOWN, KC.LEFT, KC.RIGHT]);
     return kb;
   }
@@ -411,8 +496,15 @@ export class GameScene extends Phaser.Scene {
   private setupPcKeyboard(): void {
     const kb = this.setupMovementKeys();
     if (!kb) return;
-    // each bar key casts whatever you have put in its slot
-    BAR_KEYS.forEach((b, i) => kb.on('keydown-' + b.code, () => this.sim.castBarSlot(i)));
+    // each bar key casts whatever you have put in its slot (in the point-of-view view Q and E
+    // turn instead: their slots cast with a click)
+    const turns: string[] = [PC_KEYS.povTurnLeft.code, PC_KEYS.povTurnRight.code];
+    BAR_KEYS.forEach((b, i) =>
+      kb.on('keydown-' + b.code, () => {
+        if (this.viewMode === 'pov' && turns.includes(b.code)) return;
+        this.sim.castBarSlot(i);
+      })
+    );
     kb.on('keydown-' + PC_KEYS.revStep.code, () => this.sim.revStep());
     kb.on('keydown-' + PC_KEYS.revToggle.code, () => this.sim.setRev(!this.sim.rev));
     kb.on('keydown-' + PC_KEYS.revAuto.code, () => this.sim.setRevAuto(!this.sim.revAuto));
@@ -430,6 +522,9 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-' + PC_KEYS.talents.code, () => this.talents.toggle());
     kb.on('keydown-' + PC_KEYS.spellbook.code, () => this.spellbook.toggle());
     kb.on('keydown-' + PC_KEYS.controls.code, () => this.controls.toggle());
+    kb.on('keydown-' + PC_KEYS.view.code, (ev: KeyboardEvent) => this.cycleView(ev.shiftKey ? -1 : 1));
+    kb.on('keydown-' + PC_KEYS.turnLeft.code, () => this.view3d?.turnStep(-1));
+    kb.on('keydown-' + PC_KEYS.turnRight.code, () => this.view3d?.turnStep(1));
     kb.on('keydown-' + PC_KEYS.lightToggle.code, () => {
       this.lighting.setEnabled(!this.lighting.isEnabled());
       this.sim.log(this.lighting.isEnabled() ? 'Lighting on.' : 'Lighting off.');
@@ -468,6 +563,18 @@ export class GameScene extends Phaser.Scene {
           my /= l;
         }
       }
+      if (this.view3d) {
+        // a 3D view walks relative to its camera (PoV: A and D turn); the sim reads the keys as a
+        // direction on the 2D screen, so hand it the one that walks that way on the ground
+        const k = this.keys;
+        const turn = k ? (k.PERIOD.isDown || k.E.isDown ? 1 : 0) - (k.COMMA.isDown || k.Q.isDown ? 1 : 0) : 0;
+        const d = this.view3d.steer(mx, my, this.view3d.mode === 'pov' ? turn : 0, dt);
+        const sx = d.x - d.y;
+        const sy = (d.x + d.y) / 2;
+        const l = Math.hypot(sx, sy);
+        mx = l ? sx / l : 0;
+        my = l ? sy / l : 0;
+      }
       this.sim.inputMove.x = mx;
       this.sim.inputMove.y = my;
     }
@@ -480,7 +587,9 @@ export class GameScene extends Phaser.Scene {
 
     // the camera follows the hero, or eases over to what a scene is showing
     const look = this.sim.scene?.look;
-    const want = look ? { x: isoX(look.x, look.y), y: isoY(look.x, look.y) + 20 } : { x: isoX(this.sim.x, this.sim.y), y: isoY(this.sim.x, this.sim.y) + 20 };
+    // on the hero: the same whole pixel the hero is drawn at, so they never shimmer against the screen
+    const hero = this.world.heroScreen();
+    const want = look ? { x: isoX(look.x, look.y), y: isoY(look.x, look.y) + 20 } : { x: hero.x, y: hero.y + 20 };
     if (this.sim.scene) this.camEase = 0.8;
     else this.camEase = Math.max(0, this.camEase - dt);
     if (!this.camAt || this.camEase <= 0) this.camAt = want;
@@ -491,23 +600,28 @@ export class GameScene extends Phaser.Scene {
     const shake = this.sim.shake > 0 ? Math.random() * 6 - 3 : 0;
     this.cameras.main.centerOn(Math.round(this.camAt.x + shake), Math.round(this.camAt.y));
     this.world.draw(time);
-    this.effects.draw();
+    if (!this.view3d) this.effects.draw();
     this.clouds.update(dt);
     // the player carries a small neutral light so night stays playable; a lantern adds a warm pool
     const px = isoX(this.sim.x, this.sim.y);
     const py = isoY(this.sim.x, this.sim.y) - 10;
-    this.lighting.setLight({ id: 'player', x: px, y: py, radius: 110, r: 0, g: 0, b: 0, intensity: 0.9 });
+    this.lighting.setLight({ id: 'player', x: px, y: py, wx: this.sim.x, wy: this.sim.y, radius: 110, r: 0, g: 0, b: 0, intensity: 0.9 });
     if (this.sim.gear.light > 0)
-      this.lighting.setLight({ id: 'lantern', x: px, y: py, radius: 110 + this.sim.gear.light, r: 0.02, g: 0.06, b: 0.16, intensity: 0.75, flickerHz: 5, flickerAmount: 0.06 });
+      this.lighting.setLight({ id: 'lantern', x: px, y: py, wx: this.sim.x, wy: this.sim.y, radius: 110 + this.sim.gear.light, r: 0.02, g: 0.06, b: 0.16, intensity: 0.75, flickerHz: 5, flickerAmount: 0.06 });
     else this.lighting.removeLight('lantern');
     this.lightStructures();
     // the grey postman carries a faint cold light of his own
     for (const w of this.sim.wanderers) {
       const id = 'wanderer:' + w.id;
-      if (w.alpha > 0.05) this.lighting.setLight({ id, x: isoX(w.x, w.y), y: isoY(w.x, w.y) - 16, radius: 46, r: 0.2, g: 0.1, b: 0, intensity: w.alpha * 0.7 });
+      if (w.alpha > 0.05) this.lighting.setLight({ id, x: isoX(w.x, w.y), y: isoY(w.x, w.y) - 16, wx: w.x, wy: w.y, radius: 46, r: 0.2, g: 0.1, b: 0, intensity: w.alpha * 0.7 });
       else this.lighting.removeLight(id);
     }
-    this.lighting.update(dt);
+    if (this.view3d) {
+      this.lighting.tick(dt);
+      // the 3D camera follows the hero, or the 2D camera's eased point while a scene shows something
+      const at = this.sim.scene || this.camEase > 0 ? fromIso(this.camAt.x, this.camAt.y - 20) : { x: this.sim.x, y: this.sim.y };
+      this.view3d.update(time, dt, at);
+    } else this.lighting.update(dt);
     this.bossBar.update();
     this.dev.update();
   }

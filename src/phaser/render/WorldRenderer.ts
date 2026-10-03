@@ -32,6 +32,19 @@ interface PropBox {
   sb: number;
 }
 
+/**
+ * Where a sprite stands: the world point under it, the screen point that was drawn from
+ * (sx, sy) and how far below that point its bottom rests (`foot`, screen px). The 3D views
+ * stand the same sprite up on that point, lifted by however far it is drawn above its rest.
+ */
+export interface Pin {
+  x: number;
+  y: number;
+  sx: number;
+  sy: number;
+  foot: number;
+}
+
 interface EnemyView {
   sprite: Phaser.GameObjects.Image;
   shadow: Phaser.GameObjects.Image;
@@ -75,7 +88,9 @@ export class WorldRenderer {
   /** Static world sprites whose texture changes with the art style. */
   private readonly statics: { img: Phaser.GameObjects.Image; key: string; scaled: boolean }[] = [];
   /** Everything this renderer draws lives in one layer (depth-sorted inside it). */
-  private readonly layer: Phaser.GameObjects.Layer;
+  readonly layer: Phaser.GameObjects.Layer;
+  /** The sprites that stand somewhere (people, creatures, trees, items, their shadows and names). */
+  readonly pins = new Map<Phaser.GameObjects.GameObject, Pin>();
   /** Buildings, for sorting what stands in front of them (see depthAt). */
   private readonly propBoxes: PropBox[] = [];
   /** Lit windows: faded in as night falls. */
@@ -125,11 +140,11 @@ export class WorldRenderer {
       if (o.kind === Tile.Tree) {
         // about one tree in three is a pine, picked by tile so it never changes
         const key = (Math.floor(o.wx / T) * 7 + Math.floor(o.wy / T) * 13) % 3 === 0 ? Tex.pine : Tex.tree;
-        const img = keep(this.image(px, py + 6, key).setOrigin(0.5, 1).setScale(artScale(key)).setDepth(d), key, true);
+        const img = this.pin(keep(this.image(px, py + 6, key).setOrigin(0.5, 1).setScale(artScale(key)).setDepth(d), key, true), o.wx, o.wy, 6);
         this.treeViews.set(`${Math.floor(o.wx / T)},${Math.floor(o.wy / T)}`, { img, key, x: px, shown: key });
       } else if (o.kind === Tile.Rock) {
-        const shadow = this.image(px, py + 4, Tex.shadow).setDisplaySize(32, 16).setAlpha(0.3).setDepth(d - 0.5);
-        const img = keep(this.image(px, py + 7, Tex.rock).setOrigin(0.5, 1).setScale(artScale(Tex.rock)).setDepth(d), Tex.rock, true);
+        const shadow = this.pin(this.image(px, py + 4, Tex.shadow).setDisplaySize(32, 16).setAlpha(0.3).setDepth(d - 0.5), o.wx, o.wy, 4);
+        const img = this.pin(keep(this.image(px, py + 7, Tex.rock).setOrigin(0.5, 1).setScale(artScale(Tex.rock)).setDepth(d), Tex.rock, true), o.wx, o.wy, 7);
         this.rockViews.set(`${Math.floor(o.wx / T)},${Math.floor(o.wy / T)}`, { img, shadow, x: px, shown: Tex.rock });
       } else if (o.kind === Tile.Wall && scene.textures.exists(Tex.prop('wallblock'))) {
         // interior walls: full height behind the room, cut low in front of it so you can see in
@@ -188,6 +203,24 @@ export class WorldRenderer {
     for (const v of this.rockViews.values()) v.shown = '';
   }
 
+  /** The hero's own sprites (a first-person view hides them). */
+  heroParts(): Phaser.GameObjects.GameObject[] {
+    return [this.knight, this.horse, this.rider, this.playerShadow, this.buffMark];
+  }
+
+  /** Record where a sprite stands (see Pin); `sx`/`sy` default to the point's projection. */
+  private pin<O extends Phaser.GameObjects.GameObject>(o: O, x: number, y: number, foot: number, sx = isoX(x, y), sy = isoY(x, y)): O {
+    const p = this.pins.get(o);
+    if (p) {
+      p.x = x;
+      p.y = y;
+      p.sx = sx;
+      p.sy = sy;
+      p.foot = foot;
+    } else this.pins.set(o, { x, y, sx, sy, foot });
+    return o;
+  }
+
   private image(x: number, y: number, key: string): Phaser.GameObjects.Image {
     const o = this.scene.add.image(x, y, key);
     this.layer.add(o);
@@ -209,6 +242,7 @@ export class WorldRenderer {
   /** Remove everything this renderer drew (leaving a region). */
   destroy(): void {
     this.layer.destroy();
+    this.pins.clear();
     this.enemyViews.clear();
     this.treeViews.clear();
     this.rockViews.clear();
@@ -274,7 +308,10 @@ export class WorldRenderer {
     const others = this.sim.others;
     for (const [o, v] of this.otherViews) {
       if (others.includes(o)) continue;
-      for (const x of [v.img, v.shadow, v.name, v.horse, v.rider]) x.destroy();
+      for (const x of [v.img, v.shadow, v.name, v.horse, v.rider]) {
+        this.pins.delete(x);
+        x.destroy();
+      }
       this.otherViews.delete(o);
     }
     for (const o of others) {
@@ -312,6 +349,11 @@ export class WorldRenderer {
       const qy = isoY(o.x, o.y);
       const z = jp >= 0 ? 16 * 4 * jp * (1 - jp) : 0;
       const depth = this.depthAt(o.x, o.y);
+      this.pin(v.img, o.x, o.y, 8);
+      this.pin(v.shadow, o.x, o.y, 5);
+      this.pin(v.name, o.x, o.y, 8);
+      this.pin(v.horse, o.x, o.y, 4);
+      this.pin(v.rider, o.x, o.y, 4);
       if (o.mounted && !o.dead) {
         const walking = v.walkingT > 0;
         const lift = this.trot(walking, now) + z;
@@ -365,6 +407,7 @@ export class WorldRenderer {
       const qy = isoY(w.x, w.y);
       // he glides: a slow bob instead of steps
       const bob = Math.round(Math.sin(now / 380 + w.x) * 1.5);
+      this.pin(v, w.x, w.y, 4);
       v.setTexture(frameKey(key, frames > 1 ? Math.floor(now / 520) % frames : 0))
         .setPosition(Math.round(qx), Math.round(qy + 4 + bob))
         .setFlipX(w.face < 0)
@@ -378,6 +421,7 @@ export class WorldRenderer {
   private drawObjects(now: number): void {
     for (const [o, img] of this.objectViews) {
       if (this.sim.objects.includes(o)) continue;
+      this.pins.delete(img);
       img.destroy();
       this.objectViews.delete(o);
     }
@@ -386,7 +430,7 @@ export class WorldRenderer {
       let img = this.objectViews.get(o);
       if (!img) {
         const flat = o.kind === 'page' || o.kind === 'letter';
-        img = this.image(isoX(o.x, o.y), isoY(o.x, o.y) + (flat ? 4 : 7), key).setOrigin(0.5, 1).setDepth(this.depthAt(o.x, o.y, flat ? o.x + o.y - 8 : o.x + o.y));
+        img = this.pin(this.image(isoX(o.x, o.y), isoY(o.x, o.y) + (flat ? 4 : 7), key).setOrigin(0.5, 1).setDepth(this.depthAt(o.x, o.y, flat ? o.x + o.y - 8 : o.x + o.y)), o.x, o.y, flat ? 4 : 7);
         this.objectViews.set(o, img);
       }
       const glint = (o.kind === 'page' || o.kind === 'letter') && Math.floor(now / 160) % 16 === 0;
@@ -428,7 +472,10 @@ export class WorldRenderer {
     const live = new Set(s.npcs);
     for (const [n, v] of this.npcViews) {
       if (live.has(n)) continue;
-      for (const o of [v.img, v.shadow, v.name, v.mark]) o.destroy();
+      for (const o of [v.img, v.shadow, v.name, v.mark]) {
+        this.pins.delete(o);
+        o.destroy();
+      }
       this.npcViews.delete(n);
     }
     for (const n of s.npcs) {
@@ -445,6 +492,7 @@ export class WorldRenderer {
         };
         this.npcViews.set(n, v);
       }
+      for (const o of [v.img, v.shadow, v.name, v.mark]) this.pin(o, n.x, n.y, 6);
       const frames = artFrames(key);
       const sc = artScale(key);
       v.img.setTexture(frameKey(key, frames > 1 ? Math.floor(now / 420) % frames : 0)).setScale(sc).setDepth(this.depthAt(n.x, n.y));
@@ -468,6 +516,8 @@ export class WorldRenderer {
     const live = new Set(this.sim.structures);
     for (const [s, v] of this.structureViews) {
       if (live.has(s)) continue;
+      this.pins.delete(v.img);
+      this.pins.delete(v.shadow);
       v.img.destroy();
       v.shadow.destroy();
       this.structureViews.delete(s);
@@ -484,6 +534,8 @@ export class WorldRenderer {
         };
         this.structureViews.set(s, v);
       }
+      this.pin(v.img, s.x, s.y, s.kind === 'forge' ? 9 : 6);
+      this.pin(v.shadow, s.x, s.y, 3);
       const n = artFrames(key);
       const f = n > 1 ? Math.floor(now / (s.kind === 'campfire' ? 120 : 260) + s.id) % n : 0;
       const k = frameKey(key, f);
@@ -501,6 +553,8 @@ export class WorldRenderer {
     const live = new Set(this.sim.drops);
     for (const [d, v] of this.dropViews) {
       if (live.has(d)) continue;
+      this.pins.delete(v.img);
+      this.pins.delete(v.shadow);
       v.img.destroy();
       v.shadow.destroy();
       this.dropViews.delete(d);
@@ -517,6 +571,8 @@ export class WorldRenderer {
       }
       const qx = isoX(d.x, d.y);
       const qy = isoY(d.x, d.y);
+      this.pin(v.img, d.x, d.y, 2);
+      this.pin(v.shadow, d.x, d.y, 2);
       const s = artScale(key);
       const w = v.img.setTexture(key).frame.width * s;
       const bob = d.z === 0 ? Math.round(Math.sin(now / 300 + d.x) * 1.2) : 0;
@@ -531,6 +587,7 @@ export class WorldRenderer {
     const live = new Set(this.sim.enemies);
     for (const [e, v] of this.enemyViews) {
       if (live.has(e)) continue;
+      for (const o of [v.sprite, v.shadow, v.mark]) this.pins.delete(o);
       v.sprite.destroy();
       v.shadow.destroy();
       v.mark.destroy();
@@ -565,6 +622,7 @@ export class WorldRenderer {
     const h = fh * s;
     const qx = isoX(e.x, e.y);
     const qy = isoY(e.x, e.y);
+    for (const o of [v.sprite, v.shadow, v.mark]) this.pin(o, e.x, e.y, 6);
     const x = qx - w / 2;
     const y = qy - h + 6;
     const depth = this.depthAt(e.x, e.y);
@@ -645,17 +703,45 @@ export class WorldRenderer {
     seg([[x + m, y + h], [x, y + h], [x, y + h - m]]);
   }
 
-  private drawPlayer(now: number, g: Phaser.GameObjects.Graphics): void {
+  /**
+   * Where the hero stands on screen this frame, in whole pixels; the camera centres on the same
+   * point, so the hero holds still while the world scrolls. Rounding x and y on their own made
+   * a diagonal walk step x on one frame and y on another, and the hero shimmered against the
+   * ground: instead round the axis that moves faster and slide along the line of travel to it
+   * (like a line drawn pixel by pixel), so both axes step together.
+   */
+  heroScreen(): { x: number; y: number } {
     const s = this.sim;
     const qx = isoX(s.x, s.y);
     const qy = isoY(s.x, s.y);
+    const m = s.moving ? s.hero.lastMove : null;
+    if (!m) return { x: Math.round(qx), y: Math.round(qy) };
+    // the walk's direction on screen
+    const vx = m.x - m.y;
+    const vy = (m.x + m.y) / 2;
+    if (Math.abs(vx) >= Math.abs(vy)) {
+      const x = Math.round(qx);
+      return { x, y: Math.round(qy + ((x - qx) * vy) / vx) };
+    }
+    const y = Math.round(qy);
+    return { x: Math.round(qx + ((y - qy) * vx) / vy), y };
+  }
+
+  private drawPlayer(now: number, g: Phaser.GameObjects.Graphics): void {
+    const s = this.sim;
+    const { x: qx, y: qy } = this.heroScreen();
     const depth = this.depthAt(s.x, s.y);
+    this.pin(this.knight, s.x, s.y, 8, qx, qy);
+    this.pin(this.playerShadow, s.x, s.y, 5, qx, qy);
+    this.pin(this.horse, s.x, s.y, 4, qx, qy);
+    this.pin(this.rider, s.x, s.y, 4, qx, qy);
+    this.pin(this.buffMark, s.x, s.y, 8, qx, qy);
     const alpha = s.invT > 0 ? 0.5 : 1;
     const flipX = s.face < 0;
     const ks = artScale(Tex.knight);
     const walking = s.moving && !s.airborne;
     // jump: lift the body, shrink the shadow, stretch going up and squash on landing
-    const z = s.jumpZ;
+    const z = Math.round(s.jumpZ);
     const jp = s.jumpP;
     // a backflip tumbles through drawn frames when the style has them; otherwise it is a straight jump
     const tumbling = s.airborne && s.jumpFlip && artAnim(Tex.knight, 'flip') > 0;
