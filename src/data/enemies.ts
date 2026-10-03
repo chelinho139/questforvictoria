@@ -90,7 +90,10 @@ export interface EnemyDef {
   gold: [number, number];
   /** Experience for the kill. */
   xp: number;
-  /** Items dropped on death. */
+  /**
+   * Items dropped on death. Gear is a lucky find (leather 1–4% a piece, iron 1–3%): the
+   * forge, the traders and quest rewards are the main roads to better gear.
+   */
   loot?: Loot;
   /**
    * A boss: a big health bar while you fight it, phases as its health falls (fractions,
@@ -119,13 +122,13 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
     gold: [1, 3],
     xp: 18,
     loot: [
-      ['leather_cap', 1, 1, 0.15],
-      ['leather_tunic', 1, 1, 0.12],
-      ['leather_trousers', 1, 1, 0.15],
-      ['leather_boots', 1, 1, 0.12],
-      ['wooden_shield', 1, 1, 0.1],
-      ['woodcutter_axe', 1, 1, 0.08],
-      ['pickaxe', 1, 1, 0.08],
+      ['leather_cap', 1, 1, 0.04],
+      ['leather_tunic', 1, 1, 0.03],
+      ['leather_trousers', 1, 1, 0.04],
+      ['leather_boots', 1, 1, 0.03],
+      ['wooden_shield', 1, 1, 0.03],
+      ['woodcutter_axe', 1, 1, 0.02],
+      ['pickaxe', 1, 1, 0.02],
     ],
   },
   shaman: {
@@ -152,8 +155,8 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
     gold: [2, 5],
     xp: 26,
     loot: [
-      ['vigour_amulet', 1, 1, 0.25],
-      ['swift_boots', 1, 1, 0.15],
+      ['vigour_amulet', 1, 1, 0.06],
+      ['swift_boots', 1, 1, 0.04],
     ],
   },
   ogre: {
@@ -171,8 +174,8 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
     gold: [4, 8],
     xp: 60,
     loot: [
-      ['iron_shield', 1, 1, 0.35],
-      ['iron_sword', 1, 1, 0.25],
+      ['iron_shield', 1, 1, 0.1],
+      ['iron_sword', 1, 1, 0.07],
     ],
   },
   skeleton: {
@@ -197,10 +200,10 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
     gold: [1, 3],
     xp: 24,
     loot: [
-      ['iron_helm', 1, 1, 0.15],
-      ['chainmail', 1, 1, 0.1],
-      ['iron_greaves', 1, 1, 0.12],
-      ['iron_sword', 1, 1, 0.06],
+      ['iron_helm', 1, 1, 0.03],
+      ['chainmail', 1, 1, 0.015],
+      ['iron_greaves', 1, 1, 0.025],
+      ['iron_sword', 1, 1, 0.01],
     ],
   },
   cow: {
@@ -236,13 +239,13 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
     gold: [0, 1],
     xp: 10,
     loot: [
-      ['leather_cap', 1, 1, 0.07],
-      ['leather_tunic', 1, 1, 0.06],
-      ['leather_trousers', 1, 1, 0.07],
-      ['leather_boots', 1, 1, 0.07],
-      ['wooden_shield', 1, 1, 0.06],
-      ['woodcutter_axe', 1, 1, 0.04],
-      ['pickaxe', 1, 1, 0.04],
+      ['leather_cap', 1, 1, 0.02],
+      ['leather_tunic', 1, 1, 0.015],
+      ['leather_trousers', 1, 1, 0.02],
+      ['leather_boots', 1, 1, 0.02],
+      ['wooden_shield', 1, 1, 0.015],
+      ['woodcutter_axe', 1, 1, 0.01],
+      ['pickaxe', 1, 1, 0.01],
     ],
   },
   // a test boss for the dev Test Field: three phases, a flag when it falls

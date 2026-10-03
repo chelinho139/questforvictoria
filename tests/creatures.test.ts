@@ -4,7 +4,9 @@ import { Game } from '../src/sim/Game';
 import type { Hero } from '../src/sim/Hero';
 import type { Enemy } from '../src/sim/types';
 import { ITEMS, sellValue } from '../src/data/items';
+import type { ItemId } from '../src/data/items';
 import { KINDS } from '../src/data/enemies';
+import type { EnemyKind } from '../src/data/enemies';
 import { NPCS } from '../src/data/npcs';
 import type { NpcId } from '../src/data/npcs';
 import { skipScenes, run, standBy } from './helpers';
@@ -109,4 +111,26 @@ test('traders pay a twentieth of the price, and nothing for what is worth less t
   assert.equal(h.sell(trader, h.bag.findIndex(s => s?.id === 'log')), false);
   assert.equal(h.sell(trader, h.bag.findIndex(s => s?.id === 'iron_sword')), true);
   assert.equal(h.gold - g0, sellValue('iron_sword'));
+});
+
+/** Kills, on average, until every one of these items has dropped at least once (inclusion–exclusion over the chances). */
+function killsForAll(kind: EnemyKind, items: ItemId[]): number {
+  const p = items.map(id => KINDS[kind].loot!.find(([i]) => i === id)![3] ?? 1);
+  let sum = 0;
+  for (let mask = 1; mask < 1 << p.length; mask++) {
+    const picked = p.filter((_, i) => mask & (1 << i));
+    sum += (picked.length % 2 ? 1 : -1) / picked.reduce((a, b) => a + b, 0);
+  }
+  return sum;
+}
+
+test('gear is a lucky find: a full iron set takes many nights of skeletons', () => {
+  // it used to take about 15 kills, a single night
+  const iron = killsForAll('skeleton', ['iron_helm', 'chainmail', 'iron_greaves']);
+  assert.ok(iron > 60, `a helm, chainmail and greaves in about ${iron.toFixed(0)} kills`);
+  const leather = killsForAll('slime', ['leather_cap', 'leather_tunic', 'leather_trousers', 'leather_boots']);
+  assert.ok(leather > 60, `the leather set in about ${leather.toFixed(0)} slimes`);
+  for (const [kind, k] of Object.entries(KINDS))
+    for (const [id, , , chance = 1] of k.loot ?? [])
+      if (ITEMS[id].slot) assert.ok(chance <= 0.1, `${kind} drops ${id} ${chance * 100}% of the time`);
 });
