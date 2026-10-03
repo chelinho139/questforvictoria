@@ -306,12 +306,13 @@ interface Speaker {
 }
 
 /**
- * Talking, in no language at all: a handful of syllables, each a mouth shape with a little
- * consonant in front, wandering up and down and falling at the end of the phrase.
+ * Talking, in no language at all: three to five syllables (a word or two, not a speech),
+ * each a mouth shape with a little consonant in front, wandering up and down and falling
+ * at the end of the phrase.
  */
 function babble(s: Track, o: Speaker): void {
   const mouths = [AH, EH, EE, OH, UH];
-  const n = 5 + Math.floor(s.random() * 4);
+  const n = 3 + Math.floor(s.random() * 3);
   let t = 0.02;
   for (let i = 0; i < n; i++) {
     const p = i / (n - 1);
@@ -379,7 +380,7 @@ const VOICES = Object.fromEntries(
   (Object.keys(SPEAKERS) as (keyof typeof SPEAKERS)[]).map(who => {
     const o = SPEAKERS[who];
     const recipe: Recipe = {
-      len: 9 * o.syl + 0.6 + (o.room ? 1 : 0),
+      len: 7 * o.syl + 0.6 + (o.room ? 1 : 0),
       loud: 0.45,
       takes: 4,
       make: s => babble(s, o),

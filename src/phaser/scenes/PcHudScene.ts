@@ -8,7 +8,7 @@ import { BAR_KEYS, PC_KEYS } from '../../data/actionBar';
 import type { SpellKey } from '../../data/spells';
 import { dragSpell } from '../ui/spellDrag';
 import { isoX, isoY, fromIso } from '../../sim/map';
-import { Colors, Fonts, hex, PIXEL_SCALE, logicalSize } from '../config';
+import { Colors, Fonts, hex, PIXEL_SCALE, TOUCH, logicalSize } from '../config';
 import { Tex } from '../render/textures';
 import { drawSquareSweep } from '../render/hud';
 import type { Graphics, Text } from '../render/hud';
@@ -28,7 +28,9 @@ const LOG_LINES = 6;
 const PANEL_H = 64;
 
 // draw order, back to front
-const D = { panel: 10, slot: 11, bars: 12, art: 13, sweep: 14, ring: 15, text: 16, tipPanel: 60, tipText: 61, floater: 80, banner: 90, overlay: 100, dead: 110 };
+const D = { panel: 10, slot: 11, bars: 12, art: 13, sweep: 14, ring: 15, text: 16, list: 50, tipPanel: 60, tipText: 61, floater: 80, banner: 90, overlay: 100, dead: 110 };
+/** The touch menu button's size. */
+const MENU_BTN = 34;
 
 /** Bar fill ramps: highlight row, body, shade row. */
 const FILL = {
@@ -54,6 +56,7 @@ interface SlotView {
 
 interface UnitFrame {
   x: number;
+  y: number;
   panel: NineSlice;
   slot: NineSlice;
   portrait: Image;
@@ -120,6 +123,14 @@ export class PcHudScene extends Phaser.Scene {
   private menu: { view: SlotView; win: string; name: string; desc: string; bind: string }[] = [];
   private menuSize = 30;
   private menuHover = -1;
+  /**
+   * On a touch screen the menu bar folds into one button (top right) that drops the list
+   * down, each window named beside its icon, so the action bar has the whole bottom edge.
+   */
+  private readonly compact = TOUCH;
+  private menuBtn!: SlotView;
+  private menuOpen = false;
+  private menuNames: Text[] = [];
   /** Experience bar above the action bar. */
   private xpBg!: NineSlice;
   private xpHover = false;
@@ -201,6 +212,21 @@ export class PcHudScene extends Phaser.Scene {
       view.icon.setTexture(Tex.icon(icon));
       return { view, win, name, desc, bind };
     });
+    this.menuBtn = mkSlot('rev', '');
+    this.menuBtn.icon.setTexture(Tex.icon('menu'));
+    this.menuNames = this.menu.map(m => this.text(0, 0, m.name, 12, '#fce6b4', { bold: true, stroke: true }).setOrigin(0, 0.5));
+    if (this.compact) {
+      // the list drops over the unit frames: above them, under the tooltips
+      this.menuBack.setDepth(D.list);
+      for (const { view: v } of this.menu) {
+        v.bg.setDepth(D.list + 1);
+        v.icon.setDepth(D.list + 2);
+        v.ring.setDepth(D.list + 3);
+        v.bind.setVisible(false);
+      }
+      for (const t of this.menuNames) t.setDepth(D.list + 3);
+    }
+    this.showMenu(!this.compact);
     this.tipPanel = panel(this, UI.panel, 0, 0, 10, 10).setDepth(D.tipPanel).setVisible(false);
     this.tipName = this.text(0, 0, '', 12, Ink.dark, { bold: true }).setDepth(D.tipText).setVisible(false);
     this.tipDesc = this.text(0, 0, '', 10, Ink.mid).setDepth(D.tipText).setVisible(false);
@@ -219,6 +245,7 @@ export class PcHudScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
       this.offs.forEach(f => f());
+      document.body.classList.remove('hud-menu-open');
     });
   }
 
@@ -229,6 +256,7 @@ export class PcHudScene extends Phaser.Scene {
   private unitFrame(withMana: boolean): UnitFrame {
     const f: UnitFrame = {
       x: 0,
+      y: 12,
       panel: panel(this, UI.panel, 0, 0, 10, PANEL_H).setDepth(D.panel),
       slot: panel(this, UI.slot, 0, 0, 48, 48).setDepth(D.slot),
       portrait: this.add.image(0, 0, Tex.knight).setOrigin(0).setDepth(D.art),
@@ -253,10 +281,14 @@ export class PcHudScene extends Phaser.Scene {
     this.H = h;
     this.cameras.main.setZoom(PIXEL_SCALE).centerOn(w / 2, h / 2);
 
-    // unit frames shrink on narrow windows so they never reach the dial
-    this.panelW = Math.max(200, Math.min(262, Math.floor((w - 24 - 8 - 130) / 2)));
-    this.placeFrame(this.player, 12);
-    this.placeFrame(this.target, 12 + this.panelW + 8);
+    // unit frames shrink on narrow windows so they never reach the dial; on a phone held
+    // upright there is no room for two side by side, so the target's goes under yours
+    const frameRoom = w - 24 - 130 - (this.compact ? MENU_BTN + 8 : 0);
+    const stacked = this.compact && frameRoom - 8 < 2 * 200;
+    this.panelW = stacked ? Math.max(160, Math.min(262, frameRoom)) : Math.max(200, Math.min(262, Math.floor((frameRoom - 8) / 2)));
+    this.placeFrame(this.player, 12, 12);
+    if (stacked) this.placeFrame(this.target, 12, 12 + PANEL_H + 6);
+    else this.placeFrame(this.target, 12 + this.panelW + 8, 12);
 
     // info box pinned to the top-right corner, the day dial centred above it, gear to its left
     const infoW = 118;
@@ -275,15 +307,16 @@ export class PcHudScene extends Phaser.Scene {
     // action bar: (Rev slot +) 12 slots + the bag button, centred as a group, slots shrink if needed
     const rev = (this.revShown = this.sim.revEnabled);
     const n = this.slots.length;
-    // menu bar first: it owns the bottom-right corner
-    const M = (this.menuSize = w < 760 ? 26 : 30);
+    // menu bar first: it owns the bottom-right corner (on a touch screen it is a button up top)
+    const M = (this.menuSize = w < 760 && !this.compact ? 26 : 30);
     const menuW = this.menu.length * M + (this.menu.length - 1) * GAP;
     const menuX = w - 12 - 10 - menuW;
-    // the action bar (skills only, the Rev slot left of it when on) fits in what is left
-    const maxRight = menuX - 10 - 14;
+    // the action bar (skills only, the Rev slot left of it when on) fits in what is left:
+    // on a touch screen the whole width, with slots big enough for a thumb
+    const maxRight = this.compact ? w - 12 : menuX - 10 - 14;
     const room = maxRight - 12;
     const gaps = 20 + (rev ? 30 + 20 : 0);
-    this.slotSize = Math.max(24, Math.min(36, Math.floor((room - gaps - GAP * (n - 1)) / (n + (rev ? 1 : 0)))));
+    this.slotSize = Math.max(24, Math.min(this.compact ? 48 : 36, Math.floor((room - gaps - GAP * (n - 1)) / (n + (rev ? 1 : 0)))));
     const S = this.slotSize;
     const barW = n * S + (n - 1) * GAP;
     const groupW = (rev ? S + 30 : 0) + barW;
@@ -303,9 +336,12 @@ export class PcHudScene extends Phaser.Scene {
     this.placeSlot(this.revSlot, revX, y);
 
     // menu bar, bottom-aligned with the action bar; windows stay above both
-    const my = h - M - 14;
-    this.menuBack.setPosition(menuX - 10, my - 10).setSize(menuW + 20, M + 20);
-    this.menu.forEach((m, i) => this.placeMenu(m.view, menuX + i * (M + GAP), my));
+    const my = this.compact ? y : h - M - 14;
+    if (this.compact) this.layoutMenuList(infoX);
+    else {
+      this.menuBack.setPosition(menuX - 10, my - 10).setSize(menuW + 20, M + 20);
+      this.menu.forEach((m, i) => this.placeMenu(m.view, menuX + i * (M + GAP), my));
+    }
     const bottom = ((h - (Math.min(y, my) - 10)) * PIXEL_SCALE) / (window.devicePixelRatio || 1) + 10;
     for (const k of ['inventory', 'crafting', 'questLog', 'controls', 'spellbook']) (this.registry.get(k) as { setBottom(px: number): void } | undefined)?.setBottom(bottom);
 
@@ -316,27 +352,27 @@ export class PcHudScene extends Phaser.Scene {
     this.deadText.setPosition(w / 2, h * 0.42);
   }
 
-  private placeFrame(f: UnitFrame, x: number): void {
+  private placeFrame(f: UnitFrame, x: number, y: number): void {
     const pw = this.panelW;
     f.x = x;
-    f.panel.setPosition(x, 12).setSize(pw, PANEL_H);
-    f.slot.setPosition(x + 8, 20);
+    f.y = y;
+    f.panel.setPosition(x, y).setSize(pw, PANEL_H);
+    f.slot.setPosition(x + 8, y + 8);
     const cx = x + 64;
-    f.name.setPosition(cx, 16);
-    f.sub.setPosition(cx, 18);
+    f.name.setPosition(cx, y + 4);
+    f.sub.setPosition(cx, y + 6);
     const barW = pw - 64 - 24;
-    f.hpIcon.setPosition(cx, 36);
-    f.hpBg.setPosition(cx + 13, 35).setSize(barW, 11);
-    f.hpText.setPosition(cx + 13 + barW / 2, 40.5);
+    f.hpIcon.setPosition(cx, y + 24);
+    f.hpBg.setPosition(cx + 13, y + 23).setSize(barW, 11);
+    f.hpText.setPosition(cx + 13 + barW / 2, y + 28.5);
     if (f.mpBg && f.mpIcon && f.mpText) {
-      f.mpIcon.setPosition(cx + 1, 48);
-      f.mpBg.setPosition(cx + 13, 50).setSize(barW, 9);
-      f.mpText.setPosition(cx + 13 + barW / 2, 54.5);
+      f.mpIcon.setPosition(cx + 1, y + 36);
+      f.mpBg.setPosition(cx + 13, y + 38).setSize(barW, 9);
+      f.mpText.setPosition(cx + 13 + barW / 2, y + 42.5);
     }
   }
 
-  private placeSlot(s: SlotView, x: number, y: number): void {
-    const S = this.slotSize;
+  private placeSlot(s: SlotView, x: number, y: number, S = this.slotSize): void {
     s.x = x;
     s.y = y;
     s.bg.setPosition(x, y).setSize(S, S);
@@ -460,8 +496,11 @@ export class PcHudScene extends Phaser.Scene {
 
   /** Index of the menu button under the pointer, or -1. */
   private menuAt(p: { x: number; y: number }): number {
+    if (!this.menuOpen) return -1;
     const M = this.menuSize;
-    return this.menu.findIndex(m => p.x >= m.view.x && p.x < m.view.x + M && p.y >= m.view.y && p.y < m.view.y + M);
+    // on a touch screen a whole row of the list is the button
+    const right = (m: { view: SlotView }) => (this.compact ? this.menuBack.x + this.menuBack.width : m.view.x + M);
+    return this.menu.findIndex(m => p.x >= m.view.x && p.x < right(m) && p.y >= m.view.y - GAP / 2 && p.y < m.view.y + M + GAP / 2);
   }
 
   /** A menu button: like an action slot, at the menu bar's size. */
@@ -476,6 +515,46 @@ export class PcHudScene extends Phaser.Scene {
     s.cd.setPosition(x + M / 2, y + M / 2);
   }
 
+  /**
+   * Touch: the menu button left of the day dial, and its list dropping down from it, one
+   * row a window (its icon and name), right-aligned under the button.
+   */
+  private layoutMenuList(infoX: number): void {
+    const B = MENU_BTN;
+    const bx = infoX - 8 - B;
+    this.placeSlot(this.menuBtn, bx, 12, B);
+    const M = this.menuSize;
+    const nameW = Math.max(...this.menuNames.map(t => t.width));
+    const listW = 10 + M + 8 + nameW + 12;
+    const lx = Math.max(8, bx + B - listW);
+    const ly = 12 + B + 6;
+    this.menuBack.setPosition(lx, ly).setSize(listW, 10 + this.menu.length * (M + GAP) - GAP + 10);
+    this.menu.forEach((m, i) => {
+      const ry = ly + 10 + i * (M + GAP);
+      this.placeMenu(m.view, lx + 10, ry);
+      this.menuNames[i].setPosition(lx + 10 + M + 8, ry + M / 2);
+    });
+  }
+
+  /** Show or hide the menu (the bar on PC; the dropped-down list on a touch screen). */
+  private showMenu(on: boolean): void {
+    this.menuOpen = on;
+    this.menuBack.setVisible(on);
+    for (const { view: v } of this.menu) {
+      v.bg.setVisible(on);
+      v.icon.setVisible(on);
+      if (!on) v.ring.setVisible(false);
+      v.bind.setVisible(on && !this.compact);
+    }
+    for (const t of this.menuNames) t.setVisible(on && this.compact);
+    for (const o of [this.menuBtn.bg, this.menuBtn.icon]) o.setVisible(this.compact);
+    if (!this.compact) this.menuBtn.ring.setVisible(false);
+    this.menuBtn.bind.setVisible(false);
+    // the quest list (a page element, drawn over the game) steps aside for the list
+    if (this.compact) document.body.classList.toggle('hud-menu-open', on);
+    this.menuHover = -1;
+  }
+
   private toggleWindow(win: string): void {
     (this.registry.get(win) as { toggle(): void } | undefined)?.toggle();
   }
@@ -486,13 +565,27 @@ export class PcHudScene extends Phaser.Scene {
 
   /** HUD panels that should swallow clicks instead of moving the player. */
   private overHud(p: { x: number; y: number }): boolean {
-    return [this.player.panel, this.target.panel, this.castTag, this.info, this.barBack, this.revBack, this.revTag, this.menuBack].some(o => this.inside(p, o));
+    return [this.player.panel, this.target.panel, this.castTag, this.info, this.barBack, this.revBack, this.revTag, this.menuBack, this.menuBtn.bg].some(o => this.inside(p, o));
   }
 
   private onDown(pointer: Phaser.Input.Pointer): void {
     // clicks on DOM overlays (the dev panel) are not game clicks
     if (pointer.downElement !== this.game.canvas) return;
     const p = this.toLogical(pointer);
+    if (this.compact) {
+      // the menu button opens and closes the list; a row opens its window; a tap anywhere
+      // else while it is open only closes it
+      if (this.inside(p, this.menuBtn.bg)) {
+        this.showMenu(!this.menuOpen);
+        return;
+      }
+      if (this.menuOpen) {
+        const mi = this.menuAt(p);
+        if (mi >= 0) this.toggleWindow(this.menu[mi].win);
+        this.showMenu(false);
+        return;
+      }
+    }
     if (this.dial.contains(p)) return;
     const mi = this.menuAt(p);
     if (mi >= 0) {
@@ -575,6 +668,13 @@ export class PcHudScene extends Phaser.Scene {
 
   private onUp(pointer: Phaser.Input.Pointer): void {
     this.pressed = null;
+    // a finger lifted leaves nothing hovered (no tooltip stuck over the bar)
+    if (this.compact) {
+      this.hover = null;
+      this.hoverSlot = null;
+      this.menuHover = -1;
+      this.xpHover = false;
+    }
     if (this.steering && pointer === this.steering.pointer) this.steering = null;
   }
 
@@ -728,6 +828,8 @@ export class PcHudScene extends Phaser.Scene {
     const f = this.player;
     f.sub.setText(`${CLASSES[s.cls].name} · Lv ${s.level}`);
     f.sub.setX(f.name.x + f.name.width + 6);
+    // a narrow frame (a phone held upright) drops the class and level before they spill out
+    f.sub.setVisible(f.sub.x + f.sub.width <= f.x + this.panelW - 8);
     // head-and-shoulders crop of the knight
     // re-set every frame so a mid-game art style change picks up the new hero size
     f.portrait.setTexture(Tex.knight);
@@ -754,17 +856,17 @@ export class PcHudScene extends Phaser.Scene {
     this.castBg.setVisible(casting);
     this.castText.setVisible(casting);
     if (!has || !tg) {
-      f.name.setText('No target').setColor(Ink.soft).setY(32);
+      f.name.setText('No target').setColor(Ink.soft).setY(f.y + 20);
       return;
     }
-    f.name.setText(tg.n).setColor(Ink.dark).setY(16);
+    f.name.setText(tg.n).setColor(Ink.dark).setY(f.y + 4);
     f.portrait.setTexture(tg.def.tex);
     this.fitPortrait(f.portrait, f.slot);
     this.fillBar(f.hpBg, tg.hp / tg.hpMax, FILL.hp);
     f.hpText.setText(`${Math.round(tg.hp)} / ${tg.hpMax}`);
     if (casting) {
       const x = f.x + 8;
-      const y = 12 + PANEL_H + 4;
+      const y = f.y + PANEL_H + 4;
       const w = this.panelW - 16;
       this.castTag.setPosition(x, y).setSize(w, 18);
       this.castText.setPosition(x + 6, y + 9).setText('Fireball');
@@ -784,8 +886,10 @@ export class PcHudScene extends Phaser.Scene {
     if (tg && tg.alive && tg.stunT > 0) chips.push(['Stunned', Ink.mid]);
     if (tg && tg.alive && s.dist(s, tg) >= s.aaReach) chips.push(['Out of range', Ink.mid]);
     if (s.mounted) chips.push(['Mounted ×1.8', '#6a4ab8']);
+    // under the frames (and under the target's cast bar when its frame is under yours)
     let x = 12;
-    const y = 12 + PANEL_H + 4;
+    const stacked = this.target.y > this.player.y;
+    const y = this.target.y + PANEL_H + 4 + (stacked && this.castTag.visible ? 22 : 0);
     this.chips.forEach((c, i) => {
       const chip = chips[i];
       c.tag.setVisible(!!chip);
@@ -880,7 +984,18 @@ export class PcHudScene extends Phaser.Scene {
   /** Menu buttons light up while their window is open (and on hover); Talents glows while points wait. */
   private drawBagBtn(): void {
     const pulse = 0.55 + 0.45 * Math.sin(this.time.now / 220);
+    if (this.compact) {
+      // the menu button stands in for the bar while the list is shut: lit while it is open,
+      // glowing while talent points wait
+      const waiting = !this.menuOpen && this.sim.talentPoints > 0;
+      this.menuBtn.bg.setTexture(this.menuOpen ? UI.slotHot : UI.slot);
+      this.menuBtn.ring
+        .setVisible(this.menuOpen || waiting)
+        .setTint(hex(Colors.gold))
+        .setAlpha(waiting ? pulse : 1);
+    }
     this.menu.forEach((m, i) => {
+      if (!this.menuOpen) return;
       const open = (this.registry.get(m.win) as { isOpen: boolean } | undefined)?.isOpen ?? false;
       const hover = this.menuHover === i;
       const waiting = m.win === 'talents' && !open && this.sim.talentPoints > 0;
@@ -911,7 +1026,7 @@ export class PcHudScene extends Phaser.Scene {
       this.tipDesc.setPosition(x + 11, y + 9 + this.tipName.height);
       return;
     }
-    if (k === null && this.menuHover >= 0) {
+    if (k === null && this.menuHover >= 0 && !this.compact) {
       const m = this.menu[this.menuHover];
       const b = m.view;
       this.tipPanel.setVisible(true);

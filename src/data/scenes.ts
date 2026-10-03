@@ -8,8 +8,12 @@ import type { Effect } from './story';
  * Steps run in order; `say` waits for a click (or Space / Enter).
  */
 export type SceneStep =
-  /** A line in the scene box. `who` is an NPC, or any name in quotes for someone else. */
-  | { say: string; who?: NpcId | string }
+  /**
+   * A line in the scene box. `who` is an NPC, or any name in quotes for someone else.
+   * `voice` says it aloud in their voice: kept for the lines that matter (someone's first
+   * words, an alarm, a boss), so a scene isn't a run of hums.
+   */
+  | { say: string; who?: NpcId | string; voice?: boolean }
   | { wait: number }
   /** Fade to or from black (seconds). */
   | { fade: 'out' | 'in'; s?: number }
@@ -31,7 +35,7 @@ export const SCENES: Record<string, SceneDef> = {
       { fade: 'out', s: 0 },
       { wait: 0.8 },
       { say: 'Water. Cold water, and a voice somewhere above it.', who: 'Narrator' },
-      { say: 'Breathe. Come on. Breathe, blast you.', who: 'aldric' },
+      { say: 'Breathe. Come on. Breathe, blast you.', who: 'aldric', voice: true },
       { fade: 'in', s: 1.6 },
       { look: 'player' },
       { say: "There. Back among the living. The lake doesn't give things back, you know. Not usually.", who: 'aldric' },
@@ -42,7 +46,7 @@ export const SCENES: Record<string, SceneDef> = {
   herald: {
     steps: [
       { look: [38, 23] },
-      { say: 'Hear ye! By order of the Lady Isolde Vane, Steward of Corvalis and Hand of the late King!', who: 'pike' },
+      { say: 'Hear ye! By order of the Lady Isolde Vane, Steward of Corvalis and Hand of the late King!', who: 'pike', voice: true },
       { say: "Ten thousand crowns to whoever brings Her Majesty Queen Victoria out of the wizard's tower! Ten thousand crowns!", who: 'pike' },
       { say: "Ten thousand crowns. And not one of the Steward's soldiers north of Ashford.", who: 'A villager' },
       { say: "Bar your doors at sunset. That's all the Steward ever sends us. Bounties and advice.", who: 'Another villager' },
@@ -58,7 +62,7 @@ export const SCENES: Record<string, SceneDef> = {
       { say: 'Wrong, somehow. Each stroke swells up out of silence and stops dead, as if the sound were being sucked back into the bronze.', who: 'Narrator' },
       { look: [53, 11] },
       { say: 'In the churchyard, the earth heaves.', who: 'Narrator' },
-      { say: 'Inside! Everyone inside! Bar the doors!', who: 'odo' },
+      { say: 'Inside! Everyone inside! Bar the doors!', who: 'odo', voice: true },
       { look: 'player' },
       { effect: { flags: ['millbrook_night'] } },
     ],
@@ -68,7 +72,7 @@ export const SCENES: Record<string, SceneDef> = {
     steps: [
       { look: [10, 6] },
       { say: 'Under the cracked bell, an old man in a sexton\'s coat hauls on a rope that is not there.', who: 'Narrator' },
-      { say: 'Late... late for the knell... the King is dead... the King is dead...', who: 'The Bell-Ringer' },
+      { say: 'Late... late for the knell... the King is dead... the King is dead...', who: 'The Bell-Ringer', voice: true },
       { say: 'He turns. There is black lace knotted round his arm.', who: 'Narrator' },
       { look: 'player' },
     ],
@@ -76,7 +80,7 @@ export const SCENES: Record<string, SceneDef> = {
   // the Bell-Ringer falls
   bellringer_down: {
     steps: [
-      { say: 'She hears... every bell...', who: 'The Bell-Ringer' },
+      { say: 'She hears... every bell...', who: 'The Bell-Ringer', voice: true },
       { say: 'The bell gives one last crack, and is silent.', who: 'Narrator' },
       { effect: { docs: ['lace_1'] } },
     ],
@@ -85,7 +89,7 @@ export const SCENES: Record<string, SceneDef> = {
   nan_lace: {
     steps: [
       { say: 'What did he have on his arm? Show me. Lace. Black lace.', who: 'nan' },
-      { say: "That's from a wedding veil. Hers was white. Her mother's veil, Elowen's. I took up the hem myself, the night before.", who: 'nan' },
+      { say: "That's from a wedding veil. Hers was white. Her mother's veil, Elowen's. I took up the hem myself, the night before.", who: 'nan', voice: true },
       { say: 'That monster tore it up and gave it to his creatures. Like a favour. Like she was his to give.', who: 'nan' },
       { say: 'Nan turns the lace over in her hands for a long time, and says nothing more.', who: 'Narrator' },
       { banner: 'ACT I COMPLETE' },

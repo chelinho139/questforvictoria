@@ -680,7 +680,7 @@ export class Region {
       if ('say' in st) {
         if (!sc.line) {
           const who = st.who ? (st.who in NPCS ? NPCS[st.who as NpcId].name : st.who) : '';
-          sc.line = { who, text: st.say };
+          sc.line = { who, text: st.say, voice: st.voice };
           this.events.emit('scene', {});
         }
         return;

@@ -3,6 +3,18 @@ import Phaser from 'phaser';
 /** Which HUD and key map to run. Mobile keeps the one-thumb wheel HUD. */
 export const PLATFORM: 'pc' | 'mobile' = 'pc';
 
+/**
+ * A phone or tablet (a finger, not a mouse). The PC HUD folds its menu bar into one button
+ * so the action bar gets the whole bottom edge, and nothing is drawn smaller than the
+ * page's own pixels. `?touch` in the address forces it on a desktop (`?touch=0` turns it off).
+ */
+export const TOUCH: boolean = (() => {
+  if (typeof window === 'undefined') return false;
+  const q = new URLSearchParams(window.location.search).get('touch');
+  if (q !== null) return q !== '0';
+  return window.matchMedia?.('(pointer: coarse)').matches ?? false;
+})();
+
 export const Fonts = {
   display: 'Silkscreen, "Courier New", monospace',
   body: 'VT323, "Courier New", monospace',
@@ -58,7 +70,11 @@ const TARGET_LOGICAL_H = 540;
 export let PIXEL_SCALE = 1;
 
 export function computePixelScale(): number {
-  return Math.max(1, Math.round(physicalSize().h / TARGET_LOGICAL_H));
+  const { w, h } = physicalSize();
+  if (!TOUCH) return Math.max(1, Math.round(h / TARGET_LOGICAL_H));
+  // a phone: its shorter side decides (it may be held upright), and a logical pixel is never
+  // smaller than a page pixel (at the PC rule a small phone drew everything at half size)
+  return Math.max(1, Math.round(dpr()), Math.round(Math.min(w, h) / TARGET_LOGICAL_H));
 }
 
 /** Logical view size for the current canvas and pixel scale. */

@@ -510,6 +510,22 @@ function styleJobs(scene: Phaser.Scene, style: SpriteStyle): TextureJob[] {
   ];
 }
 
+/** The touch HUD's menu button: three bars (22×22 with the outline). */
+function menuIcon(): HTMLCanvasElement {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 22;
+  const c = cv.getContext('2d')!;
+  for (const y of [4, 9, 14]) {
+    c.fillStyle = '#2a1406';
+    c.fillRect(3, y, 16, 5);
+    c.fillStyle = '#8a5a36';
+    c.fillRect(4, y + 1, 14, 3);
+    c.fillStyle = '#c08a58';
+    c.fillRect(4, y + 1, 14, 1);
+  }
+  return cv;
+}
+
 /**
  * Every texture the game uses, as a list of steps so the loading screen can run them
  * across frames and show progress. Call `result()` after all jobs have run.
@@ -539,6 +555,7 @@ export function textureJobs(scene: Phaser.Scene): TextureJob[] {
         add(Tex.icon('quests'), scrollIcon());
         add(Tex.icon('settings'), cogIcon());
         add(Tex.icon('help'), bookIcon());
+        add(Tex.icon('menu'), menuIcon());
         add(Tex.icon('talents'), starIcon());
         add(Tex.icon('spellbook'), spellbookIcon());
         add(Tex.icon('eye'), eyeIcon());
