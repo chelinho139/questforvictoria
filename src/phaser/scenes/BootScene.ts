@@ -13,14 +13,15 @@ import { buildLogo, Splash } from '../render/splash';
 import { devSkipIntro, devArtReview } from '../dev/DevMenu';
 import { lastLocalChar, createLocalChar, localCharInfos } from '../saveStore';
 import type { CharInfo } from '../../net/protocol';
+import { soundJobs } from '../audio/sounds';
 
 /** The loading screen stays up at least this long so the logo can be seen. */
 const MIN_SPLASH_MS = 1600;
 const FADE_MS = 350;
 
 /**
- * Loading screen. Shows the logo over a night sky while the procedural textures are
- * generated one step per frame (the bar follows real progress), then asks for a name and
+ * Loading screen. Shows the logo over a night sky while the procedural textures and sounds
+ * are generated one step per frame (the bar follows real progress), then asks for a name and
  * a hero (the start screen) and fades into the game. Any key or click skips the remaining
  * wait once loading has finished. "Skip loading screen" in the dev menu skips both.
  */
@@ -44,7 +45,7 @@ export class BootScene extends Phaser.Scene {
     // reachable only with the dev switch on
     setSpriteStyle(devArtReview() ? readSpriteStyle() : 'hdsil');
     buildUiKit(this);
-    this.jobs = textureJobs(this);
+    this.jobs = [...textureJobs(this), ...soundJobs()];
     if (devSkipIntro()) {
       // straight in: the single-player character played last (or a first one)
       const ch = lastLocalChar() ?? this.firstLocalChar();

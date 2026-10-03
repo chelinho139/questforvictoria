@@ -33,6 +33,7 @@ import type { ClassId } from '../../data/classes';
 import { OnlineBadge } from '../ui/OnlineBadge';
 import { SceneBox } from '../ui/SceneBox';
 import { BossBar } from '../ui/BossBar';
+import { Sfx } from '../audio/Sfx';
 
 /** Runs the simulation, renders the world and handles keyboard input. */
 export class GameScene extends Phaser.Scene {
@@ -53,6 +54,7 @@ export class GameScene extends Phaser.Scene {
   private spellbook!: SpellbookWindow;
   private sceneBox!: SceneBox;
   private bossBar!: BossBar;
+  private sfx!: Sfx;
   /** Where the camera looks (eased toward the hero, or what a scene shows). */
   private camAt: { x: number; y: number } | null = null;
   /** Seconds left of easing back to the hero after a scene. */
@@ -100,7 +102,8 @@ export class GameScene extends Phaser.Scene {
       const badge = new OnlineBadge(net);
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => badge.destroy());
     } else if (charId) this.setupAutosave(charId);
-    this.dev = new DevMenu(this.game, this.sim, this.lighting, this.clouds, this.effects);
+    this.sfx = new Sfx(this.game, this.sim);
+    this.dev = new DevMenu(this.game, this.sim, this.lighting, this.clouds, this.effects, this.sfx);
     this.registry.set('dev', this.dev);
     this.inventory = new InventoryWindow(this.game, this.sim);
     this.registry.set('inventory', this.inventory);
@@ -119,6 +122,7 @@ export class GameScene extends Phaser.Scene {
     this.quests = new QuestTracker(this.sim, () => this.questLog.toggle(true));
     this.sceneBox = new SceneBox(this.sim);
     this.bossBar = new BossBar(this.sim);
+    this.shown = this.windows().map(w => w.isOpen);
     this.sim.events.on('sceneFade', ({ dir, s }) => (dir === 'out' ? this.cameras.main.fadeOut(s * 1000, 0, 0, 0) : this.cameras.main.fadeIn(s * 1000, 0, 0, 0)));
     let inScene = false;
     this.sim.events.on('scene', () => {
@@ -153,6 +157,7 @@ export class GameScene extends Phaser.Scene {
       this.effects.destroy();
       this.clouds.destroy();
       this.lighting.destroy();
+      this.sfx.destroy();
       this.dev.destroy();
       this.inventory.destroy();
       this.crafting.destroy();
@@ -195,6 +200,22 @@ export class GameScene extends Phaser.Scene {
   }
 
   private structureLights = new Set<string>();
+
+  /** The windows that open and close with a sound. */
+  private windows(): { isOpen: boolean }[] {
+    return [this.inventory, this.crafting, this.trade, this.dialog, this.questLog, this.controls, this.talents, this.spellbook, this.dev];
+  }
+
+  /** Which windows were open last frame. */
+  private shown: boolean[] = [];
+
+  /** A window opening or closing makes a sound, however it happened (a key, a button, Esc, another window taking its place). */
+  private soundWindows(): void {
+    const now = this.windows().map(w => w.isOpen);
+    if (now.some((o, i) => o && !this.shown[i])) this.sfx.play('open');
+    else if (now.some((o, i) => !o && this.shown[i])) this.sfx.play('close');
+    this.shown = now;
+  }
 
   /** Draw the hero in their current equipment (HD styles show gear on the sprite). */
   private wearGear(): void {
@@ -444,6 +465,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.sim.tick(dt);
+    this.soundWindows();
 
     // the camera follows the hero, or eases over to what a scene is showing
     const look = this.sim.scene?.look;

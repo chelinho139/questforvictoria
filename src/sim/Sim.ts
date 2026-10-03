@@ -58,7 +58,7 @@ export class Sim {
     this.hero = h;
     this.game.heroes.push(h);
     // the hero's own events, and the room's, pass straight through
-    for (const k of ['log', 'banner', 'castFlash', 'nudge', 'loadout', 'died', 'bag', 'talk', 'level', 'talents', 'respawned', 'exit', 'trade'] as const) {
+    for (const k of ['log', 'banner', 'castFlash', 'nudge', 'loadout', 'died', 'bag', 'talk', 'level', 'talents', 'respawned', 'exit', 'trade', 'sound'] as const) {
       h.events.on(k, p => this.events.emit(k, p as never));
     }
     h.events.on('region', p => {
@@ -87,6 +87,7 @@ export class Sim {
       on.on('scene', p => this.events.emit('scene', p)),
       on.on('sceneFade', p => this.events.emit('sceneFade', p)),
       on.on('bossPhase', p => this.events.emit('bossPhase', p)),
+      on.on('sound', p => this.events.emit('sound', p)),
       on.on('fx', f => this.fx.push({ t: 0, ...f })),
       on.on('burst', b => this.burst(b.x, b.y, b.n, b.col, b.spd, b.life, b.size, b.g)),
       on.on('shake', p => (this.hero.shake = Math.max(this.hero.shake, p.s)))

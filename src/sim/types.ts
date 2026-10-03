@@ -5,6 +5,7 @@ import type { NpcId } from '../data/npcs';
 import type { EnemyDef, EnemyKind } from '../data/enemies';
 import type { SkillKey, ActionKey, Key, WheelKey } from '../data/skills';
 import type { ObjectKind } from '../data/regions/types';
+import type { SpellKey } from '../data/spells';
 
 export interface Enemy {
   /** Unique in its region (the network names creatures by it). */
@@ -277,9 +278,53 @@ export interface HeroEvents extends Record<string, unknown> {
   region: { id: string };
   exit: { to: string; at: string };
   trade: Record<string, never>;
+  /** A sound for this hero alone: a level, a quest, loot, gold (Sfx plays it). */
+  sound: { id: SoundId };
 }
 
-/** What everyone in a region sees: damage numbers, effects, scenes, bosses. */
+/**
+ * A sound effect. The recipes are in src/phaser/audio/sounds.ts.
+ *
+ * A spell's key is the sound of casting it, and these follow it: an arrow landing (hit…), a
+ * bear trap springing, the horse arriving and being left. Everyone nearby hears those.
+ */
+export type SoundId = SpellKey | FollowSound | UiSound;
+export type FollowSound =
+  | 'mounted'
+  | 'dismount'
+  | 'hitArrow'
+  | 'hitAimed'
+  | 'hitBarbed'
+  | 'hitConcussive'
+  | 'hitSilence'
+  | 'hitKillshot'
+  | 'hitVolley'
+  | 'hitPierce'
+  | 'hitDeadeye'
+  | 'trapSnap';
+/** What only the hero it happens to hears: the game telling them something. */
+export type UiSound =
+  | 'levelUp'
+  | 'talent'
+  | 'questAccept'
+  | 'questReady'
+  | 'questComplete'
+  | 'journal'
+  | 'pickup'
+  | 'coins'
+  | 'equip'
+  | 'eat'
+  | 'cook'
+  | 'smith'
+  | 'build'
+  | 'perfect'
+  | 'error'
+  | 'died'
+  | 'respawn'
+  | 'open'
+  | 'close';
+
+/** What everyone in a region sees and hears: damage numbers, effects, sounds, scenes, bosses. */
 export interface RegionEvents extends Record<string, unknown> {
   floater: { x: number; y: number; text: string; cls: FloaterClass; color?: string };
   fx: Omit<Fx, 't' | 'onEnd'>;
@@ -289,6 +334,8 @@ export interface RegionEvents extends Record<string, unknown> {
   bossPhase: { kind: EnemyKind; phase: number };
   /** Something big happened nearby (a toll): shake the camera. */
   shake: { s: number };
+  /** A sound, from where it happened (it carries, fading with distance). */
+  sound: { id: SoundId; x: number; y: number };
 }
 
 /** What the whole room shares: the story. */
@@ -334,6 +381,8 @@ export interface SimEvents extends Record<string, unknown> {
   sceneFade: { dir: 'out' | 'in'; s: number };
   /** A boss moved to its next phase. */
   bossPhase: { kind: EnemyKind; phase: number };
+  /** A sound: from somewhere nearby (a spell, an arrow landing), or just for you (no place). */
+  sound: { id: SoundId; x?: number; y?: number };
 }
 
 export interface Loadout {
