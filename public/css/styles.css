@@ -538,6 +538,10 @@ html, body { height: 100%; margin: 0; background: #0c1018; overflow: hidden; }
 .scene { position: fixed; inset: 0; z-index: 30; cursor: pointer; }
 /* while a scene plays, the quest list steps aside with the rest of the HUD */
 body.in-scene .quests { visibility: hidden; }
+/* on a touch screen the HUD's menu list drops down over where the quest list sits */
+body.hud-menu-open .quests { visibility: hidden; }
+/* a phone held upright: the quest list keeps clear of the unit frames */
+@media (max-width: 480px) { .quests { width: 165px; } }
 .scene-bar { position: absolute; left: 0; right: 0; height: 9vh; background: #0b0604; }
 .scene-bar.top { top: 0; }
 .scene-bar.bottom { bottom: 0; }
