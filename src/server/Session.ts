@@ -8,7 +8,9 @@ import type {
   EnemySnap,
   HeroSnap,
   DropSnap,
+  CompanionSnap,
 } from '../net/protocol';
+import type { Companion } from '../sim/Companion';
 import { CHOP, MINE } from '../data/items';
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
@@ -41,6 +43,7 @@ const REGION_EVENTS = [
   'bossPhase',
   'shake',
   'sound',
+  'say',
 ] as const;
 const ROOM_EVENTS = ['quests', 'flags', 'journal'] as const;
 
@@ -107,6 +110,8 @@ export class Session {
       this.sent[key] = json;
       (tick as unknown as Record<string, unknown>)[key] = value;
     };
+    const cps = h.game.companionsIn(R.id);
+    if (cps.length) tick.cp = cps.map(companionSnap);
     part('mf', this.meFull(h));
     if (R.wanderers.length)
       tick.wd = R.wanderers.map(w => [w.id, r1(w.x), r1(w.y), r2(w.alpha), w.face]);
@@ -115,7 +120,7 @@ export class Session {
     part('rk', changedRocks(R));
     part(
       'st',
-      R.structures.map(s => [s.id, s.kind, s.c, s.r, s.t === Infinity ? -1 : r1(s.t)])
+      R.structures.map(s => [s.id, s.kind, s.c, s.r, s.t === Infinity ? -1 : r1(s.t), s.out ? 1 : 0, r2(s.smother ?? 0)])
     );
     part(
       'ob',
@@ -136,6 +141,10 @@ export class Session {
     part(
       'tz',
       R.traps.map(t => [Math.round(t.x), Math.round(t.y)])
+    );
+    part(
+      'sn',
+      R.snares.map(s => [Math.round(s.x), Math.round(s.y)])
     );
     part('sc', R.scene);
     part('sy', { flags: h.game.flags, quests: h.game.quests, journal: h.game.journal });
@@ -161,6 +170,11 @@ export class Session {
       aimT: r2(h.aimT),
       predatorT: r1(h.predatorT),
       hiddenT: r1(h.hiddenT),
+      heldT: r2(h.heldT),
+      heldBy: h.heldBy,
+      slowT: r1(h.slowT),
+      slowK: h.slowK,
+      itemCd: Object.fromEntries(Object.entries(h.itemCd).map(([k, v]) => [k, r1(v ?? 0)])),
       hp: Math.round(h.hp),
       hpMax: h.hpMax,
       mp: r1(h.mp),
@@ -221,7 +235,12 @@ export class Session {
   }
 }
 
-/** A creature as one hero sees it (whether it bears their Mark is theirs to know). */
+/**
+ * A creature as one hero sees it (whether it bears their Mark is theirs to know). Its flags:
+ * 1 alive, 2 fighting, 4 about to strike, 8 summoned, 16 just hit, 32 slowed, 64 held by a
+ * trap, 128 marked by me, 256 shield up, 512 hidden in the canopy, 1024 hatching, 2048 lying
+ * on a fire.
+ */
 function enemySnap(e: import('../sim/types').Enemy, me: string): EnemySnap {
   const flags =
     (e.alive ? 1 : 0) |
@@ -231,7 +250,11 @@ function enemySnap(e: import('../sim/types').Enemy, me: string): EnemySnap {
     (e.flash > 0 ? 16 : 0) |
     (e.slowT > 0 ? 32 : 0) |
     (e.rootT > 0 ? 64 : 0) |
-    (e.markT > 0 && e.markBy === me ? 128 : 0);
+    (e.markT > 0 && e.markBy === me ? 128 : 0) |
+    ((e.shieldT ?? 0) > 0 && e.stunT <= 0 ? 256 : 0) |
+    (e.hid ? 512 : 0) |
+    (e.hatchT !== undefined ? 1024 : 0) |
+    (e.lying ? 2048 : 0);
   return [
     e.id,
     e.kind,
@@ -249,6 +272,24 @@ function enemySnap(e: import('../sim/types').Enemy, me: string): EnemySnap {
     r2(e.stunT),
     e.phase,
     r1(e.sunderT),
+    r1(e.z ?? 0),
+  ];
+}
+
+function companionSnap(c: Companion): CompanionSnap {
+  return [
+    c.cid,
+    r1(c.x),
+    r1(c.y),
+    c.face,
+    r1(c.walk),
+    Math.round(c.hp),
+    c.hpMax,
+    r2(c.dead),
+    r2(c.atkAnimT),
+    (c.flash > 0 ? 1 : 0) | (c.slowT > 0 ? 2 : 0),
+    c.heldBy,
+    c.target?.id ?? 0,
   ];
 }
 
@@ -276,6 +317,7 @@ function heroSnap(h: Hero): HeroSnap {
     equip,
     h.level,
     h.cls,
+    h.heldBy,
   ];
 }
 

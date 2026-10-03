@@ -2,6 +2,8 @@ import type { EnemyKind } from '../enemies';
 import type { NpcId } from '../npcs';
 import type { Cond, Effect } from '../story';
 import type { PropKind } from '../props';
+import type { StructureKind } from '../crafting';
+import type { ItemId } from '../items';
 
 /** How deep into the Blackthorn a region lies (docs/lore.md): 0 untouched to 5 Thornhallow. */
 export type Ring = 0 | 1 | 2 | 3 | 4 | 5;
@@ -14,6 +16,8 @@ export interface RegionSpawn {
   at: At;
   /** Only placed while this holds (checked when you enter the region). */
   when?: Cond;
+  /** A lure (EnemyDef.lure): where it drifts to when someone comes near. */
+  to?: At;
 }
 
 export interface RegionNpc {
@@ -53,6 +57,8 @@ export interface RegionObject {
   /** It can only be used while this holds; otherwise it says `needSay`. */
   need?: Cond;
   needSay?: string;
+  /** What using it takes from the bag (three logs to light a hearth); without them it says `needSay`. */
+  cost?: [ItemId, number][];
 }
 
 /** Walk into `area` (tiles, inclusive) to play `scene` (once, while `when` holds). */
@@ -71,6 +77,42 @@ export interface RegionWanderer {
   route: At[];
   when?: Cond;
   say: string;
+}
+
+/**
+ * A fire (or anything built) the region has of its own: a kiln, the fire at a camp once it
+ * has been lit. There while `when` holds; never saved, and as it was whenever the region is.
+ */
+export interface RegionStructure {
+  kind: StructureKind;
+  at: At;
+  when?: Cond;
+}
+
+/**
+ * Holding a place through the night (Kilnholt's ring of kilns). From dusk, while `when` holds,
+ * `spawns.kind` keep coming out of the dark at the `from` tiles (one every `every` seconds,
+ * never more than `max` about at once). At dawn, with at least `need` of the region's `fire`
+ * structures still burning, `flag` is set and `won` is said; otherwise `lost` is said and the
+ * fires are lit again for another night.
+ */
+export interface RegionHold {
+  when: Cond;
+  fire: StructureKind;
+  need: number;
+  spawns: { kind: EnemyKind; from: At[]; every: number; max: number };
+  flag: string;
+  won: string;
+  lost: string;
+}
+
+/** Where a hero who falls here wakes: at `spot` (in `region`, if not this one), while `when` holds. */
+export interface RegionWake {
+  spot: string;
+  region?: string;
+  when?: Cond;
+  /** Said as they wake there. */
+  say?: string;
 }
 
 /** A building or big prop (data/props.ts); `at` is the north corner of its footprint. */
@@ -97,6 +139,14 @@ export interface RegionDef {
   /** Indoors: as dim as dusk all day; lit only by `lights` (torches, tiles). */
   indoor?: boolean;
   lights?: At[];
+  /** Under the grave-mist it is dusk all day: never lighter than dusk, and the dead walk by day too. */
+  dusk?: boolean;
+  /** Fires (and anything built) the region has of its own. */
+  structures?: RegionStructure[];
+  /** A night to hold out through (Kilnholt). */
+  hold?: RegionHold;
+  /** Where you wake after falling here, the first that holds (otherwise at `start`). */
+  wake?: RegionWake[];
   /** Scenes to play here (each once): on arrival, or as soon as `when` holds while you're here. */
   onEnter?: { scene: string; when?: Cond }[];
   /** Dev-only regions are reachable from the settings panel, never from play. */

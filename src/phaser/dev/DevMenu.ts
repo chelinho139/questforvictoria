@@ -136,6 +136,8 @@ const WORLD_SOUNDS: Record<WorldSound, string> = {
   fireball: 'Fireball',
   fireballHit: 'Fireball · lands',
   bellToll: 'The bell tolls',
+  fireOut: 'A fire is smothered',
+  wardenCall: "A Warden's whistle",
 };
 
 /** The sound board's names for thunder. */

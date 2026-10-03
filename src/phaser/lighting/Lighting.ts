@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ambientDarkness, ringDarkness } from '../../sim/daylight';
+import { ambientDarkness, ringDarkness, ringHour } from '../../sim/daylight';
 import type { DayCycle, Rgb } from '../../sim/daylight';
 import { LightingPostFX } from './LightingPostFX';
 
@@ -102,12 +102,14 @@ export class Lighting {
 
   /** How deep into the Blackthorn the current region is (0-5); darkens the light. */
   private ring = 0;
-  /** How deep in the Blackthorn we are; indoors it is as dim as dusk all day. */
-  setRing(ring: number, indoor = false): void {
+  /** How deep in the Blackthorn we are; indoors (or under the grave-mist) it is dusk all day. */
+  setRing(ring: number, indoor = false, dusk = false): void {
     this.ring = ring;
     this.indoor = indoor;
+    this.dusk = dusk;
   }
   private indoor = false;
+  private dusk = false;
 
   /** How strongly the darkness applies, 0..1. */
   setStrength(v: number): void {
@@ -166,7 +168,9 @@ export class Lighting {
 
   /** The darkness of the hour, the region's ring and indoors, before the weather. */
   private hour(): Rgb {
-    return this.indoor ? ringDarkness(ambientDarkness(0.83), this.ring) : ringDarkness(ambientDarkness(this.day.t), this.ring);
+    return this.indoor
+      ? ringDarkness(ambientDarkness(0.83), this.ring)
+      : ringDarkness(ambientDarkness(ringHour(this.day.t, this.ring)), this.ring, this.dusk);
   }
 
   /** The darkness colour (0-255): the hour's, under the overcast, lifted by lightning. */

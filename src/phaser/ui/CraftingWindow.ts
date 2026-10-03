@@ -39,6 +39,7 @@ function verb(r: Recipe): string {
 
 interface RowView {
   r: Recipe;
+  el: HTMLElement;
   btn: HTMLButtonElement;
   needs: { id: ItemId; n: number; el: HTMLElement; count: HTMLElement }[];
 }
@@ -137,7 +138,7 @@ export class CraftingWindow {
     out.addEventListener('pointerleave', () => (this.tip.hidden = true));
     name.addEventListener('pointerenter', () => this.showTip(name, r));
     name.addEventListener('pointerleave', () => (this.tip.hidden = true));
-    this.rows.push({ r, btn, needs });
+    this.rows.push({ r, el, btn, needs });
     return el;
   }
 
@@ -179,6 +180,8 @@ export class CraftingWindow {
       el.className = near ? 'ok' : '';
     }
     for (const v of this.rows) {
+      // a recipe you haven't learned yet isn't shown (the steel bar, until Bram teaches it)
+      v.el.hidden = !s.check(v.r.when);
       for (const n of v.needs) {
         const have = s.count(n.id);
         n.count.textContent = `${Math.min(have, 999)}/${n.n}`;

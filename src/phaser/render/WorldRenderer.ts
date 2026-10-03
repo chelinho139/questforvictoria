@@ -3,6 +3,7 @@ import type { Sim } from '../../sim/Sim';
 import { RISE_DUR } from '../../sim/Sim';
 import type { Enemy, Drop, Structure, NpcState, ObjectState, WandererState, Work } from '../../sim/types';
 import type { Hero } from '../../sim/Hero';
+import type { Companion } from '../../sim/Companion';
 import { NPCS } from '../../data/npcs';
 import { Tile, T, isoX, isoY } from '../../sim/map';
 import { Fonts, hex, PIXEL_SCALE } from '../config';
@@ -82,6 +83,11 @@ export class WorldRenderer {
       walkSeen: number;
       walkingT: number;
     }
+  >();
+  /** Companions walking with the heroes (Wren). */
+  private readonly companionViews = new Map<
+    Companion,
+    { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image; name: Phaser.GameObjects.Text; walkSeen: number; walkingT: number }
   >();
   private lastNow = 0;
   private readonly npcViews = new Map<NpcState, { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image; name: Phaser.GameObjects.Text; mark: Phaser.GameObjects.Text }>();
@@ -252,6 +258,7 @@ export class WorldRenderer {
     this.objectViews.clear();
     this.wandererViews.clear();
     this.otherViews.clear();
+    this.companionViews.clear();
   }
 
   private mark(size: string, color: string): Phaser.GameObjects.Text {
@@ -281,7 +288,7 @@ export class WorldRenderer {
     const wf = Math.floor(now / 450) % 2 === 1;
     if (this.litViews.length) {
       const k = Math.max(0, Math.min(1, (darknessLevel(this.sim.day.t) - 0.25) / 0.4));
-      const lit = this.sim.regionDef.ring >= 4 ? 1 : k;
+      const lit = this.sim.regionDef.ring >= 4 || this.sim.regionDef.dusk ? 1 : k;
       for (const v of this.litViews) v.setAlpha(lit);
     }
     for (const a of this.animViews) a.img.setTexture(a.key + ':' + (Math.floor(now / a.ms) % a.n));
@@ -295,16 +302,17 @@ export class WorldRenderer {
     this.drawStructures(now);
     this.drawObjects(now);
     this.drawNpcs(now);
-    this.drawOthers(now, g);
+    const dt = this.lastNow ? Math.min(0.1, (now - this.lastNow) / 1000) : 0;
+    this.lastNow = now;
+    this.drawOthers(now, dt, g);
+    this.drawCompanions(now, dt, g);
     this.drawWanderers(now);
     this.drawDrops(now);
     this.drawPlayer(now, g);
   }
 
   /** The other players' heroes: their look and gear, walking, swinging, jumping; a name and a health bar. */
-  private drawOthers(now: number, g: Phaser.GameObjects.Graphics): void {
-    const dt = this.lastNow ? Math.min(0.1, (now - this.lastNow) / 1000) : 0;
-    this.lastNow = now;
+  private drawOthers(now: number, dt: number, g: Phaser.GameObjects.Graphics): void {
     const others = this.sim.others;
     for (const [o, v] of this.otherViews) {
       if (others.includes(o)) continue;
@@ -380,6 +388,69 @@ export class WorldRenderer {
       else v.img.clearTint();
       v.shadow.setPosition(qx, qy + 5).setDisplaySize(26, 13).setDepth(depth - 0.5);
       this.nameAndHealth(o, v.name, g, qx, qy + 8 - z - v.img.frame.height);
+    }
+  }
+
+  /**
+   * Companions: drawn like a hero in their look and gear, walking, shooting, idling; down on
+   * one knee when badly hurt; their name and a health bar over their head.
+   */
+  private drawCompanions(now: number, dt: number, g: Phaser.GameObjects.Graphics): void {
+    const here = this.sim.companions;
+    for (const [c, v] of this.companionViews) {
+      if (here.includes(c)) continue;
+      for (const x of [v.img, v.shadow, v.name]) {
+        this.pins.delete(x);
+        x.destroy();
+      }
+      this.companionViews.delete(c);
+    }
+    for (const c of here) {
+      const key = heroLookTexture(this.scene, c.def.look, c.def.equip);
+      let v = this.companionViews.get(c);
+      if (!v) {
+        v = {
+          img: this.image(0, 0, key).setOrigin(0.5, 1),
+          shadow: this.image(0, 0, Tex.shadow).setAlpha(0.3),
+          name: this.mark('8px', '#c8f0b8').setOrigin(0.5, 1),
+          walkSeen: c.walk,
+          walkingT: 0,
+        };
+        this.companionViews.set(c, v);
+      }
+      if (c.walk !== v.walkSeen) {
+        v.walkSeen = c.walk;
+        v.walkingT = 0.2;
+      } else v.walkingT = Math.max(0, v.walkingT - dt);
+      const n = (group: string) => artAnim(key, group);
+      let fk: string;
+      if (c.atkAnimT > 0 && n('shoot')) fk = animKey(key, 'shoot', Math.min(n('shoot') - 1, Math.floor((1 - c.atkAnimT / 0.36) * n('shoot'))));
+      else if (v.walkingT > 0 && artFrames(key) > 1) fk = frameKey(key, Math.floor(now / 95) % artFrames(key));
+      else if (n('idle')) fk = animKey(key, 'idle', Math.floor(now / 380) % n('idle'));
+      else fk = frameKey(key, 0);
+      const qx = isoX(c.x, c.y);
+      const qy = isoY(c.x, c.y);
+      const depth = this.depthAt(c.x, c.y);
+      for (const o of [v.img, v.shadow, v.name]) this.pin(o, c.x, c.y, 8);
+      // down on one knee: lower and squatter, still facing the fight
+      const down = c.dead > 0;
+      v.img
+        .setTexture(fk)
+        .setScale(1, down ? 0.78 : 1)
+        .setPosition(Math.round(qx), Math.round(qy + 8))
+        .setFlipX(c.face < 0)
+        .setDepth(depth)
+        .setAlpha(down ? 0.85 : 1);
+      if (c.flash > 0) v.img.setTintFill(0xffffff);
+      else v.img.clearTint();
+      v.shadow.setPosition(qx, qy + 5).setDisplaySize(26, 13).setDepth(depth - 0.5);
+      const top = qy + 8 - v.img.frame.height * (down ? 0.78 : 1);
+      v.name.setText(c.name).setPosition(Math.round(qx), Math.round(top - 6)).setVisible(true);
+      const w = 22;
+      const x0 = Math.round(qx - w / 2);
+      const y0 = Math.round(top - 4);
+      g.fillStyle(hex('#0a0d14')).fillRect(x0 - 1, y0 - 1, w + 2, 4);
+      g.fillStyle(hex(down ? '#c8a05a' : '#5fc46a')).fillRect(x0, y0, Math.round(down ? w * (1 - c.dead / c.def.down) : (w * Math.max(0, c.hp)) / Math.max(1, c.hpMax)), 2);
     }
   }
 
@@ -543,6 +614,10 @@ export class WorldRenderer {
       v.img.setTexture(k).setScale(sc);
       const w = v.img.frame.width * sc;
       const fade = s.t < 6 ? Math.max(0.15, s.t / 6) : 1;
+      // a fire put out goes dark and still; one being smothered dims as it goes
+      if (s.out) v.img.setTexture(frameKey(key, 0)).setTint(0x404040);
+      else if ((s.smother ?? 0) > 0) v.img.setTint(Phaser.Display.Color.GetColor(255, Math.round(255 - 150 * (s.smother ?? 0)), Math.round(255 - 150 * (s.smother ?? 0))));
+      else v.img.clearTint();
       v.img.setPosition(Math.round(qx), Math.round(qy + (s.kind === 'forge' ? 9 : 6))).setDepth(this.depthAt(s.x, s.y)).setAlpha(fade);
       v.shadow.setDisplaySize(w * 0.85, w * 0.35).setDepth(this.depthAt(s.x, s.y) - 0.5);
     }
@@ -605,7 +680,8 @@ export class WorldRenderer {
       };
       this.enemyViews.set(e, v);
     }
-    const visible = e.alive || e.dieT > 0;
+    // an ambusher up in the canopy can't be seen until it drops
+    const visible = (e.alive || e.dieT > 0) && !e.hid;
     v.sprite.setVisible(visible);
     v.shadow.setVisible(visible);
     v.mark.setVisible(false);
@@ -623,8 +699,14 @@ export class WorldRenderer {
     const qx = isoX(e.x, e.y);
     const qy = isoY(e.x, e.y);
     for (const o of [v.sprite, v.shadow, v.mark]) this.pin(o, e.x, e.y, 6);
-    const x = qx - w / 2;
-    const y = qy - h + 6;
+    // up in the air (dropping out of the canopy, or on a leap); an egg about to hatch shudders;
+    // a smotherer lies flat on its fire (its bars come down with it)
+    const z = Math.round(e.z ?? 0);
+    const shudder = e.hatchT !== undefined && e.alive ? Math.round(Math.sin(now / 45) * 1.5) : 0;
+    const lying = !!e.lying && e.alive;
+    // lying, the body is turned about its feet and lies off to the side it faces
+    const x = lying ? qx + e.face * (h * 0.5 + w * 0.3) - w / 2 : qx - w / 2;
+    const y = lying ? qy - 8 : qy - h + 6 - z;
     const depth = this.depthAt(e.x, e.y);
 
     // walk bob (smaller when there are real walk frames), or a squash-and-stretch hop
@@ -647,14 +729,15 @@ export class WorldRenderer {
     if (hidden > 0) v.sprite.setCrop(0, 0, fw, fh - hidden);
     else v.sprite.setCrop();
 
-    v.shadow.setPosition(qx, qy + 3).setDisplaySize(w + 2, (w + 2) / 2).setDepth(depth - 0.5).setAlpha(0.3 * (1 - buried));
+    const lift = Math.max(0.45, 1 - z / 120);
+    v.shadow.setPosition(qx, qy + 3).setDisplaySize((w + 2) * lift, ((w + 2) / 2) * lift).setDepth(depth - 0.5).setAlpha(0.3 * (1 - buried));
     v.sprite
       .setScale(sx, sy)
-      .setPosition(qx, qy + 6 - bob + (e.stunT > 0 ? 3 : 0) + hidden * sy)
+      .setPosition(qx + shudder + (lying ? e.face * w * 0.3 : 0), qy + 6 - bob - z + (e.stunT > 0 ? 3 : 0) + hidden * sy + (lying ? 4 : 0))
       .setFlipX(e.face < 0)
       .setDepth(depth)
       .setAlpha(e.alive || sinking ? 1 : Math.max(0, e.dieT))
-      .setRotation(e.alive || sinking ? 0 : 0.7);
+      .setRotation(lying ? e.face * 1.45 : e.alive || sinking ? 0 : 0.7);
     if (e.flash > 0) v.sprite.setTintFill(0xffffff);
     else v.sprite.clearTint();
     if (!e.alive || e.riseT > 0) return;
@@ -675,6 +758,8 @@ export class WorldRenderer {
       v.mark.setText('✦').setFontSize(12).setColor('#a78bfa').setPosition(x + w + 2, y - 4).setVisible(true);
     }
     if (e.aggro && !e.tele && e.castT <= 0 && e.stunT <= 0) g.fillStyle(hex('#e0504b')).fillRect(qx - 2, y - 15, 4, 4);
+    // shield up: a kite shield held out on the side it faces
+    if ((e.shieldT ?? 0) > 0 && e.stunT <= 0) this.shieldMark(g, Math.round(qx + e.face * (w * 0.42)), Math.round(y + h * 0.42));
 
     if (this.sim.target === e) {
       const p = Math.sin(now / 180) * 2;
@@ -687,6 +772,13 @@ export class WorldRenderer {
       this.bracket(g, bx, by, bw, bh, m, hex('#f2c14e'), 2);
       g.fillStyle(hex('#f2c14e')).fillTriangle(qx - 5, by - 12, qx + 5, by - 12, qx, by - 5);
     }
+  }
+
+  /** A small kite shield, steel with a dark rim, centred on (x, y): a creature's shield is up. */
+  private shieldMark(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
+    g.fillStyle(hex('#1a1d24')).fillRect(x - 4, y - 6, 9, 9).fillTriangle(x - 4, y + 3, x + 5, y + 3, x + 0.5, y + 8);
+    g.fillStyle(hex('#c4cedc')).fillRect(x - 3, y - 5, 7, 7).fillTriangle(x - 3, y + 2, x + 4, y + 2, x + 0.5, y + 6);
+    g.fillStyle(hex('#8a94a6')).fillRect(x, y - 5, 1, 10);
   }
 
   private bracket(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, m: number, col: number, lw: number): void {

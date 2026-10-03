@@ -33,8 +33,11 @@ export interface NpcDef {
   onMeet?: Effect;
   /** How the name label reads over their head (defaults to `name`). */
   label?: string;
-  /** A trader: what they sell (at each item's price). Every trader buys anything with a price, for a third of it. */
-  shop?: { sells: ItemId[]; name: string };
+  /**
+   * A trader: what they sell (at each item's price), and more once the story lets them (`more`:
+   * Bram's steel after you bring him charcoal). Every trader buys anything worth a coin to them.
+   */
+  shop?: { sells: ItemId[]; name: string; more?: { when: Cond; sells: ItemId[] }[] };
 }
 
 export const NPCS: Record<NpcId, NpcDef> = {

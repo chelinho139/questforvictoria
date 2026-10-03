@@ -107,8 +107,9 @@ export function ambientDarkness(t: number): Rgb {
 
 /**
  * The Blackthorn darkens the land ring by ring (docs/lore.md): rings 1 to 3 dim and sicken
- * the light (a little less red and blue taken away keeps a grey-green cast), ring 4 never
- * gets brighter than dusk, and Thornhallow (ring 5) is always night.
+ * the light (a little less red and blue taken away keeps a grey-green cast), ring 4 (and a
+ * region under the grave-mist) never gets brighter than dusk, and Thornhallow (ring 5) is
+ * always night.
  */
 const RING_DIM: Rgb[] = [
   { r: 0, g: 0, b: 0 },
@@ -117,13 +118,25 @@ const RING_DIM: Rgb[] = [
   { r: 84, g: 52, b: 80 },
 ];
 
-export function ringDarkness(base: Rgb, ring: number): Rgb {
-  if (ring >= 4) {
+export function ringDarkness(base: Rgb, ring: number, dusk = false): Rgb {
+  // under the grave-mist (a region at dusk all day) it is as ring 4: never lighter than dusk
+  if (ring >= 4 || dusk) {
     const floor = ring >= 5 ? ambientDarkness(0) : ambientDarkness(0.8);
     return { r: Math.max(base.r, floor.r + 30), g: Math.max(base.g, floor.g + 20), b: Math.max(base.b, floor.b) };
   }
   const d = RING_DIM[Math.max(0, ring)];
   return { r: Math.min(255, base.r + d.r), g: Math.min(255, base.g + d.g), b: Math.min(255, base.b + d.b) };
+}
+
+/**
+ * The hour as the Blackthorn makes it look: from ring 2 the day is shorter (night comes
+ * earlier and goes later, as Region.isNight has it), so the light is taken a little further
+ * from noon.
+ */
+export function ringHour(t: number, ring: number): number {
+  if (ring < 2) return t;
+  const d = wrap01(t) - 0.5;
+  return 0.5 + Math.max(-0.5, Math.min(0.5, d * 1.1));
 }
 
 /** 0 at noon, 1 at deepest night: handy for gameplay or UI that cares about darkness. */

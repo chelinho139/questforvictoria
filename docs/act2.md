@@ -2,7 +2,7 @@
 
 *The Weeping Bridge. What the second slice of the campaign contains. Everything here comes from the lore (docs/lore.md); what this spec added to the lore is listed under* New to the lore *at the end, and is now in the lore too.*
 
-> **Decided (3 October 2026). Nothing here is built yet.** It picks up where Act I ends (Nan turning the black lace over in her hands) and follows the lore's Act II: Wren, the hollow oak, the Weepwood, the Weeping Bridge and Sir Garrick. Levels 7 to 11 take nearly twice the experience that levels 1 to 7 did, so this act is about twice as long as Act I: twice the quests, about twice the creatures, and four forest regions instead of one. The choices made before building are under *Decided*.
+> **Decided (3 October 2026). Being built:** the systems it needs are in the game (creature behaviours, being held still, Wren as a companion, the whistle, a night held round the fires, a region's own fires, waking by a safe fire, traders and recipes that grow with the story, the all-day dusk under the mist); the places, people, creatures and quests come next. It picks up where Act I ends (Nan turning the black lace over in her hands) and follows the lore's Act II: Wren, the hollow oak, the Weepwood, the Weeping Bridge and Sir Garrick. Levels 7 to 11 take nearly twice the experience that levels 1 to 7 did, so this act is about twice as long as Act I: twice the quests, about twice the creatures, and four forest regions instead of one. The choices made before building are under *Decided*.
 
 ---
 
