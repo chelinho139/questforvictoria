@@ -5,7 +5,7 @@ import { mergeStory } from '../sim/save';
 import type { SaveData } from '../sim/save';
 import { REGIONS, START_REGION } from '../data/regions';
 import { QUESTS } from '../data/quests';
-import { STARTER } from '../data/items';
+import { CLASSES, isClass } from '../data/classes';
 import { PROTOCOL, ROOM_MAX, TICK_HZ } from '../net/protocol';
 import type { C2S, S2C, RoomInfo, CharInfo } from '../net/protocol';
 import { COMMANDS, DEV_COMMANDS } from '../net/commands';
@@ -176,10 +176,11 @@ export class GameServer {
         return this.sendChars(c);
       case 'newChar': {
         const look = typeof m.look === 'string' && /^[a-z0-9]{1,16}$/.test(m.look) ? m.look : 'k1';
-        const made = this.store.create(a, typeof m.name === 'string' ? m.name : '', look);
+        const cls = isClass(m.cls) ? m.cls : 'warrior';
+        const made = this.store.create(a, typeof m.name === 'string' ? m.name : '', look, cls);
         if (typeof made === 'string')
           return this.send(c, { t: 'error', msg: made, about: 'newChar' });
-        console.log(`[game] new character ${made.name}`);
+        console.log(`[game] new character ${made.name} (${made.cls})`);
         return this.sendChars(c, made.id);
       }
       case 'delChar': {
@@ -268,12 +269,14 @@ export class GameServer {
   private charInfos(a: AccountRecord): CharInfo[] {
     return this.store.charsOf(a).map(ch => {
       const s = ch.save;
+      const cls = isClass(ch.cls) ? ch.cls : 'warrior';
       return {
         id: ch.id,
         name: ch.name,
         look: ch.look,
+        cls,
         level: s?.level ?? 1,
-        equip: s?.equip ?? STARTER.worn,
+        equip: s?.equip ?? CLASSES[cls].starter,
         place: s ? (REGIONS[s.region]?.name ?? '') : 'The lakeshore',
         at: s?.at ?? 0,
         busy: this.playing.has(ch.id),
@@ -320,9 +323,14 @@ export class GameServer {
     const hero = game.addHero(c.id, ch.name, opening ? START_REGION : where);
     hero.driven = 'remote';
     hero.look = ch.look;
+    hero.cls = isClass(ch.cls) ? ch.cls : 'warrior';
     if (ch.save) {
       if (opening) game.loadSave(ch.save, hero);
       else game.loadHero(ch.save, hero);
+    } else {
+      // a new character: their class's spells and starting kit (and the party's open quests)
+      hero.resetHero();
+      game.shareQuests(hero);
     }
     hero.log(`You join ${room.name}.`, 't');
     for (const o of game.heroes) if (o !== hero) o.log(`${hero.name} joins the room.`, 't');

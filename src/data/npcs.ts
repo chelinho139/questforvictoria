@@ -260,7 +260,7 @@ export const NPCS: Record<NpcId, NpcDef> = {
     greeting: 'Buying or selling? Both, I hope.',
     shop: {
       name: "Tobin's stall",
-      sells: ['bread', 'bandage', 'cooked_meat', 'leather_cap', 'leather_tunic', 'leather_trousers', 'leather_boots', 'wooden_shield', 'woodcutter_axe', 'pickaxe'],
+      sells: ['bread', 'bandage', 'cooked_meat', 'leather_cap', 'leather_tunic', 'leather_trousers', 'leather_boots', 'wooden_shield', 'woodcutter_axe', 'pickaxe', 'hunting_bow', 'leather_quiver'],
     },
     topics: [
       {
@@ -277,7 +277,7 @@ export const NPCS: Record<NpcId, NpcDef> = {
     title: 'Blacksmith',
     intro: ["Bram. Smith. You want something made, I've made it. You want to talk, talk to Tobin."],
     greeting: 'Hm.',
-    shop: { name: "Bram's smithy", sells: ['iron_bar', 'iron_sword', 'iron_shield', 'iron_helm', 'chainmail', 'iron_greaves'] },
+    shop: { name: "Bram's smithy", sells: ['iron_bar', 'iron_sword', 'iron_shield', 'yew_longbow', 'hunters_quiver', 'iron_helm', 'chainmail', 'iron_greaves'] },
     topics: [
       {
         ask: 'Tell me about Millbrook.',

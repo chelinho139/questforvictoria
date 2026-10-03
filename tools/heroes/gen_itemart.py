@@ -6,10 +6,11 @@ from backpack import backpack, PAL as BACKPACK_PAL
 import ores
 import craftart
 import items2
+import archery
 def arr(rows, ind='    '): return "[\n" + "".join(f"{ind}{json.dumps(r.rstrip('.'))},\n" for r in rows) + ind[:-2] + "]"
 def pal(p): return "{ " + ", ".join(f"{json.dumps(k)}: {json.dumps(v)}" for k, v in p.items()) + " }"
-pals = {'meat': MEAT_PAL, 'cooked_meat': craftart.COOKED_PAL, 'log': LOG_PAL, 'iron_bar': craftart.IRON_BAR_PAL, 'gold_bar': craftart.GOLD_BAR_PAL, **{k: v[1] for k, v in ores.ICONS.items()}, **{k: v[1] for k, v in GEAR.items()}, 'pickaxe': ores.PICK_PAL, **{k: v[1] for k, v in items2.ICONS.items()}}
-icons = {'meat': MEAT_ICON, 'cooked_meat': craftart.COOKED_ICON, 'log': LOG_ICON, 'iron_bar': craftart.ingot_icon().rows(), 'gold_bar': craftart.ingot_icon().rows(), **{k: v[0].rows() for k, v in ores.ICONS.items()}, **{k: v[0].rows() for k, v in GEAR.items()}, 'pickaxe': ores.pickaxe().rows(), **{k: v[0].rows() for k, v in items2.ICONS.items()}}
+pals = {'meat': MEAT_PAL, 'cooked_meat': craftart.COOKED_PAL, 'log': LOG_PAL, 'iron_bar': craftart.IRON_BAR_PAL, 'gold_bar': craftart.GOLD_BAR_PAL, **{k: v[1] for k, v in ores.ICONS.items()}, **{k: v[1] for k, v in GEAR.items()}, 'pickaxe': ores.PICK_PAL, **{k: v[1] for k, v in items2.ICONS.items()}, **{k: v[1] for k, v in archery.ICONS.items()}}
+icons = {'meat': MEAT_ICON, 'cooked_meat': craftart.COOKED_ICON, 'log': LOG_ICON, 'iron_bar': craftart.ingot_icon().rows(), 'gold_bar': craftart.ingot_icon().rows(), **{k: v[0].rows() for k, v in ores.ICONS.items()}, **{k: v[0].rows() for k, v in GEAR.items()}, 'pickaxe': ores.pickaxe().rows(), **{k: v[0].rows() for k, v in items2.ICONS.items()}, **{k: v[0].rows() for k, v in archery.ICONS.items()}}
 # unique versions of common gear look like them (ItemDef.looks)
 for k, base in {'edric_helm': 'iron_helm', 'elowen_amulet': 'vigour_amulet'}.items():
     pals[k] = pals[base]

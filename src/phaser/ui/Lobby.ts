@@ -66,7 +66,7 @@ export class Lobby {
       onCreate: c =>
         new Promise<string | null>(resolve => {
           this.pendingMake = resolve;
-          this.conn?.send({ t: 'newChar', name: c.name, look: c.hero });
+          this.conn?.send({ t: 'newChar', name: c.name, look: c.hero, cls: c.cls });
         }),
       onBack: () => this.list?.show(),
     }).open();

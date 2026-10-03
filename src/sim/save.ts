@@ -2,6 +2,7 @@ import type { ItemId, Slot } from '../data/items';
 import type { SpellKey } from '../data/spells';
 import type { NpcId } from '../data/npcs';
 import type { Stack, Structure, QuestProgress } from './types';
+import type { ClassId } from '../data/classes';
 
 /** Bump when the shape changes in a way old saves can't be read as. */
 export const SAVE_VERSION = 1;
@@ -14,6 +15,8 @@ export interface SaveData {
   v: number;
   /** When it was saved (ms since 1970). */
   at: number;
+  /** Warrior or archer (saves from before classes have none: warriors). */
+  cls?: ClassId;
   region: string;
   x: number;
   y: number;

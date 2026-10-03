@@ -37,7 +37,13 @@ export type ItemId =
   | 'bandage'
   | 'warm_cloak'
   | 'hound_trousers'
-  | 'sexton_lantern';
+  | 'sexton_lantern'
+  // the archer's
+  | 'worn_shortbow'
+  | 'hunting_bow'
+  | 'yew_longbow'
+  | 'leather_quiver'
+  | 'hunters_quiver';
 
 export type Slot = 'head' | 'body' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'trinket';
 
@@ -87,7 +93,11 @@ export interface ItemDef {
   looks?: ItemId;
   /** One of a kind (a quest reward): fine colour, and a line saying so. */
   unique?: boolean;
+  /** Only this class can wield it (weapons and off-hands; armour is for everyone). */
+  cls?: ClassId;
 }
+
+import type { ClassId } from './classes';
 
 const GEAR_COL = '#e8dcc0';
 const FINE_COL = '#7ae0a0';
@@ -134,6 +144,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     stats: { atk: 2 },
     col: GEAR_COL,
     price: 4,
+    cls: 'warrior',
   },
   iron_sword: {
     name: 'Iron sword',
@@ -144,6 +155,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     fine: true,
     col: FINE_COL,
     price: 60,
+    cls: 'warrior',
   },
   woodcutter_axe: {
     name: "Woodcutter's axe",
@@ -171,6 +183,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     stats: { armor: 3 },
     col: GEAR_COL,
     price: 14,
+    cls: 'warrior',
   },
   iron_shield: {
     name: 'Iron kite shield',
@@ -181,6 +194,59 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     fine: true,
     col: FINE_COL,
     price: 70,
+    cls: 'warrior',
+  },
+  worn_shortbow: {
+    name: 'Worn shortbow',
+    desc: 'Patched with twine. It still shoots straight, mostly.',
+    stack: 1,
+    slot: 'weapon',
+    stats: { atk: 2 },
+    col: GEAR_COL,
+    price: 4,
+    cls: 'archer',
+  },
+  hunting_bow: {
+    name: 'Hunting bow',
+    desc: 'Ash, horn and gut: a poacher’s favourite.',
+    stack: 1,
+    slot: 'weapon',
+    stats: { atk: 3 },
+    col: GEAR_COL,
+    price: 18,
+    cls: 'archer',
+  },
+  yew_longbow: {
+    name: 'Yew longbow',
+    desc: 'As tall as you are, and it hits like a hammer.',
+    stack: 1,
+    slot: 'weapon',
+    stats: { atk: 6 },
+    fine: true,
+    col: FINE_COL,
+    price: 60,
+    cls: 'archer',
+  },
+  leather_quiver: {
+    name: 'Leather quiver',
+    desc: 'Arrows at hand: you shoot a little harder.',
+    stack: 1,
+    slot: 'offhand',
+    stats: { atk: 1 },
+    col: GEAR_COL,
+    price: 14,
+    cls: 'archer',
+  },
+  hunters_quiver: {
+    name: "Hunter's quiver",
+    desc: 'Iron-banded, with broadheads fletched in grey goose, and a strap of boiled leather across the chest.',
+    stack: 1,
+    slot: 'offhand',
+    stats: { atk: 1, hp: 15 },
+    fine: true,
+    col: FINE_COL,
+    price: 70,
+    cls: 'archer',
   },
   leather_cap: {
     name: 'Leather cap',
@@ -362,6 +428,36 @@ export type Loot = [ItemId, number, number, number?][];
  * earned: leather and wood (tier 1) from slimes and goblins, iron (tier 2) from skeletons at
  * night, ogres and shamans. Plate is a future tier.
  */
+/**
+ * The same piece of loot for the other class: a sword drops as a bow for an archer, a shield
+ * as a quiver (and back), so personal loot is always something you can use.
+ */
+export const CLASS_TWIN: Partial<Record<ItemId, ItemId>> = {
+  rusty_sword: 'worn_shortbow',
+  worn_shortbow: 'rusty_sword',
+  iron_sword: 'yew_longbow',
+  yew_longbow: 'iron_sword',
+  wooden_shield: 'leather_quiver',
+  leather_quiver: 'wooden_shield',
+  iron_shield: 'hunters_quiver',
+  hunters_quiver: 'iron_shield',
+  // the hunting bow's warrior counterpart is the axe (which stays an axe: it's a tool for anyone)
+  hunting_bow: 'woodcutter_axe',
+};
+
+/** Loot as a hero of this class finds it. */
+export function lootFor(id: ItemId, cls: ClassId): ItemId {
+  const d = ITEMS[id];
+  return d.cls && d.cls !== cls ? (CLASS_TWIN[id] ?? id) : id;
+}
+
+/** Whether a hero of this class can wear or wield it. */
+export function canWield(id: ItemId, cls: ClassId): boolean {
+  const d = ITEMS[id];
+  return !d.cls || d.cls === cls;
+}
+
+/** The warrior's starting kit (each class's is in data/classes.ts). */
 export const STARTER = {
   worn: { weapon: 'rusty_sword', legs: 'cloth_trousers' } as Partial<Record<Slot, ItemId>>,
   bag: [] as ItemId[],

@@ -94,7 +94,7 @@ export class Session {
     const tick: Tick = {
       rg: h.regionId,
       me: this.me(h),
-      en: R.enemies.map(enemySnap),
+      en: R.enemies.map(e => enemySnap(e, h.id)),
       hs: R.heroes()
         .filter(o => o !== h)
         .map(heroSnap),
@@ -131,6 +131,10 @@ export class Session {
       'hz',
       R.hazards.map(z => [r1(z.x), r1(z.y), r1(z.r), z.speed, z.max])
     );
+    part(
+      'tz',
+      R.traps.map(t => [Math.round(t.x), Math.round(t.y)])
+    );
     part('sc', R.scene);
     part('sy', { flags: h.game.flags, quests: h.game.quests, journal: h.game.journal });
     this.dayT -= dt;
@@ -151,6 +155,9 @@ export class Session {
       x: r1(h.x),
       y: r1(h.y),
       tp: h.tp,
+      aimT: r2(h.aimT),
+      predatorT: r1(h.predatorT),
+      hiddenT: r1(h.hiddenT),
       hp: Math.round(h.hp),
       hpMax: h.hpMax,
       mp: r1(h.mp),
@@ -192,6 +199,7 @@ export class Session {
 
   private meFull(h: Hero): MeFull {
     return {
+      cls: h.cls,
       level: h.level,
       xp: h.xp,
       gold: h.gold,
@@ -209,13 +217,17 @@ export class Session {
   }
 }
 
-function enemySnap(e: import('../sim/types').Enemy): EnemySnap {
+/** A creature as one hero sees it (whether it bears their Mark is theirs to know). */
+function enemySnap(e: import('../sim/types').Enemy, me: string): EnemySnap {
   const flags =
     (e.alive ? 1 : 0) |
     (e.aggro ? 2 : 0) |
     (e.tele ? 4 : 0) |
     (e.temp ? 8 : 0) |
-    (e.flash > 0 ? 16 : 0);
+    (e.flash > 0 ? 16 : 0) |
+    (e.slowT > 0 ? 32 : 0) |
+    (e.rootT > 0 ? 64 : 0) |
+    (e.markT > 0 && e.markBy === me ? 128 : 0);
   return [
     e.id,
     e.kind,
@@ -237,7 +249,9 @@ function enemySnap(e: import('../sim/types').Enemy): EnemySnap {
 }
 
 function heroSnap(h: Hero): HeroSnap {
-  const flags = (h.mounted ? 1 : 0) | (h.jumpFlip ? 2 : 0) | (h.flash > 0 ? 4 : 0);
+  // camouflaged archers show faintly to their friends
+  const flags =
+    (h.mounted ? 1 : 0) | (h.jumpFlip ? 2 : 0) | (h.flash > 0 ? 4 : 0) | (h.hiddenT > 0 ? 8 : 0);
   const equip = Object.values(h.equip)
     .map(v => v ?? '')
     .join(',');
@@ -257,6 +271,7 @@ function heroSnap(h: Hero): HeroSnap {
     r2(h.atkAnimT),
     equip,
     h.level,
+    h.cls,
   ];
 }
 

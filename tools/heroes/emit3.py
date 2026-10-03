@@ -2,7 +2,7 @@
 shorts, own hair), plus one pixel layer per item for every frame. The game stacks
 the equipped layers on the bare frame; backflip frames are the tuck pose turned 90° at a time."""
 import json, os, random, sys
-from cast2 import HEROES, GEAR_PAL, ALL_ITEMS, ITEMS_BY_SLOT, SLOT_OF, APPLY_ORDER, compose, poses, MX, MY
+from cast2 import HEROES, GEAR_PAL, ALL_ITEMS, ITEMS_BY_SLOT, SLOT_OF, APPLY_ORDER, QUIVERS, compose, poses, MX, MY
 
 LABELS = {
     'k1': ('K1 · Knight', 'tall and broad-shouldered, with auburn hair'),
@@ -14,7 +14,7 @@ LABELS = {
     'cute': ('H4 · Cute', 'a big dark-haired head with dot eyes'),
     'masked': ('H5 · Masked', 'a pale floating spirit wearing a mask; its weapons hover beside it'),
 }
-GROUPS = ['walk', 'idle', 'attack', 'jump']
+GROUPS = ['walk', 'idle', 'attack', 'jump', 'shoot']
 LAYER_IDS = ALL_ITEMS
 
 
@@ -24,7 +24,8 @@ def layer_for(hero, item, p, base):
     if slot in ('weapon', 'offhand', 'trinket'):
         g = compose(hero, {slot: item}, only=slot, **p)
         px = {(x, y): g.g[y][x] for y in range(g.h) for x in range(g.w) if g.t[y][x] == slot}
-        return px, slot == 'weapon' and p.get('weapon') == 'back'
+        # a weapon wound up behind the head, and a quiver on the back, only fill empty pixels
+        return px, (slot == 'weapon' and p.get('weapon') == 'back') or item in QUIVERS
     g = compose(hero, {slot: item}, **p)
     px = {}
     for y in range(g.h):
@@ -179,13 +180,15 @@ def js(v):
 
 L = ["""import { PixelCanvas } from './pixelPainter';
 import type { RiderFit, Crop } from './styleArt';
+import { ITEMS } from '../../data/items';
 import type { ItemId, Slot } from '../../data/items';
 
 /**
  * The HD heroes: three knights and five heroes modelled on approved board looks. Each has
  * a 4-frame idle, a walk (6 frames; the floating Masked hero bobs in 4), a 4-frame attack
- * (wind-up, overhead, strike, follow-through), 3 jump frames (rise, tuck, fall) and a
- * 4-frame backflip (the tuck pose turned in 90° steps).
+ * (wind-up, overhead, strike, follow-through), a 4-frame shot for archers (nock, draw,
+ * loose, lower; feet planted), 3 jump frames (rise, tuck, fall) and a 4-frame backflip
+ * (the tuck pose turned in 90° steps).
  *
  * Equipment shows on the hero: every frame is stored bare (skin, linen shorts, bare feet,
  * the hero's own hair), with one pixel layer per item for that frame: caps and helms
@@ -197,8 +200,8 @@ import type { ItemId, Slot } from '../../data/items';
 """,
 "export type HdHeroId = " + " | ".join(json.dumps(h['id']) for h in heroes_out) + ";\n",
 """/** Animation groups beyond the walk. Every group but flip shares the walk's canvas size. */
-export type HeroAnim = 'idle' | 'attack' | 'jump' | 'flip';
-export const HERO_ANIMS: HeroAnim[] = ['idle', 'attack', 'jump', 'flip'];
+export type HeroAnim = 'idle' | 'attack' | 'shoot' | 'jump' | 'flip';
+export const HERO_ANIMS: HeroAnim[] = ['idle', 'attack', 'shoot', 'jump', 'flip'];
 type Group = 'walk' | HeroAnim;
 
 /** A layer for one frame: top-left, rows joined by '|' ('.' leaves a pixel, '-' clears it), and 1 if it only fills empty pixels. */
@@ -268,7 +271,8 @@ export interface HeroCanvases {
 export function hdHeroFrames(id: HdHeroId, gear: Gear = {}): HeroCanvases {
   const h = HD_HEROES[id];
   const pal = { ...GEAR_PAL, ...h.pal };
-  const ids: LayerId[] = STACK.map(s => gear[s]).filter((v): v is ItemId => !!v);
+  // unique gear is drawn like the common piece it is based on (ItemDef.looks)
+  const ids: LayerId[] = STACK.map(s => gear[s]).filter((v): v is ItemId => !!v).map(i => ITEMS[i].looks ?? i);
   const stacks = ids.map(i => h.layers[i]).filter(l => !!l);
   const paint = (g: Group, i: number, [w, rows]: [number, number]) => {
     const grid = h.frames[g][i].map(r => [...r.padEnd(w, '.')]);
@@ -293,7 +297,7 @@ export function hdHeroFrames(id: HdHeroId, gear: Gear = {}): HeroCanvases {
   const group = (g: Group) => h.frames[g].map((_, i) => paint(g, i, g === 'flip' ? h.flipSize[i] : h.size));
   return {
     walk: group('walk'),
-    anims: { idle: group('idle'), attack: group('attack'), jump: group('jump'), flip: group('flip') },
+    anims: { idle: group('idle'), attack: group('attack'), shoot: group('shoot'), jump: group('jump'), flip: group('flip') },
   };
 }
 """)

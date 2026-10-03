@@ -63,6 +63,19 @@ export class Effects {
       g.strokeCircle(goal.x, goal.y, 5 + 2 * k);
     }
 
+    // bear traps: iron jaws open on the ground
+    for (const tr of this.sim.traps) {
+      g.lineStyle(1, hex('#4a3a2c'), 1);
+      g.strokeCircle(tr.x, tr.y, 5);
+      g.fillStyle(hex('#9aa0aa'), 1);
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        g.fillRect(Math.round(tr.x + Math.cos(a) * 4) - 0.5, Math.round(tr.y + Math.sin(a) * 4) - 0.5, 1, 1);
+      }
+      g.fillStyle(hex('#c8a05a'), 1);
+      g.fillRect(tr.x - 1, tr.y - 1, 2, 2);
+    }
+
     const live = new Set<Fx>();
     for (const f of this.sim.fx) {
       const p = f.t / f.dur;
@@ -169,6 +182,25 @@ export class Effects {
           draw(2, WHITE);
           b.fillStyle(hex(f.col!), (1 - p) * 0.7);
           b.fillCircle(isoX(f.x!, f.y!), isoY(f.x!, f.y!), 8 + p * 22);
+          break;
+        }
+        case 'arrow': {
+          // an arrow on a shallow arc: dark shaft, steel head, fletching in the spell's colour
+          const ax = isoX(f.x0!, f.y0!), ay = isoY(f.x0!, f.y0!);
+          const bx = isoX(f.x1!, f.y1!), by = isoY(f.x1!, f.y1!);
+          const arc = Math.min(14, Math.hypot(bx - ax, by - ay) * 0.08);
+          const at = (q: number): [number, number] => [ax + (bx - ax) * q, ay + (by - ay) * q - Math.sin(q * Math.PI) * arc];
+          const [x, y] = at(p);
+          const [px, py] = at(Math.max(0, p - 0.05));
+          const d = Math.hypot(x - px, y - py) || 1;
+          const dx = (x - px) / d;
+          const dy = (y - py) / d;
+          b.lineStyle(1, hex('#6b4a2b'), 1);
+          b.lineBetween(Math.round(x - dx * 7), Math.round(y - dy * 7), Math.round(x), Math.round(y));
+          b.fillStyle(hex('#d8dce4'), 1);
+          b.fillRect(Math.round(x + dx) - 1, Math.round(y + dy) - 1, 2, 2);
+          b.fillStyle(hex(f.col ?? '#e8dcc0'), 1);
+          b.fillRect(Math.round(x - dx * 7) - 1, Math.round(y - dy * 7) - 1, 2, 2);
           break;
         }
         case 'fireball': {

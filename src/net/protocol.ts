@@ -27,9 +27,10 @@
  */
 
 import type { ItemId, Slot } from '../data/items';
+import type { ClassId } from '../data/classes';
 
 /** Bump when a message changes shape: the server turns away a browser that speaks another. */
-export const PROTOCOL = 2;
+export const PROTOCOL = 3;
 
 /** Players a room takes. */
 export const ROOM_MAX = 8;
@@ -49,6 +50,8 @@ export interface CharInfo {
   name: string;
   /** Which hero they look like (an HD hero id). */
   look: string;
+  /** Warrior or archer. */
+  cls: ClassId;
   level: number;
   /** What they wear, by slot (to draw them). */
   equip: Partial<Record<Slot, ItemId | null>>;
@@ -74,7 +77,7 @@ export interface RoomInfo {
 export type C2S =
   | { t: 'hello'; v: number; account: string }
   | { t: 'chars' }
-  | { t: 'newChar'; name: string; look: string }
+  | { t: 'newChar'; name: string; look: string; cls: ClassId }
   | { t: 'delChar'; id: string }
   | { t: 'list' }
   | { t: 'host'; name: string; char: string }
@@ -129,6 +132,8 @@ export interface Tick {
   np?: [string, number][];
   pr?: unknown[];
   hz?: unknown[];
+  /** Bear traps: [x, y]. */
+  tz?: [number, number][];
   sc?: unknown;
   /** The story: flags, quests, journal (when they change). */
   sy?: { flags: Record<string, number>; quests: Record<string, unknown>; journal: string[] };
@@ -141,6 +146,10 @@ export interface MeSnap {
   x: number;
   y: number;
   tp: number;
+  /** The archer's: holding still to shoot, Predator, Camouflage. */
+  aimT: number;
+  predatorT: number;
+  hiddenT: number;
   hp: number;
   hpMax: number;
   mp: number;
@@ -172,6 +181,7 @@ export interface MeSnap {
 }
 
 export interface MeFull {
+  cls: ClassId;
   level: number;
   xp: number;
   gold: number;
@@ -223,6 +233,7 @@ export type HeroSnap = [
   atkAnimT: number,
   equip: string,
   level: number,
+  cls: ClassId,
 ];
 
 export type DropSnap = [

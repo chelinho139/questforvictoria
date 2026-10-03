@@ -9,6 +9,7 @@ import type { WheelKey } from '../../data/skills';
 import { isoX, isoY } from '../../sim/map';
 import { Colors, Fonts, hex, PIXEL_SCALE, logicalSize } from '../config';
 import { Tex } from '../render/textures';
+import { CLASSES } from '../../data/classes';
 
 type Text = Phaser.GameObjects.Text;
 type Graphics = Phaser.GameObjects.Graphics;
@@ -121,7 +122,7 @@ export class MobileHudScene extends Phaser.Scene {
     this.gTop = this.add.graphics().setDepth(100);
 
     // plates
-    this.txt(14, 14, `${playerName()} · Warrior 14`, 'display', 9, Colors.ink);
+    this.txt(14, 14, `${playerName()} · ${CLASSES[this.sim.cls].name} ${this.sim.level}`, 'display', 9, Colors.ink);
     this.pHp = this.txt(14 + 132 - 3, 25, '', 'body', 13, '#fff').setOrigin(1, 0);
     this.pMp = this.txt(14 + 132 - 3, 39, '', 'body', 13, '#fff').setOrigin(1, 0);
     this.eName = this.txt(180, 14, 'Tap an enemy', 'display', 9, Colors.ink).setOrigin(0.5, 0);
@@ -588,7 +589,7 @@ export class MobileHudScene extends Phaser.Scene {
     if (s.bleedT > 0) chips.push(['Bleed ' + s.bleedT.toFixed(1) + 's', '#ff7a72']);
     const tg = s.target;
     if (tg && tg.alive && tg.stunT > 0) chips.push(['Stunned', Colors.muted]);
-    if (tg && tg.alive && s.dist(s, tg) >= 48) chips.push(['Out of range', Colors.muted]);
+    if (tg && tg.alive && s.dist(s, tg) >= s.aaReach) chips.push(['Out of range', Colors.muted]);
     if (s.rev) chips.push(['Rev', Colors.ember]);
     if (s.mounted) chips.push(['Mounted ×1.8', Colors.purple]);
     let y = 66;

@@ -5,11 +5,14 @@ import { regrade } from '../render/regrade';
 import { NAME_MAX } from '../player';
 import { STARTER } from '../../data/items';
 import type { ItemId, Slot } from '../../data/items';
+import { CLASSES, CLASS_IDS } from '../../data/classes';
+import type { ClassId } from '../../data/classes';
 
-/** A new character: what they're called and which hero they look like. */
+/** A new character: what they're called, their class, and which hero they look like. */
 export interface NewChoice {
   name: string;
   hero: HdHeroId;
+  cls: ClassId;
 }
 
 /** Hero frames in some gear (the starting kit by default), recoloured the way the game shows them (HD · Silhouette colours). */
@@ -24,22 +27,24 @@ export function heroArt(
     anims: {
       idle: re(f.anims.idle),
       attack: re(f.anims.attack),
+      shoot: re(f.anims.shoot),
       jump: re(f.anims.jump),
       flip: re(f.anims.flip),
     },
   };
 }
 
-/** The big preview's show reel: idle, walk, attack, jump and a backflip, then repeat. */
-function reel(a: HeroCanvases): [HTMLCanvasElement, number][] {
+/** The big preview's show reel: idle, walk, attack (an archer's shot), jump and a backflip, then repeat. */
+function reel(a: HeroCanvases, shoots = false): [HTMLCanvasElement, number][] {
   const out: [HTMLCanvasElement, number][] = [];
   const add = (list: HTMLCanvasElement[], ms: number, loops = 1) => {
     for (let l = 0; l < loops; l++) for (const cv of list) out.push([cv, ms]);
   };
   add(a.anims.idle, 380, 2);
   add(a.walk, 100, 3);
-  add(a.anims.attack, 110);
-  out.push([a.anims.attack[a.anims.attack.length - 1], 300]);
+  const hit = shoots ? a.anims.shoot : a.anims.attack;
+  add(hit, shoots ? 150 : 110);
+  out.push([hit[hit.length - 1], 300]);
   add(a.anims.jump, 170);
   add(a.anims.flip, 110);
   out.push([a.walk[0], 400]);
@@ -75,7 +80,7 @@ export class NewCharacter {
   private root: HTMLDivElement | null = null;
   private raf = 0;
   private sel: number;
-  private readonly art = new Map<HdHeroId, HeroCanvases>();
+  private readonly art = new Map<string, HeroCanvases>();
   private cards: HTMLButtonElement[] = [];
   private cardCanvases: HTMLCanvasElement[] = [];
   private big!: HTMLCanvasElement;
@@ -125,11 +130,16 @@ export class NewCharacter {
     this.sel = Math.max(0, HD_HERO_IDS.indexOf(opts.hero));
   }
 
+  /** Warrior or archer: the class card picked. */
+  private cls: ClassId = 'warrior';
+
+  /** A hero in the chosen class's starting kit (a sword, or a bow). */
   private artOf(id: HdHeroId): HeroCanvases {
-    let a = this.art.get(id);
+    const key = `${id}|${this.cls}`;
+    let a = this.art.get(key);
     if (!a) {
-      a = heroArt(id);
-      this.art.set(id, a);
+      a = heroArt(id, CLASSES[this.cls].starter);
+      this.art.set(key, a);
     }
     return a;
   }
@@ -150,6 +160,13 @@ export class NewCharacter {
             <label class="select-field" for="select-input">Name
               <input id="select-input" type="text" maxlength="${NAME_MAX}" autocomplete="off" spellcheck="false" placeholder="Name your character">
             </label>
+            <div class="select-field">Class
+              <div class="select-classes" role="radiogroup" aria-label="Class">${CLASS_IDS.map(
+                c =>
+                  `<button type="button" class="select-class" role="radio" data-cls="${c}"><b>${CLASSES[c].name}</b><small>${CLASSES[c].blurb}</small></button>`
+              ).join('')}</div>
+              <p class="select-class-about"></p>
+            </div>
             <div class="select-grid" role="listbox" aria-label="Heroes"></div>
             <p class="select-hint">Arrow keys pick a hero · Enter creates</p>
           </div>
@@ -181,6 +198,9 @@ export class NewCharacter {
       this.cards.push(b);
       this.cardCanvases.push(cv);
     });
+    for (const b of root.querySelectorAll<HTMLButtonElement>('.select-class'))
+      b.addEventListener('click', () => this.pickClass(b.dataset.cls as ClassId));
+    this.pickClass(this.cls);
     root.querySelector('.select-go')!.addEventListener('click', () => this.make());
     root.querySelector('.lobby-back')!.addEventListener('click', () => this.back());
     window.addEventListener('keydown', this.onKey);
@@ -195,6 +215,16 @@ export class NewCharacter {
     this.raf = requestAnimationFrame(tick);
   }
 
+  /** Warrior or archer: the cards and the preview show the class's starting kit. */
+  private pickClass(cls: ClassId): void {
+    this.cls = cls;
+    if (!this.root) return;
+    for (const b of this.root.querySelectorAll<HTMLButtonElement>('.select-class'))
+      b.setAttribute('aria-checked', String(b.dataset.cls === cls));
+    this.root.querySelector('.select-class-about')!.textContent = CLASSES[cls].about;
+    this.select(this.sel);
+  }
+
   private select(i: number): void {
     this.sel = i;
     const id = HD_HERO_IDS[i];
@@ -202,7 +232,7 @@ export class NewCharacter {
     this.title.textContent = HD_HEROES[id].label;
     this.about.textContent =
       HD_HEROES[id].about.charAt(0).toUpperCase() + HD_HEROES[id].about.slice(1) + '.';
-    this.reelFrames = reel(this.artOf(id));
+    this.reelFrames = reel(this.artOf(id), CLASSES[this.cls].aa.ranged);
     this.reelI = 0;
     this.reelT = 0;
   }
@@ -231,7 +261,9 @@ export class NewCharacter {
     if (!name) return this.say('Give your character a name.');
     this.busy = true;
     this.say('Making your character…', false);
-    void Promise.resolve(this.opts.onCreate({ name, hero: HD_HERO_IDS[this.sel] })).then(err => {
+    void Promise.resolve(
+      this.opts.onCreate({ name, hero: HD_HERO_IDS[this.sel], cls: this.cls })
+    ).then(err => {
       this.busy = false;
       if (err) this.say(err);
       else this.close();

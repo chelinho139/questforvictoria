@@ -1,5 +1,6 @@
 import type { ActionKey } from './skills';
 import type { SpellKey } from './spells';
+import type { ClassId } from './classes';
 
 /**
  * Levels and talents, in the spirit of Diablo 2 and classic WoW. You earn experience from
@@ -24,26 +25,52 @@ export function xpToNext(level: number): number {
 export const XP_FOR = { tree: 3, rock: 4, craft: 2, build: 8 };
 
 // ---------------------------------------------------------------- talents
-export type TreeId = 'blade' | 'fury' | 'warden';
+export type TreeId = 'blade' | 'fury' | 'warden' | 'marksman' | 'hunter' | 'ranger';
 
-export const TREES: Record<TreeId, { name: string; icon: string; blurb: string }> = {
+export const TREES: Record<TreeId, { cls: ClassId; name: string; icon: string; blurb: string }> = {
   blade: {
+    cls: 'warrior',
     name: 'Blade',
     icon: 'icon:thrust',
     blurb: 'One foe at a time: sharper hits, critical strikes, bleeding wounds.',
   },
   fury: {
+    cls: 'warrior',
     name: 'Fury',
     icon: 'icon:warcry',
     blurb: 'Rage and momentum: faster swings, war cries, charges and whirlwinds.',
   },
   warden: {
+    cls: 'warrior',
     name: 'Warden',
     icon: 'item:iron_shield',
     blurb: 'The old order: armour, health, second winds, food, and a life in the wilds.',
   },
+  marksman: {
+    cls: 'archer',
+    name: 'Marksman',
+    icon: 'icon:aimedshot',
+    blurb: 'One arrow, one foe: harder shots, critical hits, reach, and the killing shot.',
+  },
+  hunter: {
+    cls: 'archer',
+    name: 'Hunter',
+    icon: 'icon:mark',
+    blurb: 'Prey and the chase: marks, snares, traps, bleeding arrows and a quick draw.',
+  },
+  ranger: {
+    cls: 'archer',
+    name: 'Ranger',
+    icon: 'icon:volley',
+    blurb: "The Wardens' scouts: volleys, nimble feet, living off the land, and vanishing.",
+  },
 };
 export const TREE_IDS = Object.keys(TREES) as TreeId[];
+
+/** A class's three trees, in order. */
+export function treesOf(cls: ClassId): TreeId[] {
+  return TREE_IDS.filter(t => TREES[t].cls === cls);
+}
 
 /** Points to spend in a tree before its next tier opens (tier t needs t × this). */
 export const TIER_POINTS = 4;
@@ -96,6 +123,27 @@ export interface TalentFx {
   moveSpeed: number; // walking and riding
   mountTime: number;
   lastWarden: number; // 1: survive a killing blow once a minute
+  // Marksman
+  quickDmg: number; // flat Quick Shot damage
+  aimedCombo: number; // added to Aimed Shot's ×1.5 after Quick Shot
+  shotRange: number; // px farther for every arrow
+  farShot: number; // damage at targets more than 150 px away
+  pierceDmg: number;
+  pierceCd: number; // seconds sooner
+  critSlow: number; // seconds a crit slows the target
+  // Hunter
+  markDur: number;
+  markBonus: number; // added to the Mark's +20%
+  concCd: number;
+  concSlow: number; // added to Concussive Shot's 50% slow
+  trapCd: number;
+  trapHold: number; // seconds longer
+  markJump: number; // 1: the Mark jumps to the nearest enemy when the prey dies
+  // Ranger
+  evade: number; // chance to sidestep a blow
+  volleyDmg: number;
+  volleyReach: number;
+  volleyCd: number;
 }
 
 export const NO_FX: TalentFx = {
@@ -137,6 +185,24 @@ export const NO_FX: TalentFx = {
   moveSpeed: 0,
   mountTime: 0,
   lastWarden: 0,
+  quickDmg: 0,
+  aimedCombo: 0,
+  shotRange: 0,
+  farShot: 0,
+  pierceDmg: 0,
+  pierceCd: 0,
+  critSlow: 0,
+  markDur: 0,
+  markBonus: 0,
+  concCd: 0,
+  concSlow: 0,
+  trapCd: 0,
+  trapHold: 0,
+  markJump: 0,
+  evade: 0,
+  volleyDmg: 0,
+  volleyReach: 0,
+  volleyCd: 0,
 };
 
 export interface TalentDef {
@@ -589,6 +655,429 @@ export const TALENTS: Record<string, TalentDef> = {
     { grants: 'laststand' }
   ),
 };
+
+/**
+ * The archer's trees mirror the warrior's: the same shape, the same points, and each talent a
+ * counterpart of one there (Sharp Arrows ↔ Honed Edge, Rapid Fire ↔ Sunder, Deadeye ↔
+ * Deathblow, Bear Trap ↔ Bloodrage, Predator ↔ Berserk, Disengage ↔ Shield Bash, Camouflage ↔
+ * Last Stand). See docs/archer.md.
+ */
+Object.assign(TALENTS, {
+  // ------------------------------------------------------------ Marksman: one arrow, one foe
+  sharp_arrows: T(
+    'marksman',
+    'Sharp Arrows',
+    'item:leather_quiver',
+    0,
+    0,
+    5,
+    r => `All your attacks deal ${(2.5 * r).toFixed(1).replace('.0', '')}% more damage.`,
+    { dmg: 0.025 }
+  ),
+  quick_draw: T(
+    'marksman',
+    'Quick Draw',
+    'icon:quickshot',
+    0,
+    1,
+    3,
+    r => `Quick Shot deals ${2 * r} more damage.`,
+    { quickDmg: 2 }
+  ),
+  long_shot: T(
+    'marksman',
+    'Long Shot',
+    'item:yew_longbow',
+    0,
+    2,
+    3,
+    r => `Your arrows reach ${15 * r} farther.`,
+    { shotRange: 15 }
+  ),
+  eagle_eye: T(
+    'marksman',
+    'Eagle Eye',
+    'icon:eye',
+    1,
+    0,
+    5,
+    r => `${pct(0.02 * r)} chance for any attack to be a critical hit (×1.6 damage).`,
+    { crit: 0.02 }
+  ),
+  steady_aim: T(
+    'marksman',
+    'Steady Aim',
+    'icon:aimedshot',
+    1,
+    1,
+    2,
+    r =>
+      `Aimed Shot right after Quick Shot deals ×${(1.5 + 0.2 * r).toFixed(1)} damage instead of ×1.5.`,
+    { aimedCombo: 0.2 }
+  ),
+  far_sight: T(
+    'marksman',
+    'Far Sight',
+    'item:hunting_bow',
+    1,
+    2,
+    2,
+    r => `Arrows at targets more than 150 away deal ${pct(0.05 * r)} more damage.`,
+    { farShot: 0.05 },
+    { requires: 'long_shot' }
+  ),
+  lethal_shots: T(
+    'marksman',
+    'Lethal Shots',
+    'icon:flame',
+    2,
+    0,
+    3,
+    r => `Critical hits deal ×${(1.6 + 0.15 * r).toFixed(2)} instead of ×1.6.`,
+    { critDmg: 0.15 },
+    { requires: 'eagle_eye' }
+  ),
+  rapid_fire: T(
+    'marksman',
+    'Rapid Fire',
+    'icon:rapidfire',
+    2,
+    1,
+    1,
+    () =>
+      'Teaches Rapid Fire: three arrows in quick succession, 4 damage each. 8 mana, 10 s cooldown.',
+    {},
+    { grants: 'rapidfire' }
+  ),
+  ballistics: T(
+    'marksman',
+    'Ballistics',
+    'icon:pierce',
+    2,
+    2,
+    3,
+    r => `Piercing Shot deals ${4 * r} more damage and is ready ${4 * r} s sooner.`,
+    { pierceDmg: 4, pierceCd: 4 }
+  ),
+  pinning_crits: T(
+    'marksman',
+    'Pinning Shots',
+    'icon:concussive',
+    3,
+    0,
+    1,
+    () => 'Your critical hits slow the target by half for 4 s.',
+    { critSlow: 4 },
+    { requires: 'lethal_shots' }
+  ),
+  coup_de_grace: T(
+    'marksman',
+    'Coup de Grâce',
+    'icon:killshot',
+    3,
+    1,
+    2,
+    r => `Kill Shot works below ${25 + 5 * r}% health and hits ${pct(0.1 * r)} harder.`,
+    { execThreshold: 0.05, execDmg: 0.1 }
+  ),
+  scavenger: T(
+    'marksman',
+    'Scavenger',
+    'icon:talents',
+    3,
+    2,
+    2,
+    r => `Every kill gives you ${8 * r} mana.`,
+    { killMana: 8 }
+  ),
+  deadeye: T(
+    'marksman',
+    'Deadeye',
+    'icon:deadeye',
+    4,
+    1,
+    1,
+    () =>
+      'Teaches Deadeye: one perfect shot for 26 damage; if it kills, it is ready again at once. 25 mana, 20 s cooldown.',
+    {},
+    { grants: 'deadeye' }
+  ),
+
+  // ------------------------------------------------------------ Hunter: prey and the chase
+  hunting_arrows: T(
+    'hunter',
+    'Hunting Arrows',
+    'item:worn_shortbow',
+    0,
+    0,
+    5,
+    r => `Your auto-shots deal ${r} more damage.`,
+    { aaDmg: 1 }
+  ),
+  tracker: T(
+    'hunter',
+    'Tracker',
+    'icon:mark',
+    0,
+    1,
+    2,
+    r => `Hunter's Mark lasts ${5 * r} s longer.`,
+    { markDur: 5 }
+  ),
+  snaring: T(
+    'hunter',
+    'Snaring',
+    'icon:concussive',
+    0,
+    2,
+    3,
+    r => `Concussive Shot is ready ${3 * r} s sooner.`,
+    { concCd: 3 }
+  ),
+  swift_hands: T(
+    'hunter',
+    'Swift Hands',
+    'icon:rapidfire',
+    1,
+    0,
+    3,
+    r => `Your auto-shots come ${pct(0.15 * r)} faster.`,
+    { aaSpeed: 0.15 },
+    { requires: 'hunting_arrows' }
+  ),
+  hunters_instinct: T(
+    'hunter',
+    "Hunter's Instinct",
+    'icon:mark',
+    1,
+    1,
+    3,
+    r => `Your Mark makes your prey take ${pct(0.2 + 0.05 * r)} more damage instead of 20%.`,
+    { markBonus: 0.05 },
+    { requires: 'tracker' }
+  ),
+  crippling: T(
+    'hunter',
+    'Crippling Shot',
+    'icon:concussive',
+    1,
+    2,
+    2,
+    r => `Concussive Shot slows by ${pct(0.5 + 0.15 * r)} instead of half.`,
+    { concSlow: 0.15 },
+    { requires: 'snaring' }
+  ),
+  serrated_heads: T(
+    'hunter',
+    'Serrated Heads',
+    'icon:barbed',
+    2,
+    2,
+    3,
+    r => `Barbed Arrow's bleed deals ${r} more damage every second.`,
+    { rendTick: 1 }
+  ),
+  bear_trap: T(
+    'hunter',
+    'Bear Trap',
+    'icon:beartrap',
+    2,
+    1,
+    1,
+    () =>
+      'Teaches Bear Trap: set a trap at your feet; the first enemy to step on it takes 8 and is held fast for 3 s. 10 mana, 20 s cooldown.',
+    {},
+    { grants: 'beartrap' }
+  ),
+  hunters_feast: T(
+    'hunter',
+    "Hunter's Feast",
+    'icon:secondwind',
+    2,
+    0,
+    3,
+    r => `Every arrow that hits heals you for ${r} health.`,
+    { lifeOnHit: 1 }
+  ),
+  blood_scent: T(
+    'hunter',
+    'Blood Scent',
+    'icon:flame',
+    3,
+    2,
+    2,
+    r => `Barbed Arrow bleeds ${3 * r} s longer.`,
+    { rendDur: 3 },
+    { requires: 'serrated_heads' }
+  ),
+  trap_mastery: T(
+    'hunter',
+    'Trap Mastery',
+    'icon:beartrap',
+    3,
+    1,
+    1,
+    () => 'Bear Trap is ready 8 s sooner and holds its catch 1 s longer.',
+    { trapCd: 8, trapHold: 1 },
+    { requires: 'bear_trap' }
+  ),
+  pack_hunter: T(
+    'hunter',
+    'Pack Hunter',
+    'icon:mark',
+    3,
+    0,
+    1,
+    () =>
+      'When your marked prey dies, the Mark jumps to the nearest enemy with the time it had left.',
+    { markJump: 1 },
+    { requires: 'hunters_feast' }
+  ),
+  predator: T(
+    'hunter',
+    'Predator',
+    'icon:predator',
+    4,
+    1,
+    1,
+    () =>
+      'Teaches Predator: for 10 s your auto-shots come 50% faster and you deal 20% more damage. 45 s cooldown.',
+    {},
+    { grants: 'predator' }
+  ),
+
+  // ------------------------------------------------------------ Ranger: the Wardens' scouts
+  nimble: T(
+    'ranger',
+    'Nimble',
+    'icon:disengage',
+    0,
+    0,
+    5,
+    r => `${pct(0.03 * r)} chance to sidestep a blow entirely.`,
+    { evade: 0.03 }
+  ),
+  endurance: T('ranger', 'Endurance', 'icon:heart', 0, 1, 5, r => `${6 * r} more maximum health.`, {
+    hp: 6,
+  }),
+  forager: T(
+    'ranger',
+    'Forager',
+    'item:woodcutter_axe',
+    0,
+    2,
+    3,
+    r => `Chop and mine ${15 * r}% faster.`,
+    { gather: 0.15 }
+  ),
+  volley_master: T(
+    'ranger',
+    'Volley Master',
+    'icon:volley',
+    1,
+    0,
+    3,
+    r => `Volley deals ${2 * r} more damage and covers ${10 * r} wider.`,
+    { volleyDmg: 2, volleyReach: 10 }
+  ),
+  living_off_the_land: T(
+    'ranger',
+    'Living off the Land',
+    'icon:secondwind',
+    1,
+    1,
+    3,
+    r => `Every kill heals you for ${5 * r} health.`,
+    { killHeal: 5 }
+  ),
+  keen_forager: T(
+    'ranger',
+    'Keen Forager',
+    'item:pickaxe',
+    1,
+    2,
+    2,
+    r =>
+      `${20 * r}% chance of an extra log when a tree falls, and of extra ore when a rock breaks.`,
+    { prospect: 0.2 },
+    { requires: 'forager' }
+  ),
+  disengage: T(
+    'ranger',
+    'Disengage',
+    'icon:disengage',
+    2,
+    0,
+    1,
+    () =>
+      'Teaches Disengage: leap back away from your target, out of its reach. 5 mana, 12 s cooldown.',
+    {},
+    { grants: 'disengage', requires: 'nimble' }
+  ),
+  rangers_rest: T(
+    'ranger',
+    "Ranger's Rest",
+    'item:leather_cap',
+    2,
+    1,
+    2,
+    r => `Regain ${(0.5 * r).toFixed(1)} health every second.`,
+    { regen: 0.5 }
+  ),
+  trail_rations: T(
+    'ranger',
+    'Trail Rations',
+    'item:cooked_meat',
+    2,
+    2,
+    2,
+    r => `Food heals ${25 * r}% more.`,
+    { food: 0.25 }
+  ),
+  storm_of_arrows: T(
+    'ranger',
+    'Storm of Arrows',
+    'icon:volley',
+    3,
+    0,
+    1,
+    () => 'Volley is ready 6 s sooner.',
+    { volleyCd: 6 },
+    { requires: 'volley_master' }
+  ),
+  watchful_eye: T(
+    'ranger',
+    'Watchful Eye',
+    'icon:silence',
+    3,
+    1,
+    2,
+    r => `Silencing Shot is ready ${4 * r} s sooner and stuns ${(0.5 * r).toFixed(1)} s longer.`,
+    { intCd: 4, intStun: 0.5 }
+  ),
+  fleet_foot: T(
+    'ranger',
+    'Fleet Foot',
+    'icon:mount',
+    3,
+    2,
+    2,
+    r => `Walk and ride ${5 * r}% faster, and mount ${(0.4 * r).toFixed(1)} s sooner.`,
+    { moveSpeed: 0.05, mountTime: 0.4 }
+  ),
+  camouflage: T(
+    'ranger',
+    'Camouflage',
+    'icon:camouflage',
+    4,
+    1,
+    1,
+    () =>
+      'Teaches Camouflage: for 6 s creatures lose track of you, you heal 20% of your health, and your next shot is a critical hit. 60 s cooldown.',
+    {},
+    { grants: 'camouflage' }
+  ),
+} satisfies Record<string, TalentDef>);
 
 /** The talent that teaches an ability, by ability. */
 export const TALENT_FOR: Partial<Record<ActionKey, string>> = Object.fromEntries(

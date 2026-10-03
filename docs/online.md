@@ -122,7 +122,8 @@ The groundwork. Today the simulation assumes one player, one region and one map 
 - **Testing alone:** a bot joins like a browser does, wanders about and picks fights:
   - `npm run bot` lists the open rooms;
   - `npm run bot -- host "Bot room"` opens a room and plays in it;
-  - `npm run bot -- join ABCD --name Botty --look k2 --secs 60` joins room ABCD.
+  - `npm run bot -- join ABCD --name Botty --look k2 --secs 60` joins room ABCD;
+  - `--cls archer` makes the bot's character an archer (the first time that name is used).
 
   Add `--url ws://<address>:3000/ws` to send it to another computer's server.
 - **While developing,** every change to the game's code restarts the server, which drops everyone and closes the rooms. Characters are saved first, so reload the page and pick up where you were.

@@ -50,6 +50,7 @@ export class BootScene extends Phaser.Scene {
       const ch = lastLocalChar() ?? this.firstLocalChar();
       if (ch) {
         this.registry.set('localChar', ch.id);
+        this.registry.set('localClass', ch.cls);
         playAs(ch.name);
         playLook(ch.look);
       }
@@ -126,6 +127,7 @@ export class BootScene extends Phaser.Scene {
   /** Play this single-player character: their game, their name and look. */
   private playLocal(ch: CharInfo): void {
     this.registry.set('localChar', ch.id);
+    this.registry.set('localClass', ch.cls);
     this.wear(ch);
   }
 

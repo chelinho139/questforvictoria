@@ -18,6 +18,7 @@ import { portraitCrop } from '../render/art';
 import { playerName } from '../player';
 import { xpToNext } from '../../data/talents';
 import type { TreeState, RockState, NpcState, ObjectState } from '../../sim/types';
+import { CLASSES } from '../../data/classes';
 
 type NineSlice = Phaser.GameObjects.NineSlice;
 type Image = Phaser.GameObjects.Image;
@@ -143,7 +144,7 @@ export class PcHudScene extends Phaser.Scene {
 
     this.player = this.unitFrame(true);
     this.player.name.setText(playerName());
-    this.player.sub.setText('Warrior · Lv 1');
+    this.player.sub.setText(`${CLASSES[this.sim.cls].name} · Lv 1`);
     this.player.portrait.setTexture(Tex.knight);
     this.target = this.unitFrame(false);
     this.castTag = panel(this, UI.tag, 0, 0, 10, 10).setDepth(D.panel).setVisible(false);
@@ -725,7 +726,7 @@ export class PcHudScene extends Phaser.Scene {
   private drawPlayerFrame(): void {
     const s = this.sim;
     const f = this.player;
-    f.sub.setText(`Warrior · Lv ${s.level}`);
+    f.sub.setText(`${CLASSES[s.cls].name} · Lv ${s.level}`);
     f.sub.setX(f.name.x + f.name.width + 6);
     // head-and-shoulders crop of the knight
     // re-set every frame so a mid-game art style change picks up the new hero size
@@ -781,7 +782,7 @@ export class PcHudScene extends Phaser.Scene {
     if (s.bleedT > 0) chips.push(['Bleed ' + s.bleedT.toFixed(1) + 's', Ink.red]);
     const tg = s.target;
     if (tg && tg.alive && tg.stunT > 0) chips.push(['Stunned', Ink.mid]);
-    if (tg && tg.alive && s.dist(s, tg) >= 48) chips.push(['Out of range', Ink.mid]);
+    if (tg && tg.alive && s.dist(s, tg) >= s.aaReach) chips.push(['Out of range', Ink.mid]);
     if (s.mounted) chips.push(['Mounted ×1.8', '#6a4ab8']);
     let x = 12;
     const y = 12 + PANEL_H + 4;

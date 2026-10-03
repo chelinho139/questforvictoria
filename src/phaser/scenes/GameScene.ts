@@ -29,6 +29,7 @@ import type { BuiltWorld } from '../render/textures';
 import type { MobileHudScene } from './MobileHudScene';
 import { readSave, writeSave } from '../saveStore';
 import type { NetSim } from '../../net/NetSim';
+import type { ClassId } from '../../data/classes';
 import { OnlineBadge } from '../ui/OnlineBadge';
 import { SceneBox } from '../ui/SceneBox';
 import { BossBar } from '../ui/BossBar';
@@ -73,6 +74,8 @@ export class GameScene extends Phaser.Scene {
     if (charId) {
       const save = readSave(charId);
       if (save) this.sim.loadSave(save);
+      // a new character starts their adventure as their class
+      else this.sim.startAs((this.registry.get('localClass') as ClassId | undefined) ?? 'warrior');
     }
     // the hero wears what the sim has equipped: redraw them whenever the gear changes
     this.wearGear();

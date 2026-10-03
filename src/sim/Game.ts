@@ -9,6 +9,8 @@ import { QUESTS, QUEST_IDS } from '../data/quests';
 import { ITEMS } from '../data/items';
 import type { ItemId } from '../data/items';
 import { SAVE_VERSION, readableSave } from './save';
+import { isClass } from '../data/classes';
+import { SPELLS } from '../data/spells';
 import type { SaveData } from './save';
 import { T } from './map';
 import { Rng } from './rng';
@@ -344,6 +346,7 @@ export class Game {
     return {
       v: SAVE_VERSION,
       at: Date.now(),
+      cls: h.cls,
       region: h.regionId,
       x: h.x,
       y: h.y,
@@ -445,6 +448,8 @@ export class Game {
   }
 
   private setHero(d: SaveData, h: Hero): void {
+    h.cls = isClass(d.cls) ? d.cls : 'warrior';
+    h.applyClass();
     h.level = d.level;
     h.xp = d.xp;
     h.gold = d.gold;
@@ -457,7 +462,10 @@ export class Game {
       Object.entries(d.equip).filter(([, id]) => !id || ITEMS[id as ItemId])
     ) as typeof h.equip;
     h.applyGear();
-    h.bar = d.bar.slice();
+    // spells the hero no longer knows (another version's) leave the bar
+    h.bar = d.bar.map(k =>
+      k && Object.prototype.hasOwnProperty.call(SPELLS, k) && h.knows(k) ? k : null
+    );
     h.met.clear();
     for (const id of d.met) if (NPCS[id]) h.met.add(id);
   }

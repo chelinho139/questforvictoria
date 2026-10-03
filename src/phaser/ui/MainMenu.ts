@@ -3,6 +3,7 @@ import type { HdHeroId, HeroCanvases } from '../render/hdHeroes';
 import type { CharInfo } from '../../net/protocol';
 import { heroArt } from './NewCharacter';
 import { esc } from './html';
+import { CLASSES } from '../../data/classes';
 
 export type MenuPick = 'single' | 'multi';
 
@@ -57,7 +58,7 @@ export class MainMenu {
         <button type="button" class="mainmenu-pick" role="menuitem">
           <canvas width="192" height="96" aria-hidden="true"></canvas>
           <b>Single Player</b>
-          <small>${s ? `${esc(s.name)} · Level ${s.level}` : 'Your own adventure'}</small>
+          <small>${s ? `${esc(s.name)} · Level ${s.level} ${CLASSES[s.cls]?.name ?? 'Warrior'}` : 'Your own adventure'}</small>
           <small>${s ? esc(s.place) : 'your characters in this browser'}</small>
         </button>
         <div class="mainmenu-div" aria-hidden="true"></div>

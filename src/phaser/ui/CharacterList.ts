@@ -4,6 +4,7 @@ import { HD_HERO_IDS } from '../render/art';
 import type { HdHeroId, HeroCanvases } from '../render/hdHeroes';
 import { heroArt, paint } from './NewCharacter';
 import { esc } from './html';
+import { CLASSES } from '../../data/classes';
 
 const when = (ms: number) =>
   ms
@@ -124,7 +125,7 @@ export class CharacterList {
       b.append(cv);
       b.insertAdjacentHTML(
         'beforeend',
-        `<span>${esc(ch.name)}</span><small>Level ${ch.level} · ${esc(ch.place)}</small><small>${ch.busy ? 'playing right now' : when(ch.at)}</small>`
+        `<span>${esc(ch.name)}</span><small>Level ${ch.level} ${CLASSES[ch.cls]?.name ?? 'Warrior'}</small><small>${esc(ch.place)}</small><small>${ch.busy ? 'playing right now' : when(ch.at)}</small>`
       );
       b.addEventListener('click', () => this.select(i));
       b.addEventListener('dblclick', () => this.play());

@@ -53,6 +53,11 @@ export const RECIPES: Recipe[] = [
   { id: 'pickaxe', station: 'forge', makes: { item: 'pickaxe' }, needs: [['iron_bar', 2], ['log', 2]] },
   { id: 'wooden_shield', station: 'forge', makes: { item: 'wooden_shield' }, needs: [['log', 4], ['iron_bar', 1]] },
   { id: 'iron_shield', station: 'forge', makes: { item: 'iron_shield' }, needs: [['iron_bar', 5]] },
+  // the archer's: staves bent over a fire, quivers banded at the forge
+  { id: 'hunting_bow', station: 'campfire', makes: { item: 'hunting_bow' }, needs: [['log', 4]] },
+  { id: 'yew_longbow', station: 'campfire', makes: { item: 'yew_longbow' }, needs: [['log', 6], ['iron_bar', 2]] },
+  { id: 'leather_quiver', station: 'forge', makes: { item: 'leather_quiver' }, needs: [['log', 3], ['iron_bar', 1]] },
+  { id: 'hunters_quiver', station: 'forge', makes: { item: 'hunters_quiver' }, needs: [['iron_bar', 4], ['log', 1]] },
   { id: 'iron_helm', station: 'forge', makes: { item: 'iron_helm' }, needs: [['iron_bar', 3]] },
   { id: 'vigour_amulet', station: 'forge', makes: { item: 'vigour_amulet' }, needs: [['gold_bar', 2]] },
 ];

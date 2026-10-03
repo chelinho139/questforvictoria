@@ -5,7 +5,7 @@
 //   node tools/net/bot.js                     list the rooms
 //   node tools/net/bot.js host "Bot room"     open a room and play in it
 //   node tools/net/bot.js join ABCD           join room ABCD
-//   options: --url ws://host:3000/ws  --name Botty  --look k2  --secs 30  --quiet
+//   options: --url ws://host:3000/ws  --name Botty  --look k2  --cls archer  --secs 30  --quiet
 // Each bot name is its own account with one character of that name, kept on the server
 // like a player's, so a bot comes back with the level and gear it had.
 const crypto = require('crypto');
@@ -19,6 +19,14 @@ const opt = (name, def) => {
 const url = opt('url', 'ws://localhost:3000/ws');
 const name = opt('name', 'Botty');
 const look = opt('look', 'k2');
+/** Warrior or archer: the class of the bot's character when it's first made. */
+const cls = opt('cls', 'warrior');
+// the protocol this checkout speaks (read from the game's own code, so it can't drift)
+const PROTOCOL = Number(
+  require('fs')
+    .readFileSync(require('path').join(__dirname, '../../src/net/protocol.ts'), 'utf8')
+    .match(/PROTOCOL = (\d+)/)[1]
+);
 const secs = Number(opt('secs', '0'));
 const quiet = args.includes('--quiet');
 // the words that aren't options or their values: the action and its argument
@@ -46,12 +54,14 @@ let goal = null;
 let lastPing = 0;
 
 /** Host or join with this character. */
+let myCls = 'warrior';
 const go = char => {
+  myCls = char.cls || 'warrior';
   if (action === 'host') send({ t: 'host', name: arg || `${name}'s room`, char: char.id });
   else send({ t: 'join', room: arg, char: char.id });
 };
 
-ws.on('open', () => send({ t: 'hello', v: 2, account }));
+ws.on('open', () => send({ t: 'hello', v: PROTOCOL, account }));
 ws.on('message', data => {
   const m = JSON.parse(String(data));
   if (m.t === 'welcome') {
@@ -59,7 +69,7 @@ ws.on('message', data => {
     // the bot's character, made the first time
     const mine = m.chars.find(c => c.name.toLowerCase() === name.toLowerCase());
     if (mine) go(mine);
-    else send({ t: 'newChar', name, look });
+    else send({ t: 'newChar', name, look, cls });
   } else if (m.t === 'chars' && m.made) {
     const made = m.chars.find(c => c.id === m.made);
     say(`made the character ${made.name}`);
@@ -104,7 +114,7 @@ setInterval(() => {
       )[0];
     if (near && Math.hypot(near[2] - me.x, near[3] - me.y) < 200) {
       send({ t: 'cmd', c: 'setTarget', a: [near[0]] });
-      send({ t: 'cmd', c: 'castKey', a: ['thrust'] });
+      send({ t: 'cmd', c: 'castKey', a: [myCls === 'archer' ? 'quickshot' : 'thrust'] });
     }
   }
   const dx = goal.x - me.x;

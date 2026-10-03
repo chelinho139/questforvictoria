@@ -17,6 +17,8 @@ import type { Enemy, ButtonId, Stack, QuestProgress, SceneLine } from '../sim/ty
 import type { Connection } from './Connection';
 import type { Tick, RoomInfo, EnemySnap, HeroSnap } from './protocol';
 import { TICK_HZ } from './protocol';
+import { isShot } from '../data/skills';
+import { AIM_HOLD } from '../data/classes';
 
 /** Something drawn where the server last put it, gliding there between snapshots. */
 interface Glide {
@@ -95,6 +97,10 @@ export class NetSim extends Sim {
     const R = this.R;
     if (t.mf) {
       const f = t.mf;
+      if (h.cls !== f.cls) {
+        h.cls = f.cls;
+        h.applyClass();
+      }
       Object.assign(h, {
         level: f.level,
         xp: f.xp,
@@ -147,7 +153,11 @@ export class NetSim extends Sim {
       seqI: me.seqI,
       cds: me.cds,
       acd: me.acd,
+      predatorT: me.predatorT,
+      hiddenT: me.hiddenT,
     });
+    // holding still to shoot: what the server says, or what this browser started itself
+    h.aimT = Math.max(h.aimT, me.aimT);
     // the short animations count down here; a fresh one from the server restarts them
     if (me.atkAnimT > h.atkAnimT + 0.06) h.atkAnimT = me.atkAnimT;
     if (me.flash > h.flash + 0.02) h.flash = me.flash;
@@ -171,6 +181,7 @@ export class NetSim extends Sim {
     if (t.st) this.syncStructures(R, t.st as [number, StructureKind, number, number, number][]);
     if (t.ob) this.syncObjects(R, t.ob as string[]);
     if (t.np) this.syncNpcs(R, t.np);
+    if (t.tz) R.traps = t.tz.map(([x, y], i) => ({ id: i, x, y, owner: '', t: 60, hold: 0 }));
     if (t.hz)
       R.hazards = (t.hz as [number, number, number, number, number][]).map(
         ([x, y, r, speed, max]) => ({ x, y, r, speed, max, dmg: 0, hit: true, what: '' })
@@ -291,6 +302,13 @@ export class NetSim extends Sim {
           fleeT: 0,
           temp: false,
           phase,
+          slowT: 0,
+          slowK: 0,
+          rootT: 0,
+          markT: 0,
+          markBy: '',
+          markK: 0,
+          angerT: 0,
         };
       }
       this.glide(e, x, y);
@@ -310,6 +328,11 @@ export class NetSim extends Sim {
         stunT,
         phase,
         sunderT,
+        // slowed, held by a trap, marked by me: shown, not simulated
+        slowT: flags & 32 ? 1 : 0,
+        rootT: flags & 64 ? 1 : 0,
+        markT: flags & 128 ? 1 : 0,
+        markBy: flags & 128 ? this.hero.id : '',
       });
       if (flags & 16) e.flash = Math.max(e.flash, 0.08);
       next.push(e);
@@ -337,6 +360,7 @@ export class NetSim extends Sim {
       atkAnimT,
       equip,
       level,
+      cls,
     ] of list) {
       let o = by.get(id);
       if (!o) {
@@ -366,6 +390,8 @@ export class NetSim extends Sim {
         jumpFlip: !!(flags & 2),
         jumpT,
         level,
+        cls,
+        hiddenT: flags & 8 ? 1 : 0,
       });
       if (atkAnimT > o.atkAnimT + 0.06) o.atkAnimT = atkAnimT;
       if (flags & 4) o.flash = Math.max(o.flash, 0.08);
@@ -467,8 +493,10 @@ export class NetSim extends Sim {
   override tick(dt: number): void {
     const h = this.hero;
     const R = this.R;
-    // my hero walks here; the short animations count down
+    // my hero walks here; the short timers count down (holding still to shoot among them:
+    // the server's own countdown is for the server's copy, not this one)
     if (!h.dead) h.tickReplica(dt);
+    h.aimT = Math.max(0, h.aimT - dt);
     h.atkAnimT = Math.max(0, h.atkAnimT - dt);
     h.flash = Math.max(0, h.flash - dt);
     h.shake = Math.max(0, h.shake - dt);
@@ -586,15 +614,32 @@ export class NetSim extends Sim {
     this.cmd('revStep');
   }
   override castKey(k: Key): boolean {
-    if (this.hero.inScene) return false;
+    if (this.hero.inScene || !this.readyToShoot(k)) return false;
     this.cmd('castKey', [k]);
+    return true;
+  }
+
+  /**
+   * An archer's shot: like single player, the feet must be planted (a click-walk stops; keys
+   * held down refuse), and the hero holds still for the draw. The server takes our word on it.
+   */
+  private readyToShoot(k: Key): boolean {
+    const h = this.hero;
+    if (h.cls !== 'archer' || !isShot(k)) return true;
+    if (h.path) h.stopMoving();
+    if (h.moving) {
+      h.log('Stand still to shoot.', 'h');
+      return false;
+    }
+    h.aimT = AIM_HOLD;
     return true;
   }
   override castSlot(i: number): void {
     this.cmd('castSlot', [i]);
   }
   override castBarSlot(i: number): void {
-    if (!this.hero.inScene) this.cmd('castBarSlot', [i]);
+    const k = this.hero.bar[i];
+    if (!this.hero.inScene && k && this.readyToShoot(k)) this.cmd('castBarSlot', [i]);
   }
   override setBarSlot(i: number, k: SpellKey | null): void {
     // drag and drop answers at once; the server agrees a moment later

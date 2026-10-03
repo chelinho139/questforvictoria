@@ -3,11 +3,12 @@ import type { Sim } from '../../sim/Sim';
 import { SKILLS, ACTIONS, isSkill } from '../../data/skills';
 import { SPELLS, SPELL_ORDER } from '../../data/spells';
 import type { SpellKey } from '../../data/spells';
-import { TALENTS, TREES, TREE_IDS, TIER_POINTS } from '../../data/talents';
+import { TALENTS, TREES, TIER_POINTS, treesOf } from '../../data/talents';
 import { BAR_KEYS, PC_KEYS } from '../../data/actionBar';
 import { Tex } from '../render/textures';
 import { dragSpell } from './spellDrag';
 import { dockLeft, undockLeft, openedLeft } from './panels';
+import { CLASSES } from '../../data/classes';
 
 const nameOf = (k: SpellKey) => (isSkill(k) ? SKILLS[k].n : ACTIONS[k].n);
 
@@ -132,9 +133,13 @@ export class SpellbookWindow {
       for (const k of keys) s.append(this.row(k));
       return s;
     };
-    const cls = SPELL_ORDER.filter(k => !SPELLS[k].talent);
-    const sections = [sec('Warrior spells', cls, `Level ${this.sim.level}`)];
-    for (const t of TREE_IDS) {
+    const mine = this.sim.cls;
+    // the class's spells (and Mount) in the order they're learned
+    const cls = SPELL_ORDER.filter(k => !SPELLS[k].talent && (!SPELLS[k].cls || SPELLS[k].cls === mine)).sort(
+      (a, b) => (SPELLS[a].level ?? 0) - (SPELLS[b].level ?? 0)
+    );
+    const sections = [sec(`${CLASSES[mine].name} spells`, cls, `Level ${this.sim.level}`)];
+    for (const t of treesOf(mine)) {
       const keys = SPELL_ORDER.filter(k => SPELLS[k].talent && TALENTS[SPELLS[k].talent!].tree === t);
       sections.push(sec(`${TREES[t].name} talents`, keys, 'from the talent tree'));
     }

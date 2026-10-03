@@ -6,6 +6,7 @@ import { itemIcon } from '../render/itemArt';
 import { Tex } from '../render/textures';
 import { artAnim, animKey, frameKey } from '../render/art';
 import { playerName } from '../player';
+import { CLASSES } from '../../data/classes';
 
 /** Equipment slots on the paper doll, placed on a 3-column grid (weapon and off-hand are tall, like Diablo 2). */
 const DOLL: Record<Slot, string> = {
@@ -72,7 +73,7 @@ export class InventoryWindow {
       <header><span>Inventory</span><button type="button" class="inv-x" title="Close (I or Esc)">×</button></header>
       <div class="inv-hero">
         <canvas width="96" height="96" aria-hidden="true"></canvas>
-        <div class="inv-who"><b class="inv-name"></b><span class="inv-lv">Warrior · Lv 1</span><ul class="inv-stats"></ul></div>
+        <div class="inv-who"><b class="inv-name"></b><span class="inv-lv"></span><ul class="inv-stats"></ul></div>
       </div>
       <div class="inv-doll"></div>
       <div class="inv-bag-head"><span>Bag</span><span class="inv-gold"></span></div>
@@ -191,7 +192,7 @@ export class InventoryWindow {
     const key = rows.map(r => r.join(':')).join('|') + '|' + s.gold + '|' + s.level;
     if (key === this.lastStats) return;
     this.lastStats = key;
-    this.root.querySelector('.inv-lv')!.textContent = `Warrior · Lv ${s.level}`;
+    this.root.querySelector('.inv-lv')!.textContent = `${CLASSES[s.cls].name} · Lv ${s.level}`;
     this.statsEl.innerHTML = rows.map(([k, v]) => `<li><span>${k}</span><b>${v}</b></li>`).join('');
     this.goldEl.textContent = `${s.gold} gold`;
   }

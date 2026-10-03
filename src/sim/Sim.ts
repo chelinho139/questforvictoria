@@ -6,6 +6,7 @@ import type { Recipe, StructureKind } from '../data/crafting';
 import type { NpcId } from '../data/npcs';
 import type { TalentFx, TreeId } from '../data/talents';
 import type { SpellKey } from '../data/spells';
+import type { ClassId } from '../data/classes';
 import type { ItemId, Slot, Stats } from '../data/items';
 import type { SaveData } from './save';
 import type { RegionMap } from './map';
@@ -15,7 +16,7 @@ import { Game } from './Game';
 import { Hero } from './Hero';
 import type { KeyInfo } from './Hero';
 import type { Region } from './Region';
-import type { Enemy, Fx, Particle, ButtonId, SimEvents, Stack, Drop, TreeState, RockState, Structure, NpcState, QuestProgress, QuestStatus, ObjectState, PropState, Hazard, WandererState, LogClass } from './types';
+import type { Enemy, Fx, Particle, ButtonId, SimEvents, Stack, Drop, TreeState, RockState, Structure, NpcState, QuestProgress, QuestStatus, ObjectState, PropState, Hazard, WandererState, LogClass, Trap } from './types';
 
 export { GCD, WIN, AA_RANGE, JUMP_DUR, JUMP_HEIGHT, FLIP_DUR, FLIP_HEIGHT, FLIP_CHANCE, ATK_ANIM, AA_PERIOD, TALK_REACH } from './Hero';
 export type { KeyInfo } from './Hero';
@@ -48,7 +49,8 @@ export class Sim {
   /** Playing in a room on a server (NetSim), rather than here in the browser. */
   readonly online: boolean = false;
   private offRegion: (() => void)[] = [];
-  private regionId = '';
+  /** The region whose events the hero hears. */
+  private heard: Region | null = null;
 
   /** `replica`: the world arrives from a server (NetSim builds it); don't start a game here. */
   constructor(replica = false) {
@@ -71,13 +73,14 @@ export class Sim {
 
   /** Hear the region the hero stands in (again after every change of region). */
   protected listenToRegion(): void {
-    if (this.hero.regionId === this.regionId && this.offRegion.length) return;
+    // the region itself, not just its id: starting over builds a new Greenmarch
+    const r = this.game.region(this.hero.regionId);
+    if (r === this.heard && this.offRegion.length) return;
     for (const off of this.offRegion) off();
     this.offRegion = [];
-    this.regionId = this.hero.regionId;
+    this.heard = r;
     this.fx = [];
     this.parts = [];
-    const r = this.game.region(this.regionId);
     const on = r.events;
     this.offRegion.push(
       on.on('floater', p => this.events.emit('floater', p)),
@@ -143,6 +146,22 @@ export class Sim {
     this.events.emit('loadout', {});
   }
 
+  /** A new game as a hero of this class (a new single-player character). */
+  startAs(cls: ClassId): void {
+    this.hero.cls = cls;
+    this.reset();
+  }
+
+  /** Warrior or archer. */
+  get cls(): ClassId {
+    return this.hero.cls;
+  }
+
+  /** How far the auto-attack reaches (a bowshot for an archer). */
+  get aaReach(): number {
+    return this.hero.aaReach;
+  }
+
   // ---------- the world around the hero ----------
   get region(): string {
     return this.hero.regionId;
@@ -184,6 +203,10 @@ export class Sim {
   /** The other heroes in the hero's region (online, the other players). */
   get others(): Hero[] {
     return this.game.heroes.filter(o => o !== this.hero && o.regionId === this.hero.regionId);
+  }
+  /** Bear traps set in the hero's region. */
+  get traps(): Trap[] {
+    return this.R.traps;
   }
   get wanderers(): WandererState[] {
     return this.R.wanderers;

@@ -26,6 +26,9 @@ npm run bot      # a test player for online play (see Online co-op)
 | `session.test.ts` | Snapshots: everything at first, then only what changed; who hears which events; changing region |
 | `store.test.ts` | The server's characters on disk: accounts by hashed key, unique names, the limit of 8, deleting, reloading, broken files |
 | `localStore.test.ts` | Single player's characters in the browser, and moving the old save into the first one |
+| `classes.test.ts` | The classes: tree shapes and points, each class's spells and gear, standing still to shoot, arrows landing when they arrive, Mark, Concussive Shot, bear traps, Volley, Piercing Shot, Camouflage, Disengage, angry slimes, saving the class |
+| `balance.test.ts` | Warrior and archer stay a fair match, build for mirrored build (see `docs/archer.md`); `fight.ts` is the fight simulator, `npx tsx tests/balance-report.ts` prints the tables |
+| `netsim.test.ts` | The browser's online game against the server's, joined by a fake line: an archer shoots and walks on, stands still to shoot, a warrior walks |
 | `server.test.ts` | The real server over WebSockets: hello, hosting and joining, one room per character, saving on leaving and on stopping, junk messages, refused moves, no cheats in production |
 
 `tests/helpers.ts` has the shared pieces: a game with heroes and the opening scene clicked through, standing next to an NPC, running the clock, and a `localStorage` for Node.
@@ -178,6 +181,10 @@ The story bible is `docs/lore.md`: the world of Corvalis, the cast, the secret t
 
 The lore's illustrated plates (map, Thornhallow, the Blackthorn stages, portraits and more) are sepia-ink SVGs in `docs/lore-art/`, drawn by `tools/lore/plates.py` (`python3 tools/lore/plates.py [name ...]`) and placed in the Markdown as `<figure class="plate">`. A shareable copy is published as a claude.ai artifact: `npm run share:lore -- <out.html>` builds one self-contained page (`docs/lore-share.html` template, plates inlined), which is then republished to the same artifact.
 
+## Classes
+
+Two classes, chosen when you make a character (single player and multi player alike): **Warrior** (steel up close; Blade, Fury and Warden talents) and **Archer** (arrows from afar, standing still to shoot; Marksman, Hunter and Ranger talents). `src/data/classes.ts` holds what a class decides: its health, its auto-attack, its starting kit, its Rev presets and mobile wheels. Spells (`spells.ts`) and talent trees (`talents.ts`) each belong to a class; weapons and off hands too (`ItemDef.cls`), while armour, tools and amulets are for everyone. Personal loot is swapped to the killer's class (a sword drops as a longbow for an archer). The archer's design, every number, and how the two classes were balanced against each other (a fight simulator running the real game) are in `docs/archer.md` (in the game: Settings › Documents › The archer).
+
 ## Online co-op
 
 The plan, its decisions and where it stands are in `docs/online.md` (in the game: Settings › Documents › Online co-op plan).
@@ -188,7 +195,7 @@ The plan, its decisions and where it stands are in `docs/online.md` (in the game
 - **Characters** (`src/server/Store.ts`) live on the server's disk in `server-data/` (gitignored; `QFV_DATA_DIR` moves it): accounts/, characters/ and deleted/, one JSON file each. A character is a single-player save plus a name and a look, so the same `Game.toSave` / `loadSave` code keeps them. They're saved every 5 seconds, on leaving, and when the server stops. Whoever opens a room brings their whole campaign (`Game.loadSave`); anyone joining brings only their hero (`Game.loadHero`) and keeps the story they see there (`mergeStory` in `src/sim/save.ts`). A browser's characters belong to the random key it keeps in localStorage (`qfv-account`, `src/net/account.ts`); there's no password yet. Rooms aren't kept: one closes 5 minutes after its last player leaves.
 - **Quests in a room** (`Game.questStatus` / `acceptQuest` / `completeQuest`, `Hero.questLog`): the room keeps quest progress (shared kills and places); each hero keeps their own log (on it, or handed in). Accepting gives the quest to the whole party, and each player hands it in for their own reward, once per character. The first hand-in plays the quest's story effects. The log travels with the character (`Game.toSave` writes the hero's view; `loadHero` brings it into the next room).
 - **Staying connected:** the server pings each browser at the WebSocket level every 10 seconds, which the browser answers even from a background tab, and lets a character go after 45 seconds of silence.
-- **Testing alone:** `npm run bot -- host "Bot room"` opens a room with a bot in it; `npm run bot -- join ABCD` sends one into room ABCD; `npm run bot` lists the rooms.
+- **Testing alone:** `npm run bot -- host "Bot room"` opens a room with a bot in it; `npm run bot -- join ABCD` sends one into room ABCD (`--cls archer` for an archer bot); `npm run bot` lists the rooms.
 
 ## License
 

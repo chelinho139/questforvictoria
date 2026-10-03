@@ -7,6 +7,7 @@ import type { Recipe, Station } from '../../data/crafting';
 import { itemIcon } from '../render/itemArt';
 import { Tex } from '../render/textures';
 import { dockLeft, undockLeft, openedLeft } from './panels';
+import { canWield } from '../../data/items';
 
 const STATIONS: Station[] = ['hand', 'campfire', 'forge'];
 
@@ -78,7 +79,9 @@ export class CraftingWindow {
       h.innerHTML = `<span>${STATION_NAMES[st]}</span><em></em>`;
       sec.append(h);
       this.stationState.set(st, h.querySelector('em')!);
-      for (const r of RECIPES.filter(x => x.station === st)) sec.append(this.row(r));
+      // only what your class can use (swords and shields for warriors, bows and quivers for archers)
+      const mine = (r: (typeof RECIPES)[number]) => !('item' in r.makes) || canWield(r.makes.item, this.sim.cls);
+      for (const r of RECIPES.filter(x => x.station === st && mine(x))) sec.append(this.row(r));
       list.append(sec);
     }
     this.tip = document.createElement('div');

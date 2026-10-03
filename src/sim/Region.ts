@@ -10,7 +10,7 @@ import { STRUCTURES } from '../data/crafting';
 import type { StructureKind } from '../data/crafting';
 import { NPCS } from '../data/npcs';
 import type { NpcId } from '../data/npcs';
-import { ITEMS, CHOP, MINE } from '../data/items';
+import { ITEMS, CHOP, MINE, lootFor } from '../data/items';
 import type { ItemId } from '../data/items';
 import { Emitter } from './Emitter';
 import type {
@@ -27,6 +27,7 @@ import type {
   SceneLine,
   PropState,
   Hazard,
+  Trap,
   WandererState,
 } from './types';
 import type { Game } from './Game';
@@ -71,6 +72,9 @@ export class Region {
   props: PropState[] = [];
   /** Rings of force spreading across the floor (the Bell-Ringer's tolls). */
   hazards: Hazard[] = [];
+  /** Bear traps archers have set (one each): the first creature to step on one is caught. */
+  traps: Trap[] = [];
+  private nextTrap = 1;
   /** Who walks this region's routes (the grey postman). */
   wanderers: WandererState[] = [];
   /** The scene playing here (data/scenes.ts), or null. Input and combat wait while it plays. */
@@ -250,6 +254,13 @@ export class Region {
       fleeT: 0,
       temp,
       phase: 0,
+      slowT: 0,
+      slowK: 0,
+      rootT: 0,
+      markT: 0,
+      markBy: '',
+      markK: 0,
+      angerT: 0,
     };
     // night creatures placed during the day wait underground (staggered so they don't all rise at once)
     if (k.nightOnly && !temp && !this.isNight) {
@@ -690,11 +701,13 @@ export class Region {
       }
     }
     e.flash = 0.08;
-    // passive creatures bolt; everything else fights back
+    // passive creatures bolt; everything else fights back, and stays angry a while however
+    // far away the hit came from (an archer can't shoot a slime from out of its sight for free)
     if (e.def.behavior === 'passive') e.fleeT = 3;
     else {
       e.aggro = true;
       e.foe ??= by.id;
+      e.angerT = 10;
     }
     if (e.def.hitSay && Math.random() < 0.6)
       this.floater(e.x + 12, e.y - 14 * e.def.scale - 8, e.def.hitSay, 'name', '#f4f1e6');
@@ -730,7 +743,8 @@ export class Region {
     for (const [id, lo, hi, chance = 1] of e.def.loot ?? []) {
       if (rng.next() >= chance) continue;
       const n = lo + Math.floor(rng.next() * (hi - lo + 1));
-      for (let k = 0; k < n; k++) this.spawnDrop(e.x, e.y, id, by.id);
+      // personal loot is something the killer's class can use (a sword drops as a bow for an archer)
+      for (let k = 0; k < n; k++) this.spawnDrop(e.x, e.y, lootFor(id, by.cls), by.id);
     }
     return true;
   }
@@ -801,14 +815,44 @@ export class Region {
     else e.walk = 0;
   }
 
-  /** The hero a creature is after: the one it fought last, or the nearest alive one. */
+  /** Set a bear trap at a hero's feet (their old one, if any, is taken up). */
+  setTrap(h: Hero, hold: number): void {
+    this.traps = this.traps.filter(t => t.owner !== h.id);
+    this.traps.push({ id: this.nextTrap++, x: h.x, y: h.y, owner: h.id, t: 60, hold });
+  }
+
+  /** Traps spring on the first creature to step on them; unsprung ones rust away after a minute. */
+  private updateTraps(dt: number): void {
+    if (!this.traps.length) return;
+    for (const tr of this.traps) {
+      tr.t -= dt;
+      const e = this.enemies.find(
+        x => x.alive && x.riseT <= 0 && Math.hypot(x.x - tr.x, x.y - tr.y) < 12 * x.def.scale
+      );
+      if (!e) continue;
+      tr.t = 0;
+      e.rootT = Math.max(e.rootT, tr.hold);
+      this.fx({ type: 'ring', x: tr.x, y: tr.y, r0: 4, r1: 22, col: '#c8a05a', lw: 3, dur: 0.35 });
+      this.burst(tr.x, tr.y - 4, 10, '#c8a05a', 80, 0.4, 2, 80);
+      this.floater(e.x + 10, e.y - 14 * e.def.scale - 8, 'CAUGHT', 'name', '#c8a05a');
+      const owner = this.heroes().find(h => h.id === tr.owner);
+      if (owner) owner.dmgEnemy(e, 8, '');
+    }
+    this.traps = this.traps.filter(t => t.t > 0);
+  }
+
+  /**
+   * The hero a creature is after: the one it fought last, or the nearest alive one it can
+   * see (a camouflaged archer is nowhere to be seen).
+   */
   private foeOf(e: Enemy, heroes: Hero[]): Hero | null {
-    const kept = e.foe ? heroes.find(h => h.id === e.foe && !h.dead) : undefined;
+    const kept = e.foe ? heroes.find(h => h.id === e.foe && !h.dead && h.hiddenT <= 0) : undefined;
     if (kept) return kept;
+    if (e.foe) e.foe = undefined;
     let best: Hero | null = null;
     let bd = Infinity;
     for (const h of heroes) {
-      if (h.dead) continue;
+      if (h.dead || h.hiddenT > 0) continue;
       const d = Math.hypot(h.x - e.x, h.y - e.y);
       if (d < bd) {
         bd = d;
@@ -844,6 +888,10 @@ export class Region {
       e.riseT -= dt;
       return;
     }
+    e.slowT = Math.max(0, e.slowT - dt);
+    e.rootT = Math.max(0, e.rootT - dt);
+    e.angerT = Math.max(0, e.angerT - dt);
+    if (e.markT > 0) e.markT = Math.max(0, e.markT - dt);
     const foe = this.foeOf(e, heroes);
     if (!foe) {
       e.aggro = false;
@@ -903,8 +951,8 @@ export class Region {
         foe.log(e.n + ' returns to its post.');
         return;
       }
-      // neutral creatures give up once you're out of reach
-      if (k.behavior === 'neutral' && d > k.aggro) {
+      // neutral creatures give up once you're out of reach (unless you just hit them)
+      if (k.behavior === 'neutral' && d > k.aggro && e.angerT <= 0) {
         e.aggro = false;
         e.foe = undefined;
         e.tele = false;
@@ -921,7 +969,12 @@ export class Region {
       if (d > k.range) {
         e.tele = false;
         e.atkT = Math.min(e.atkT, k.per);
-        this.moveEntity(e, (foe.x - e.x) / d, (foe.y - e.y) / d, k.spd, dt, hw, hh);
+        // held by a trap: it strains where it stands; slowed: it limps
+        if (e.rootT > 0) e.walk = 0;
+        else {
+          const spd = k.spd * (e.slowT > 0 ? 1 - e.slowK : 1);
+          this.moveEntity(e, (foe.x - e.x) / d, (foe.y - e.y) / d, spd, dt, hw, hh);
+        }
       } else {
         e.face = foe.x < e.x ? -1 : 1;
         e.atkT -= dt;
@@ -993,6 +1046,7 @@ export class Region {
     if (this.enemies.some(e => e.temp && !e.alive && e.dieT <= 0))
       this.enemies = this.enemies.filter(e => !(e.temp && !e.alive && e.dieT <= 0));
     if (!this.scene) this.updateHazards(dt);
+    if (!this.scene) this.updateTraps(dt);
     this.updateWanderers(dt);
     this.updateStory(dt);
     if (this.pending.length) {

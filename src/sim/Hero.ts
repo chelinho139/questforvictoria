@@ -1,11 +1,6 @@
-import {
-  SKILLS,
-  ACTIONS,
-  PRESETS,
-  DEFAULT_WHEEL_1,
-  DEFAULT_WHEEL_2,
-  isSkill,
-} from '../data/skills';
+import { SKILLS, ACTIONS, isSkill, isShot } from '../data/skills';
+import { CLASSES, AIM_HOLD, ARROW_SPEED } from '../data/classes';
+import type { ClassId } from '../data/classes';
 import type { Key, SkillKey, ActionKey, WheelKey } from '../data/skills';
 import { T, isoDir, isoSpeedFactor, Tile } from './map';
 import type { RegionMap } from './map';
@@ -27,7 +22,7 @@ import type { TalentFx, TreeId } from '../data/talents';
 import { SPELLS, SPELL_ORDER, HOME_SLOT } from '../data/spells';
 import type { SpellKey } from '../data/spells';
 import { BAR_KEYS } from '../data/actionBar';
-import { ITEMS, BAG_SLOTS, CHOP, MINE, STARTER, SLOTS, NO_STATS } from '../data/items';
+import { ITEMS, BAG_SLOTS, CHOP, MINE, STARTER, SLOTS, NO_STATS, canWield } from '../data/items';
 import type { ItemId, Slot, Stats } from '../data/items';
 import { Emitter } from './Emitter';
 import { findPath } from './pathfind';
@@ -152,6 +147,14 @@ export class Hero {
   flash = 0;
   shake = 0;
   target: Enemy | null = null;
+  /** Warrior or archer: the spells, talents, auto-attack and weapons this hero has. */
+  cls: ClassId = 'warrior';
+  /** An archer holds still this long after loosing an arrow (the draw and release). */
+  aimT = 0;
+  /** Predator: faster auto-shots and harder hits. */
+  predatorT = 0;
+  /** Camouflage: creatures lose track of you, and your next shot is a critical hit. */
+  hiddenT = 0;
   rev = false;
   revAuto = false;
   /** Rev (the skill sequencer) is an advanced option: off until the player turns it on. */
@@ -171,9 +174,9 @@ export class Hero {
   inputMove = { x: 0, y: 0 };
 
   // ---- loadout ----
-  w1: ActionKey[] = DEFAULT_WHEEL_1.slice();
-  w2: Key[] = DEFAULT_WHEEL_2.slice();
-  seq: SkillKey[] = PRESETS.mobs.slice();
+  w1: ActionKey[] = CLASSES.warrior.wheel1.slice();
+  w2: Key[] = CLASSES.warrior.wheel2.slice();
+  seq: SkillKey[] = CLASSES.warrior.presets.mobs.slice();
   seqI = 0;
   sel1: ActionKey = 'interrupt';
   sel2: Key = 'slash';
@@ -301,13 +304,14 @@ export class Hero {
       useTarget: null,
       exiting: null,
       eatCd: 0,
+      aimT: 0,
+      predatorT: 0,
+      hiddenT: 0,
     });
     this.questLog.clear();
     this.bar = new Array<SpellKey | null>(BAR_KEYS.length).fill(null);
     for (const k of SPELL_ORDER) if (this.knows(k)) this.placeSpell(k);
-    this.w1 = DEFAULT_WHEEL_1.slice();
-    this.w2 = DEFAULT_WHEEL_2.slice();
-    this.seq = PRESETS.mobs.slice();
+    this.applyClass();
     this.bag = new Array<Stack | null>(BAG_SLOTS).fill(null);
     this.equip = {
       head: null,
@@ -318,12 +322,45 @@ export class Hero {
       offhand: null,
       trinket: null,
     };
-    Object.assign(this.equip, STARTER.worn);
+    Object.assign(this.equip, CLASSES[this.cls].starter);
     for (const id of STARTER.bag) this.addItem(id, 1);
     this.met.clear();
     this.applyGear();
     this.hp = this.hpMax;
     this.events.emit('loadout', {});
+  }
+
+  /** The class's loadout: the mobile wheels and the Rev sequence start with its spells. */
+  applyClass(): void {
+    const C = CLASSES[this.cls];
+    this.w1 = C.wheel1.slice();
+    this.w2 = C.wheel2.slice();
+    this.sel1 = C.wheel1[0];
+    this.sel2 = C.wheel2[0];
+    this.seq = C.presets.mobs.slice();
+    this.seqI = 0;
+  }
+
+  /** Holding a bow (an archer without one can only punch). */
+  get hasBow(): boolean {
+    const w = this.equip.weapon;
+    return !!w && ITEMS[w].cls === 'archer';
+  }
+
+  /** Feet planted: not walking. An archer only shoots like this. */
+  get planted(): boolean {
+    return this.driven === 'remote' ? this.stillT >= 0.12 : !this.moving;
+  }
+
+  /** How far the auto-attack reaches: a sword's length, or (an archer with a bow) a bowshot. */
+  get aaReach(): number {
+    const aa = CLASSES[this.cls].aa;
+    return aa.ranged && this.hasBow ? this.reach(aa.range) : AA_RANGE;
+  }
+
+  /** How far this hero's arrows (or a spell's) reach. */
+  reach(range: number): number {
+    return range + (CLASSES[this.cls].aa.ranged ? this.tal.shotRange : 0);
   }
 
   // ---------- messaging ----------
@@ -420,7 +457,7 @@ export class Hero {
         cd: 0,
       };
     const a = ACTIONS[k];
-    return k in ACTION_CD ? { ...a, cd: this.actionCd(k as keyof typeof ACTION_CD) } : a;
+    return { ...a, cd: this.abilityCd(k) };
   }
 
   /** A skill's cooldown after talents. */
@@ -428,7 +465,18 @@ export class Hero {
     const cd = SKILLS[k].cd;
     if (k === 'charge') return Math.max(2, cd - this.tal.chargeCd);
     if (k === 'whirlwind') return Math.max(2, cd - this.tal.whirlCd);
+    if (k === 'concussive') return Math.max(2, cd - this.tal.concCd);
+    if (k === 'volley') return Math.max(2, cd - this.tal.volleyCd);
     return cd;
+  }
+
+  /** An instant spell's cooldown after talents (Silencing Shot shares Interrupt's). */
+  abilityCd(k: ActionKey): number {
+    if (k === 'mortal' || k === 'interrupt') return this.actionCd(k);
+    if (k === 'silence') return this.actionCd('interrupt');
+    if (k === 'pierce') return Math.max(2, ACTIONS.pierce.cd - this.tal.pierceCd);
+    if (k === 'beartrap') return Math.max(2, ACTIONS.beartrap.cd - this.tal.trapCd);
+    return ACTIONS[k].cd;
   }
 
   /** An action's cooldown after talents. */
@@ -437,12 +485,16 @@ export class Hero {
     return Math.max(2, ACTION_CD[k] - less);
   }
 
-  /** Everything that scales your damage: talents, War Cry, Enrage. */
-  private dmgMult(): number {
+  /**
+   * Everything that scales your damage: talents, War Cry, Enrage, Berserk and Predator, and
+   * against a particular creature, your Hunter's Mark on it.
+   */
+  private dmgMult(e?: Enemy): number {
     const cry = this.buffT > 0 ? 1.2 + this.tal.warcryBonus : 1;
     const rage = this.hp < this.hpMax / 2 ? 1 + this.tal.enrage : 1;
-    const berserk = this.berserkT > 0 ? 1.2 : 1;
-    return (1 + this.tal.dmg) * cry * rage * berserk;
+    const frenzy = this.berserkT > 0 || this.predatorT > 0 ? 1.2 : 1;
+    const marked = e && e.markT > 0 && e.markBy === this.id ? 1 + e.markK : 1;
+    return (1 + this.tal.dmg) * cry * rage * frenzy * marked;
   }
 
   /** Damage of a critical hit, as a multiplier. */
@@ -466,6 +518,7 @@ export class Hero {
       case 'mortal':
         return this.mortalCd;
       case 'interrupt':
+      case 'silence':
         return this.intCd;
       default:
         return this.acd[k as ActionKey] ?? 0;
@@ -490,7 +543,21 @@ export class Hero {
     if (rem > 0) return ACTIONS[k].n + ' on cooldown (' + Math.ceil(rem) + ' s).';
     if (this.mp < (ACTIONS[k].c ?? 0)) return 'Not enough mana for ' + ACTIONS[k].n + '.';
     const close = !!tg && tg.alive && this.dist(this, tg) <= 60;
+    // the archer's shots: a bow, feet planted, and the target within an arrow's reach
+    if (isShot(k)) {
+      const why = this.shotProblem();
+      if (why) return why;
+      if (k !== 'silence' && (!tg || !tg.alive)) return 'Pick a target first.';
+      if (tg && tg.alive && this.dist(this, tg) > this.reach(k === 'deadeye' ? 260 : 220))
+        return `${ACTIONS[k].n}: out of range.`;
+    }
     switch (k) {
+      case 'silence':
+        return tg && tg.alive && tg.castT > 0 ? null : 'Nothing to silence.';
+      case 'killshot':
+        return tg && tg.alive && tg.hp / tg.hpMax < this.execThreshold
+          ? null
+          : `Kill Shot needs a target below ${Math.round(this.execThreshold * 100)}%.`;
       case 'sunder':
       case 'deathblow':
         return close ? null : `${ACTIONS[k].n} needs a target close by.`;
@@ -526,9 +593,21 @@ export class Hero {
     const needT = sk.range > 0;
     const cd = this.cds[key] ?? 0;
     if (cd > 0) return sk.n + ' on cooldown (' + Math.ceil(cd) + ' s).';
+    if (sk.shot) {
+      const why = this.shotProblem();
+      if (why) return why;
+    }
     if (needT && (!tg || !tg.alive)) return 'Pick a target first.';
-    if (needT && tg && this.dist(this, tg) > sk.range) return sk.n + ': out of range.';
+    if (needT && tg && this.dist(this, tg) > this.reach(sk.range)) return sk.n + ': out of range.';
     if (this.mp < sk.c) return 'Not enough mana for ' + sk.n + '.';
+    return null;
+  }
+
+  /** Why an archer can't loose an arrow right now (no bow, or walking), or null. */
+  private shotProblem(): string | null {
+    if (!this.hasBow) return 'You need a bow to shoot.';
+    // the browser stops its hero before it asks, so the server takes its word on a cast
+    if (this.driven !== 'remote' && !this.planted) return 'Stand still to shoot.';
     return null;
   }
 
@@ -586,7 +665,7 @@ export class Hero {
     return false;
   }
   setSeqPreset(name: string): void {
-    const p = PRESETS[name];
+    const p = CLASSES[this.cls].presets[name];
     if (!p) return;
     this.seq = p.slice();
     this.seqI = 0;
@@ -655,7 +734,7 @@ export class Hero {
       this.mountToggle();
       return true;
     }
-    if (k !== 'bloodrage' && k !== 'laststand' && k !== 'berserk') {
+    if (!['bloodrage', 'laststand', 'berserk', 'predator', 'camouflage'].includes(k)) {
       if (this.mounted) this.dismount('You dismount to attack.');
       this.mountT = 0;
     }
@@ -702,6 +781,38 @@ export class Hero {
       this.swing = 0.2;
       this.atkAnimT = ATK_ANIM;
       this.log('Mortal Strike.', 'c');
+    } else if (k === 'silence' && tg) {
+      this.intCd = this.actionCd('interrupt');
+      this.loose(
+        tg,
+        e => {
+          e.castT = -1;
+          e.castCd = 6;
+          e.stunT = Math.max(e.stunT, 1 + this.tal.intStun);
+          this.dmgEnemy(e, Math.round(2 * this.dmgMult(e)), '');
+          this.banner('SILENCED', 'cool');
+          R.fx({ type: 'shield', x: e.x, y: e.y, col: '#3ddbd9', dur: 0.4 });
+        },
+        '#3ddbd9'
+      );
+    } else if (k === 'killshot' && tg) {
+      this.loose(
+        tg,
+        e => {
+          R.fx({ type: 'xslash', x: e.x, y: e.y - 6, col: '#e0504b', dur: 0.4 });
+          this.burst(e.x, e.y - 6, 14, '#c8302a', 110, 0.6, 3, 200);
+          this.dmgEnemy(
+            e,
+            Math.round((Math.round(e.hp * 0.3) + 8) * (1 + this.tal.execDmg) * this.dmgMult(e)),
+            'crit'
+          );
+          this.banner('KILL SHOT!', 'bad');
+        },
+        '#e0504b'
+      );
+    } else if (k === 'pierce' && tg) {
+      this.acd.pierce = this.abilityCd('pierce');
+      this.pierce(tg);
     } else this.talentAbility(k, tg);
     return true;
   }
@@ -711,10 +822,11 @@ export class Hero {
     const a = ACTIONS[k];
     if (!(k in SPELLS) || !SPELLS[k as SpellKey].talent) return;
     const R = this.region;
-    this.acd[k] = a.cd;
+    this.acd[k] = this.abilityCd(k);
     this.mp -= a.c ?? 0;
     const crit = this.game.rng.next() < this.tal.crit;
-    const hit = (base: number) => Math.round(base * this.dmgMult() * (crit ? this.critMult : 1));
+    const hit = (base: number, e?: Enemy) =>
+      Math.round(base * this.dmgMult(e) * (crit ? this.critMult : 1));
     if (k === 'sunder' && tg) {
       this.face = tg.x < this.x ? -1 : 1;
       R.fx({ type: 'slash', x: tg.x, y: tg.y - 6, rot: 0.4, col: '#c8d2e0', dur: 0.35 });
@@ -773,13 +885,128 @@ export class Hero {
         dur: 0.6,
       });
       this.log('Last Stand: you dig in.', 't');
+    } else if (k === 'rapidfire' && tg) {
+      // three arrows, a beat apart
+      for (let i = 0; i < 3; i++)
+        R.after(i * 0.18, () => {
+          if (tg.alive && this.regionId === R.id && !this.dead)
+            this.loose(tg, e => this.dmgEnemy(e, hit(4, e), crit ? 'crit' : ''), '#c8d2e0');
+        });
+    } else if (k === 'deadeye' && tg) {
+      this.loose(
+        tg,
+        e => {
+          this.burst(e.x, e.y - 6, 18, '#c8302a', 130, 0.6, 3, 200);
+          this.shake = 0.2;
+          this.dmgEnemy(e, hit(26, e), 'crit');
+          if (!e.alive) {
+            this.acd.deadeye = 0;
+            this.log('Deadeye! It is ready again.', 'c');
+          }
+        },
+        '#e0504b'
+      );
+    } else if (k === 'beartrap') {
+      R.setTrap(this, 3 + this.tal.trapHold);
+      this.burst(this.x, this.y + 2, 8, '#c8a05a', 50, 0.5, 2, -20);
+      this.log('You set a bear trap.', 't');
+    } else if (k === 'predator') {
+      this.predatorT = 10;
+      this.floater(this.x, this.y - 20, 'PREDATOR', 'name', '#ff8c42');
+      R.fx({ type: 'shout', x: this.x, y: this.y, col: '#ff8c42', dur: 0.7 });
+      this.burst(this.x, this.y - 14, 14, '#ff8c42', 70, 0.7, 2, -50);
+    } else if (k === 'disengage') {
+      this.disengage(tg);
+    } else if (k === 'camouflage') {
+      this.hiddenT = 6;
+      const h = Math.min(Math.round(this.hpMax * 0.2), this.hpMax - this.hp);
+      this.hp += h;
+      if (h) this.floater(this.x, this.y - 20, '+' + h, 'heal');
+      // whatever was after you loses the scent
+      for (const e of R.enemies)
+        if (e.foe === this.id) {
+          e.foe = undefined;
+          e.aggro = false;
+          e.tele = false;
+        }
+      this.target = null;
+      this.burst(this.x, this.y - 10, 14, '#6ccf6a', 60, 0.8, 2, -20);
+      this.log('You melt into the wild.', 't');
     }
+  }
+
+  /** Piercing Shot: one heavy arrow through everything in a line to the target and a little beyond. */
+  private pierce(tg: Enemy): void {
+    const R = this.region;
+    const d = this.dist(this, tg) || 1;
+    const ux = (tg.x - this.x) / d;
+    const uy = (tg.y - this.y) / d;
+    const len = d + 60;
+    const x0 = this.x;
+    const y0 = this.y;
+    this.face = tg.x < this.x ? -1 : 1;
+    R.fx({
+      type: 'arrow',
+      x0: x0 + this.face * 6,
+      y0: y0 - 10,
+      x1: x0 + ux * len,
+      y1: y0 + uy * len - 6,
+      col: '#f2c14e',
+      dur: len / ARROW_SPEED,
+    });
+    const dmg = 12 + this.tal.pierceDmg;
+    for (const e of R.enemies) {
+      if (!e.alive) continue;
+      const along = (e.x - x0) * ux + (e.y - y0) * uy;
+      const off = Math.abs((e.x - x0) * uy - (e.y - y0) * ux);
+      if (along < 0 || along > len || off > 12 * e.def.scale) continue;
+      R.after(along / ARROW_SPEED, () => {
+        if (e.alive && this.regionId === R.id) {
+          this.dmgEnemy(e, Math.round(dmg * this.dmgMult(e)), 'crit');
+          if (this.tal.critBleed) this.bleedT = Math.max(this.bleedT, this.tal.critBleed);
+        }
+      });
+    }
+    this.aimT = AIM_HOLD;
+    this.atkAnimT = ATK_ANIM;
+    this.hiddenT = 0;
+    this.shake = 0.12;
+    this.log('Piercing Shot.', 'c');
+  }
+
+  /** Disengage: leap back away from the target (or from where you face), stopping short of walls. */
+  private disengage(tg: Enemy | null): void {
+    const R = this.region;
+    let ux = -this.face;
+    let uy = 0;
+    if (tg) {
+      const d = this.dist(this, tg) || 1;
+      ux = (this.x - tg.x) / d;
+      uy = (this.y - tg.y) / d;
+    }
+    const x0 = this.x;
+    const y0 = this.y;
+    let best = 0;
+    for (let s = 10; s <= 90; s += 10) {
+      if (this.map.blocked(x0 + ux * s, y0 + uy * s, 9, 8)) break;
+      best = s;
+    }
+    this.stopMoving();
+    if (best) {
+      this.x = x0 + ux * best;
+      this.y = y0 + uy * best;
+      this.tp++;
+    }
+    this.invT = Math.max(this.invT, 0.25);
+    R.fx({ type: 'dash', x0, y0, x1: this.x, y1: this.y, face: this.face, dur: 0.3 });
+    this.burst(x0, y0 + 4, 8, '#6ccf6a', 60, 0.5, 3, -20);
   }
 
   // ---------- spells and the action bar ----------
   /** Whether you have learned a spell (by level, or from its talent). */
   knows(k: SpellKey): boolean {
     const s = SPELLS[k];
+    if (s.cls && s.cls !== this.cls) return false;
     if (s.talent) return (this.talents[s.talent] ?? 0) > 0;
     return this.level >= (s.level ?? 1);
   }
@@ -787,6 +1014,8 @@ export class Hero {
   private notLearned(k: SpellKey): string {
     const s = SPELLS[k];
     const name = isSkill(k) ? SKILLS[k].n : ACTIONS[k].n;
+    if (s.cls && s.cls !== this.cls)
+      return `${name} is ${s.cls === 'archer' ? 'an archer' : 'a warrior'}'s spell.`;
     return s.talent
       ? `${name} comes from the ${TALENTS[s.talent].name} talent.`
       : `You learn ${name} at level ${s.level}.`;
@@ -829,6 +1058,8 @@ export class Hero {
       return false;
     }
     const sk = SKILLS[key];
+    // an archer walking somewhere stops to shoot (keys held down have to let go first)
+    if (sk.shot && this.path && this.driven !== 'remote') this.stopMoving();
     const why = this.canCast(key);
     if (why) {
       if (!quiet) {
@@ -845,14 +1076,23 @@ export class Hero {
     this.cds[key] = this.skillCd(key);
     const phase = (this.t - GCD) % GCD;
     const perfect = fromTap && phase < WIN;
-    // a perfect-timed tap always crits; Keen Eye adds a chance for any hit
-    const crit = perfect || this.game.rng.next() < this.tal.crit;
-    const combo = key === 'slash' && this.last === 'thrust' ? 1.5 + this.tal.slashCombo : 1;
-    const mult = this.dmgMult() * combo * (crit ? this.critMult : 1);
+    // a perfect-timed tap always crits (so does the first shot out of Camouflage); Keen Eye
+    // and Eagle Eye add a chance for any hit
+    const crit = perfect || (!!sk.shot && this.hiddenT > 0) || this.game.rng.next() < this.tal.crit;
+    const combo =
+      key === 'slash' && this.last === 'thrust'
+        ? 1.5 + this.tal.slashCombo
+        : key === 'aimedshot' && this.last === 'quickshot'
+          ? 1.5 + this.tal.aimedCombo
+          : 1;
+    const scale = combo * (crit ? this.critMult : 1);
+    const mult = this.dmgMult(this.target ?? undefined) * scale;
     const base =
       sk.d +
       (key === 'thrust' ? this.tal.thrust : 0) +
-      (key === 'whirlwind' ? this.tal.whirlDmg : 0);
+      (key === 'whirlwind' ? this.tal.whirlDmg : 0) +
+      (key === 'quickshot' ? this.tal.quickDmg : 0) +
+      (key === 'volley' ? this.tal.volleyDmg : 0);
     this.floater(this.x, this.y - 36, sk.n.toUpperCase(), 'name', sk.col);
     this.castFlash(btn, key, sk.col);
     const tg = this.target;
@@ -898,6 +1138,70 @@ export class Hero {
       );
       R.fx({ type: 'shout', x: this.x, y: this.y, col: sk.col, dur: 0.7 });
       this.burst(this.x, this.y - 14, 8, sk.col, 50, 0.6, 2, -40);
+    } else if (key === 'mark' && tg) {
+      tg.markT = 15 + this.tal.markDur;
+      tg.markBy = this.id;
+      tg.markK = 0.2 + this.tal.markBonus;
+      this.face = tg.x < this.x ? -1 : 1;
+      R.fx({ type: 'ring', x: tg.x, y: tg.y - 10, r0: 20, r1: 6, col: sk.col, lw: 2, dur: 0.5 });
+      this.floater(tg.x, tg.y - 14 * tg.def.scale - 12, 'MARKED', 'name', sk.col);
+      this.log(
+        `${tg.n} is marked: it takes ${Math.round(tg.markK * 100)}% more damage from you for ${Math.round(tg.markT)} s.`,
+        'c'
+      );
+    } else if (key === 'volley' && tg) {
+      // the arrows come down all around where the target stood
+      const reach = (sk.aoe ?? 0) + this.tal.volleyReach;
+      const cx = tg.x;
+      const cy = tg.y;
+      for (let i = 0; i < 4; i++) {
+        const a = this.game.rng.next() * Math.PI * 2;
+        const r = this.game.rng.next() * reach * 0.8;
+        R.fx({
+          type: 'arrow',
+          x0: this.x,
+          y0: this.y - 10,
+          x1: cx + Math.cos(a) * r,
+          y1: cy + Math.sin(a) * r,
+          col: sk.col,
+          dur: this.dist(this, tg) / ARROW_SPEED + 0.04 * i,
+        });
+      }
+      this.loose(
+        tg,
+        () => {
+          R.fx({ type: 'ring', x: cx, y: cy, r0: 6, r1: reach, col: sk.col, lw: 2, dur: 0.4 });
+          this.burst(cx, cy - 6, 14, sk.col, 120, 0.5, 2, 160);
+          for (const e of R.enemies)
+            if (e.alive && Math.hypot(e.x - cx, e.y - cy) < reach)
+              this.dmgEnemy(e, Math.round(base * this.dmgMult(e) * scale), critCls);
+        },
+        sk.col,
+        true
+      );
+    } else if (sk.shot && tg) {
+      // one arrow: Quick Shot, Aimed Shot, Barbed Arrow, Concussive Shot
+      const far = this.dist(this, tg) > 150 ? 1 + this.tal.farShot : 1;
+      this.loose(
+        tg,
+        e => {
+          this.dmgEnemy(e, Math.round(base * this.dmgMult(e) * scale * far), critCls);
+          if (key === 'barbed') {
+            this.bleedT = 8 + this.tal.rendDur;
+            this.burst(e.x, e.y - 6, 8, '#c8302a', 70, 0.5, 2, 200);
+          }
+          if (key === 'concussive') {
+            e.slowT = 6;
+            e.slowK = Math.min(0.8, 0.5 + this.tal.concSlow);
+            this.floater(e.x + 10, e.y - 14 * e.def.scale - 8, 'SLOWED', 'name', sk.col);
+          }
+          if (crit && this.tal.critSlow) {
+            e.slowT = Math.max(e.slowT, this.tal.critSlow);
+            e.slowK = Math.max(e.slowK, 0.5);
+          }
+        },
+        sk.col
+      );
     } else if (tg) {
       this.face = tg.x < this.x ? -1 : 1;
       if (key === 'thrust')
@@ -929,7 +1233,7 @@ export class Hero {
     if (crit && this.tal.critBleed && tg && tg.alive)
       this.bleedT = Math.max(this.bleedT, this.tal.critBleed);
     this.swing = 0.15;
-    if (key !== 'warcry') this.atkAnimT = ATK_ANIM;
+    if (key !== 'warcry' && key !== 'mark') this.atkAnimT = ATK_ANIM;
     if (perfect) {
       this.perf++;
       this.banner('PERFECT!');
@@ -949,6 +1253,33 @@ export class Hero {
     this.nudge(btn, key);
     this.events.emit('loadout', {});
     return true;
+  }
+
+  /**
+   * Loose an arrow at a creature: it flies from the bow to where the creature stands, and
+   * `hit` happens when it lands, if the creature is still alive (or always, for a volley's
+   * area). The archer holds still for the draw, and shooting ends Camouflage.
+   */
+  private loose(tg: Enemy, hit: (e: Enemy) => void, col = '#e8dcc0', always = false): void {
+    const R = this.region;
+    const t = Math.max(0.08, this.dist(this, tg) / ARROW_SPEED);
+    this.face = tg.x < this.x ? -1 : 1;
+    R.fx({
+      type: 'arrow',
+      x0: this.x + this.face * 6,
+      y0: this.y - 10,
+      x1: tg.x,
+      y1: tg.y - 6,
+      col,
+      dur: t,
+    });
+    R.after(t, () => {
+      if (this.regionId !== R.id) return;
+      if (always || (tg.alive && R.enemies.includes(tg))) hit(tg);
+    });
+    this.aimT = AIM_HOLD;
+    this.atkAnimT = ATK_ANIM;
+    this.hiddenT = 0;
   }
 
   // ---------- damage ----------
@@ -979,6 +1310,23 @@ export class Hero {
     }
     if (this.tal.rampage)
       this.buffT = Math.min(this.buffT + this.tal.rampage, 15 + this.tal.warcryDur);
+    // Pack Hunter: the Mark jumps to the nearest enemy, with the time it had left
+    if (this.tal.markJump && e.markBy === this.id && e.markT > 0) {
+      let next: Enemy | null = null;
+      let nd = 300;
+      for (const o of this.region.enemies) {
+        const d = Math.hypot(o.x - e.x, o.y - e.y);
+        if (o !== e && o.alive && d < nd) {
+          nd = d;
+          next = o;
+        }
+      }
+      if (next) {
+        Object.assign(next, { markT: e.markT, markBy: this.id, markK: e.markK });
+        this.floater(next.x, next.y - 14 * next.def.scale - 12, 'MARKED', 'name', '#f2c14e');
+      }
+      e.markT = 0;
+    }
   }
 
   /** A creature (or a toll, a fireball) hits this hero. */
@@ -991,6 +1339,10 @@ export class Hero {
     if (this.invT > 0) {
       this.floater(this.x, this.y - 20, 'DODGED', 'heal');
       this.log('You dodged ' + src + '.', 't');
+      return;
+    }
+    if (this.tal.evade && this.game.rng.next() < this.tal.evade) {
+      this.floater(this.x, this.y - 20, 'SIDESTEP', 'heal');
       return;
     }
     if (this.mountT > 0) {
@@ -1277,6 +1629,10 @@ export class Hero {
     const shop = NPCS[npc].shop;
     const price = ITEMS[id].price ?? 0;
     if (!shop?.sells.includes(id) || !this.nearNpc(npc) || this.dead) return false;
+    if (!canWield(id, this.cls)) {
+      this.log(`That's for ${ITEMS[id].cls === 'archer' ? 'archers' : 'warriors'}.`, 'h');
+      return false;
+    }
     if (this.gold < price) {
       this.log("You can't afford that.", 'h');
       return false;
@@ -1490,6 +1846,7 @@ export class Hero {
   /** Why a talent can't take another rank now, or null if it can. */
   talentProblem(id: string): string | null {
     const t = TALENTS[id];
+    if (TREES[t.tree].cls !== this.cls) return `${TREES[t.tree].name} is another class's tree.`;
     if ((this.talents[id] ?? 0) >= t.ranks) return 'Fully learned.';
     const need = t.tier * TIER_POINTS;
     if (this.talentsSpent(t.tree) < need)
@@ -1596,6 +1953,13 @@ export class Hero {
     if (!s || this.dead) return;
     const slot = ITEMS[s.id].slot;
     if (!slot) return;
+    if (!canWield(s.id, this.cls)) {
+      this.log(
+        `Only ${ITEMS[s.id].cls === 'archer' ? 'an archer' : 'a warrior'} can use the ${ITEMS[s.id].name.toLowerCase()}.`,
+        'h'
+      );
+      return;
+    }
     const old = this.equip[slot];
     this.equip[slot] = s.id;
     s.n--;
@@ -1633,7 +1997,7 @@ export class Hero {
       for (const k of Object.keys(g) as (keyof Stats)[]) g[k] += st[k] ?? 0;
     }
     this.gear = g;
-    const max = 140 + HP_PER_LEVEL * (this.level - 1) + g.hp + this.tal.hp;
+    const max = CLASSES[this.cls].hp + HP_PER_LEVEL * (this.level - 1) + g.hp + this.tal.hp;
     if (this.hpMax !== max) {
       this.hp = Math.min(max, Math.round((this.hp * max) / Math.max(1, this.hpMax)));
       this.hpMax = max;
@@ -1963,8 +2327,13 @@ export class Hero {
   tickMove(dt: number): boolean {
     let mx = 0;
     let my = 0;
+    // an archer drawing a bow holds still (the keys can stay down; the feet don't move)
+    const drawing = this.aimT > 0;
     const keyboard =
-      !this.exiting && !this.inScene && (this.inputMove.x !== 0 || this.inputMove.y !== 0);
+      !drawing &&
+      !this.exiting &&
+      !this.inScene &&
+      (this.inputMove.x !== 0 || this.inputMove.y !== 0);
     if (keyboard) {
       if (this.path) this.stopMoving();
       this.chopTree = null;
@@ -1973,7 +2342,7 @@ export class Hero {
       mx = d.x;
       my = d.y;
       if (!this.dead) this.region.moveEntity(this, mx, my, this.playerSpeed, dt, 9, 8);
-    } else if (this.path && !this.dead) {
+    } else if (this.path && !this.dead && !drawing) {
       const d = this.followPath(dt);
       if (d) {
         mx = d.x;
@@ -2053,6 +2422,9 @@ export class Hero {
       this.hp = Math.min(this.hpMax, this.hp + this.tal.regen * dt);
     this.lastWardenCd = Math.max(0, this.lastWardenCd - dt);
     this.berserkT = Math.max(0, this.berserkT - dt);
+    this.predatorT = Math.max(0, this.predatorT - dt);
+    this.hiddenT = Math.max(0, this.hiddenT - dt);
+    this.aimT = Math.max(0, this.aimT - dt);
     this.lastStandT = Math.max(0, this.lastStandT - dt);
     for (const k of Object.keys(this.acd) as ActionKey[])
       this.acd[k] = Math.max(0, (this.acd[k] ?? 0) - dt);
@@ -2105,7 +2477,32 @@ export class Hero {
     if (tg && (!tg.alive || !this.region.enemies.includes(tg))) this.target = null;
     if (!this.dead && !this.mounted && !this.inScene && tg && tg.alive) {
       const d = this.dist(this, tg);
-      if (d < AA_RANGE) {
+      const aa = CLASSES[this.cls].aa;
+      const shoots = aa.ranged && this.hasBow;
+      if (shoots && d < this.reach(aa.range) && this.planted && this.hiddenT <= 0) {
+        this.aaT -= dt;
+        if (this.aaT <= 0) {
+          this.aaT = aa.period / (1 + this.tal.aaSpeed) / (this.predatorT > 0 ? 1.5 : 1);
+          const crit = this.game.rng.next() < this.tal.crit;
+          const far = d > 150 ? 1 + this.tal.farShot : 1;
+          this.loose(tg, e => {
+            this.dmgEnemy(
+              e,
+              Math.round(
+                (aa.dmg + this.tal.aaDmg) * this.dmgMult(e) * far * (crit ? this.critMult : 1)
+              ),
+              crit ? 'crit' : 'aa'
+            );
+            if (crit && this.tal.critSlow) {
+              e.slowT = Math.max(e.slowT, this.tal.critSlow);
+              e.slowK = Math.max(e.slowK, 0.5);
+            }
+          });
+          // a plain auto-shot only holds you still for a moment
+          this.aimT = Math.min(this.aimT, 0.2);
+        }
+      } else if (shoots) this.aaT = Math.min(this.aaT, 0.5);
+      else if (d < AA_RANGE) {
         this.aaT -= dt;
         if (this.aaT <= 0) {
           this.aaT = AA_PERIOD / (1 + this.tal.aaSpeed) / (this.berserkT > 0 ? 1.5 : 1);

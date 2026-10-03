@@ -5,6 +5,7 @@ import { NPCS } from '../../data/npcs';
 import type { NpcId } from '../../data/npcs';
 import { itemIcon } from '../render/itemArt';
 import { dockLeft, undockLeft, openedLeft } from './panels';
+import { canWield } from '../../data/items';
 
 /** Draw an item's icon into a canvas at 1× (pixel art stays crisp). */
 function paintIcon(cv: HTMLCanvasElement, id: ItemId): void {
@@ -118,7 +119,8 @@ export class TradeWindow {
     const s = this.sim;
     this.goldEl.textContent = `${s.gold} gold`;
     this.buyList.replaceChildren(
-      ...shop.sells.map(id => {
+      // only what your class can use (a smith sells swords to warriors, bows to archers)
+      ...shop.sells.filter(id => canWield(id, s.cls)).map(id => {
         const p = ITEMS[id].price ?? 0;
         return this.row(id, ITEMS[id].name, p, 'Buy', s.gold >= p, () => s.buy(npc, id));
       })

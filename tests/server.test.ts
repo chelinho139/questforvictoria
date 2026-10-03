@@ -266,3 +266,29 @@ test('without dev mode, the cheats are not there', async () => {
   prod.game.close();
   prod.server.close();
 });
+
+test('an archer online: the class comes through, and the arrows fly for everyone', async () => {
+  const a = await Browser.open(port);
+  a.send({ t: 'hello', v: PROTOCOL, account: a.key });
+  await a.next('welcome');
+  a.send({ t: 'newChar', name: unique('Ash'), look: 'k2', cls: 'archer' });
+  const made = await a.next('chars', m => !!m.made);
+  const info = made.chars.find(c => c.id === made.made)!;
+  assert.equal(info.cls, 'archer');
+  assert.equal(info.equip.weapon, 'worn_shortbow');
+  a.send({ t: 'host', name: 'Archery', char: made.made! });
+  await a.next('joined');
+  const first = await a.next('tick', m => !!m.mf);
+  assert.equal(first.mf!.cls, 'archer');
+  assert.ok(first.mf!.bar.includes('quickshot'));
+  await a.skipScene();
+  a.send({ t: 'cmd', c: 'spawnNear', a: ['cow'] });
+  const withCow = await a.next('tick', m => m.en.some(e => e[1] === 'cow' && e[6] & 8));
+  const cow = withCow.en.filter(e => e[1] === 'cow' && e[6] & 8).pop()!;
+  a.send({ t: 'cmd', c: 'setTarget', a: [cow[0]] });
+  a.send({ t: 'cmd', c: 'castKey', a: ['quickshot'] });
+  await a.next('tick', m =>
+    (m.ev ?? []).some(e => e[1] === 'fx' && (e[2] as { type: string }).type === 'arrow')
+  );
+  a.close();
+});

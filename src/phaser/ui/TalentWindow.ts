@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { Sim } from '../../sim/Sim';
-import { TALENTS, TALENT_IDS, TREES, TREE_IDS, TIERS, COLS, TIER_POINTS, xpToNext, MAX_LEVEL } from '../../data/talents';
+import { TALENTS, TALENT_IDS, TREES, TIERS, COLS, TIER_POINTS, xpToNext, MAX_LEVEL, treesOf } from '../../data/talents';
 import type { TreeId } from '../../data/talents';
 import { Tex } from '../render/textures';
 
@@ -56,7 +56,7 @@ export class TalentWindow {
     root.querySelector('.inv-x')!.addEventListener('click', () => this.toggle(false));
     root.addEventListener('pointerdown', e => e.stopPropagation());
     const trees = root.querySelector('.tal-trees')!;
-    for (const t of TREE_IDS) trees.append(this.tree(t));
+    for (const t of treesOf(this.sim.cls)) trees.append(this.tree(t));
     this.tip = document.createElement('div');
     this.tip.className = 'inv-tip tal-tip';
     this.tip.hidden = true;
@@ -151,7 +151,7 @@ export class TalentWindow {
     this.levelEl.textContent = s.level >= MAX_LEVEL ? `Level ${s.level} (max)` : `Level ${s.level} · ${s.xp} / ${xpToNext(s.level)} XP`;
     this.pointsEl.innerHTML = pts > 0 ? `<b>${pts}</b> point${pts > 1 ? 's' : ''} to spend` : 'No points to spend. Every level gives one.';
     this.resetBtn.disabled = s.talentsSpent() === 0;
-    for (const t of TREE_IDS) this.spentEls.get(t)!.textContent = String(s.talentsSpent(t));
+    for (const t of treesOf(this.sim.cls)) this.spentEls.get(t)!.textContent = String(s.talentsSpent(t));
     for (const [id, v] of this.cells) {
       const d = TALENTS[id];
       const r = s.talents[id] ?? 0;

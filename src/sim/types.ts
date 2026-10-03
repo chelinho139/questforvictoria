@@ -48,9 +48,32 @@ export interface Enemy {
   phase: number;
   /** The hero it is after (a hero id), while aggro. */
   foe?: string;
+  /** Slowed (Concussive Shot, Pinning Shots): moves slowK slower for slowT seconds. */
+  slowT: number;
+  slowK: number;
+  /** Held fast by a bear trap: can't move, can still swing. */
+  rootT: number;
+  /** Hunter's Mark: for markT seconds the hero markBy deals markK more damage to it. */
+  markT: number;
+  markBy: string;
+  markK: number;
+  /** Hit lately: keeps after whoever hit it, however far away they shot from. */
+  angerT: number;
   /** The Bell-Ringer: seconds to the next toll, and tolls so far. */
   tollT?: number;
   tollN?: number;
+}
+
+/** A bear trap an archer set: the first creature to step on it is held `hold` seconds. */
+export interface Trap {
+  id: number;
+  x: number;
+  y: number;
+  /** The archer who set it (a hero id): the damage is theirs. */
+  owner: string;
+  /** Seconds before it rusts away unsprung. */
+  t: number;
+  hold: number;
 }
 
 /** A ring of force spreading out from a point (the Bell-Ringer's tolls): jump it. */
@@ -82,7 +105,20 @@ export interface WandererState {
 
 /** Visual effect record. Pure data; the renderer decides how to draw each type. */
 export interface Fx {
-  type: 'stab' | 'slash' | 'whirl' | 'shout' | 'dash' | 'bolt' | 'xslash' | 'shield' | 'ring' | 'fireball' | 'hit' | 'swing';
+  type:
+    | 'stab'
+    | 'slash'
+    | 'whirl'
+    | 'shout'
+    | 'dash'
+    | 'bolt'
+    | 'xslash'
+    | 'shield'
+    | 'ring'
+    | 'fireball'
+    | 'hit'
+    | 'swing'
+    | 'arrow';
   t: number;
   dur: number;
   x?: number;

@@ -3,7 +3,8 @@ import { SAVE_VERSION } from '../sim/save';
 import { CHAR_MAX, CHAR_NAME } from '../net/protocol';
 import type { CharInfo } from '../net/protocol';
 import { REGIONS } from '../data/regions';
-import { STARTER } from '../data/items';
+import { CLASSES, isClass } from '../data/classes';
+import type { ClassId } from '../data/classes';
 
 /**
  * Single player's characters, in this browser: the list (localStorage `qfv-chars`) and one
@@ -20,6 +21,8 @@ export interface LocalChar {
   name: string;
   /** Which hero they look like (an HD hero id). */
   look: string;
+  /** Warrior or archer (characters from before classes: warriors). */
+  cls?: ClassId;
   created: number;
 }
 
@@ -72,7 +75,11 @@ export function localChars(): LocalChar[] {
 }
 
 /** Make a character; a message instead if it can't be. */
-export function createLocalChar(rawName: string, look: string): LocalChar | string {
+export function createLocalChar(
+  rawName: string,
+  look: string,
+  cls: ClassId = 'warrior'
+): LocalChar | string {
   const list = load();
   const name = rawName.trim().replace(/\s+/g, ' ');
   if (list.length >= CHAR_MAX)
@@ -81,7 +88,7 @@ export function createLocalChar(rawName: string, look: string): LocalChar | stri
     return 'Names are 2 to 14 letters or digits (spaces, apostrophes and hyphens too).';
   const taken = list.find(c => c.name.toLowerCase() === name.toLowerCase());
   if (taken) return `You already have a ${taken.name}. Try another name.`;
-  const c: LocalChar = { id: newId(), name, look, created: Date.now() };
+  const c: LocalChar = { id: newId(), name, look, cls, created: Date.now() };
   list.push(c);
   store(list);
   return c;
@@ -120,12 +127,14 @@ export function writeSave(id: string, d: SaveData): void {
 export function localCharInfos(): CharInfo[] {
   return load().map(c => {
     const s = readSave(c.id);
+    const cls = isClass(c.cls) ? c.cls : 'warrior';
     return {
       id: c.id,
       name: c.name,
       look: c.look,
+      cls,
       level: s?.level ?? 1,
-      equip: s?.equip ?? STARTER.worn,
+      equip: s?.equip ?? CLASSES[cls].starter,
       place: s ? (REGIONS[s.region]?.name ?? '') : 'The lakeshore',
       at: s?.at ?? 0,
       busy: false,

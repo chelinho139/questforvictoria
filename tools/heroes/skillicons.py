@@ -578,11 +578,259 @@ def secondwind():
     return g
 
 
+# ---------------------------------------------------------------- the archer's spells
+HEADS = {'steel': 'WSst', 'gold': 'YGgh', 'blood': 'Rrqq', 'teal': 'Ccee', 'purple': 'Vvxx', 'green': 'Kkjj'}
+
+
+def arrow(g, x0, y0, n, head='steel', fletch='Bbd', shaft='Ll', blunt=False):
+    """A ↗ arrow: fletching at the tail (x0, y0), n pixels of two-tone wooden shaft, a head at
+    the top-right (lit tip, darker barbs). `blunt` gives a round knob instead of a point."""
+    W, S, s_, t = HEADS[head]
+    for i in range(n):
+        g.at(x0 + i, y0 - i, shaft)
+    tx, ty = x0 + n, y0 - n
+    if blunt:
+        g.at(tx, ty - 1, W + S); g.at(tx, ty, S + s_); g.at(tx + 1, ty + 1, t)
+        g.at(tx - 1, ty, S); g.at(tx + 1, ty - 1, s_)
+    else:
+        # the point, and a barb either side of the shaft
+        g.at(tx, ty, S + s_)
+        g.at(tx + 1, ty - 1, W + S)
+        g.at(tx + 2, ty - 2, W)
+        g.at(tx - 1, ty - 1, s_); g.at(tx, ty - 2, S)
+        g.at(tx + 1, ty + 1, t); g.at(tx + 2, ty, s_)
+    # fletching: three feather pixels either side of the tail
+    F, f, d = fletch
+    g.at(x0 - 1, y0 - 1, F); g.at(x0 - 2, y0, F + f); g.at(x0 - 3, y0 + 1, f)
+    g.at(x0 + 1, y0 + 1, F); g.at(x0, y0 + 2, f + d); g.at(x0 - 1, y0 + 3, d)
+
+
+def quickshot():
+    """An arrow loosed fast: speed lines streaming behind it, a spark ahead of the point."""
+    g = G(20, 20)
+    px(g, [(3, 9), (6, 5), (10, 2)], '4'); px(g, [(2, 10), (5, 6), (9, 3), (12, 15), (15, 12)], '5')
+    px(g, [(11, 16), (14, 13), (16, 10)], '4')
+    arrow(g, 4, 15, 10)
+    g.at(17, 1, '2'); g.at(18, 0, '1'); g.at(18, 2, '3'); g.at(16, 0, '3')
+    return g
+
+
+def aimedshot():
+    """An arrow and the gold ring of the archer's aim settled on its point."""
+    g = G(20, 20)
+    arrow(g, 3, 16, 9)
+    # a thin aiming ring around the point, with four ticks just outside it
+    arc(g, 14.0, 6.0, 5.0, -180, 180, lambda t: 0.9, 'G', under=True)
+    for x, y, ch in ((14, 0, 'Y'), (14, 11, 'g'), (8, 6, 'Y'), (19, 6, 'g')):
+        g.at(x, y, ch)
+    g.at(16, 3, '2')
+    return g
+
+def barbed():
+    """A barbed broadhead, its hooks wet: blood running off and falling in drops."""
+    g = G(20, 20)
+    arrow(g, 3, 16, 9, head='steel')
+    # extra hooks along the head
+    g.at(11, 6, 'u'); g.at(14, 9, 'u'); g.at(12, 5, 't')
+    g.at(13, 8, 'q'); g.at(14, 10, 'r'); g.at(14, 11, 'q')
+    g.at(16, 9, 'R'); g.at(15, 10, 'Rr'); g.at(15, 11, 'rq'); g.at(15, 12, 'qQ')
+    g.at(12, 13, 'R'); g.at(12, 14, 'r'); g.at(12, 15, 'Q')
+    return g
+
+
+def concussive():
+    """A blunt-headed arrow striking: two thin purple shock rings spreading past the knob."""
+    g = G(20, 20)
+    arrow(g, 2, 17, 10, head='purple', blunt=True)
+    # two short shock arcs ahead of the knob, a gap between them
+    arc(g, 13.0, 5.0, 3.4, -95, 5, lambda t: 0.9, 'v', under=True)
+    arc(g, 13.0, 5.0, 5.8, -85, -5, lambda t: 0.9, 'x', under=True)
+    px(g, [(19, 1), (19, 6), (14, 0)], '1')
+    return g
+
+def mark():
+    """The hunter's mark: a gold chevron sigil over a red ring, glowing."""
+    g = G(20, 20)
+    arc(g, 10.0, 10.0, 8.2, -180, 180, lambda t: 1.4, 'rq', under=True)
+    # the sigil: a pointed chevron and a dot, like a claw's track
+    rows = [
+        (4, 9, 'Y'),
+        (5, 8, 'YGg'),
+        (6, 7, 'YG.Gg'),
+        (7, 6, 'YG...Gg'),
+        (8, 5, 'YG.....Gg'),
+        (9, 5, 'Gg.....gh'),
+        (10, 9, 'Y'),
+        (11, 8, 'YGg'),
+        (12, 7, 'YG.Gg'),
+        (13, 6, 'YG...Gg'),
+        (14, 6, 'Gg...gh'),
+    ]
+    for y, x, r in rows:
+        g.at(x, y, r)
+    px(g, [(10, 2), (2, 10), (17, 10), (10, 17)], '2')
+    return g
+
+
+def volley():
+    """Arrows raining down: three falling ↘ out of streaks of motion."""
+    g = G(20, 20)
+    for (x, y) in ((2, 1), (8, 0), (13, 3)):
+        # a falling arrow: head at the bottom-right
+        for i in range(6):
+            g.at(x + i, y + i, 'Ll')
+        hx, hy = x + 6, y + 6
+        g.at(hx, hy, 'Ss'); g.at(hx + 1, hy + 1, 'WS'); g.at(hx + 2, hy + 2, 'W')
+        g.at(hx - 1, hy + 1, 's'); g.at(hx + 1, hy - 1, 't')
+        g.at(x - 1, y - 1, 'B'); g.at(x - 1, y, 'b'); g.at(x, y - 1, 'b')
+    px(g, [(1, 6), (3, 9), (7, 7), (9, 11), (12, 12), (15, 14)], '6'); px(g, [(0, 4), (6, 9), (11, 15), (17, 17)], '7')
+    # the ground they strike
+    g.at(4, 18, 'dDDdDDDdDDDdDDd')
+    return g
+
+
+def silence():
+    """An arrow through a teal ring of sound, the ring broken where it passes."""
+    g = G(20, 20)
+    arc(g, 10.0, 10.0, 6.5, -160, -60, lambda t: 1.6, 'ce', under=True)
+    arc(g, 10.0, 10.0, 6.5, 20, 120, lambda t: 1.6, 'ce', under=True)
+    arc(g, 10.0, 10.0, 8.8, -150, -70, lambda t: 1.0, '6', under=True)
+    arc(g, 10.0, 10.0, 8.8, 30, 110, lambda t: 1.0, '7', under=True)
+    arrow(g, 3, 16, 10, head='teal')
+    return g
+
+
+def killshot():
+    """An arrow and a crimson crosshair on its point: the finishing shot."""
+    g = G(20, 20)
+    arrow(g, 2, 17, 10)
+    for x, y in ((14, 0), (14, 1), (14, 9), (14, 10), (9, 5), (10, 5), (18, 5), (19, 5)):
+        g.at(x, y, 'r')
+    arc(g, 14.5, 5.5, 3.6, -180, 180, lambda t: 1.0, 'q', under=True)
+    g.at(16, 4, '0'); g.at(17, 3, '*'); g.at(15, 2, '+')
+    return g
+
+
+def pierce():
+    """A heavy gold arrow passing clean through two targets in a line."""
+    g = G(20, 20)
+    for cx, cy in ((7.5, 12.5), (13.0, 7.0)):
+        arc(g, cx, cy, 3.0, -180, 180, lambda t: 1.4, 'rq', under=True)
+        g.at(int(cx - 0.5), int(cy - 0.5), 'B')
+    arrow(g, 1, 18, 14, head='gold')
+    px(g, [(4, 12), (10, 6), (17, 2)], '2')
+    return g
+
+def rapidfire():
+    """Three arrows loosed one after another, each a little ahead of the last."""
+    g = G(20, 20)
+    arrow(g, 4, 8, 6)
+    arrow(g, 6, 13, 7)
+    arrow(g, 8, 18, 7)
+    px(g, [(1, 9), (3, 14), (5, 18)], '4')
+    return g
+
+def deadeye():
+    """An eye with a crimson iris and a crosshair for a pupil."""
+    g = G(20, 20)
+    for y in range(20):
+        for x in range(20):
+            dx, dy = (x + 0.5 - 10) / 9.0, (y + 0.5 - 10) / 5.2
+            e = dx * dx + dy * dy
+            if e <= 1:
+                g.at(x, y, 'B' if e > 0.7 and y < 10 else 'b' if e > 0.7 else 'B')
+    arc(g, 10.0, 10.0, 3.9, -180, 180, lambda t: 2.4, 'rqQ')
+    g.at(9, 9, 'ZZ'); g.at(9, 10, 'ZZ')
+    for x, y in ((10, 4), (10, 15), (4, 10), (15, 10)):
+        g.at(x, y, 'q')
+    g.at(7, 7, 'W')
+    # lids
+    for x in range(3, 17):
+        g.at(x, 4 if 5 <= x <= 14 else 5, 'n')
+    px(g, [(2, 9), (17, 9)], '0')
+    return g
+
+
+def beartrap():
+    """Iron jaws sprung open, a ring of teeth, a gold trigger plate in the middle."""
+    g = G(20, 20)
+    arc(g, 10.0, 12.0, 7.6, -180, 0, lambda t: 1.8, 'Sst')
+    arc(g, 10.0, 12.0, 7.6, 0, 180, lambda t: 1.8, 'stu')
+    # teeth pointing in
+    for a in range(0, 360, 30):
+        r = math.radians(a)
+        x, y = round(10 + 5.4 * math.cos(r) - 0.5), round(12 + 5.4 * math.sin(r) - 0.5)
+        g.at(x, y, 'W' if y < 12 else 't')
+    g.at(9, 11, 'YG'); g.at(9, 12, 'Gg')
+    # the chain and stake
+    g.at(17, 3, 'u'); g.at(16, 4, 't'); g.at(15, 5, 'u'); g.at(14, 6, 't'); g.at(18, 2, 'Ll'); g.at(19, 1, 'm')
+    return g
+
+
+def predator():
+    """A beast's eye, slit-pupilled and burning orange, three claw marks raked across below."""
+    g = G(20, 20)
+    for y in range(20):
+        for x in range(20):
+            dx, dy = (x + 0.5 - 10.5) / 7.0, (y + 0.5 - 6.5) / 3.4
+            e = dx * dx + dy * dy
+            if e <= 1:
+                g.at(x, y, 'O' if e < 0.3 else 'o' if e < 0.65 else 'p')
+    for y in range(4, 10):
+        g.at(10, y, 'Z')
+    g.at(10, 3, 'z'); g.at(10, 9, 'z')
+    # the brow
+    for x in range(4, 18):
+        g.at(x, 2 if 7 <= x <= 14 else 3, 'P')
+    # three claw marks raked across the lower half, top-left to bottom-right
+    for x0 in (3, 8, 13):
+        for i in range(6):
+            g.at(x0 + i // 2, 12 + i, 'rq' if i < 4 else 'qQ')
+    px(g, [(2, 7), (18, 7), (17, 1)], '3')
+    return g
+
+def disengage():
+    """A swift green leap backwards: an arc of motion curling back, the dust kicked up."""
+    g = G(20, 20)
+    curve(g, (15.5, 15.5), (12.0, 1.0), (3.5, 8.0), lambda t: 1.0 + 3.6 * t, lambda t, s: 'K' if s < -0.3 else 'k' if s < 0.3 else 'j')
+    # the arrowhead at the end of the leap, pointing back
+    g.at(1, 7, 'K'); g.at(1, 8, 'kK'); g.at(2, 9, 'kj'); g.at(2, 6, 'k'); g.at(3, 11, 'j')
+    g.at(13, 17, 'dDd'); g.at(15, 18, 'Dd'); g.at(17, 17, 'd')
+    px(g, [(18, 14), (12, 15), (16, 12)], '9')
+    return g
+
+
+def camouflage():
+    """A pointed hood fading into the leaves, two eyes glowing in its shadow."""
+    g = G(20, 20)
+    # the hood: a rounded triangle, lit on the left
+    for y in range(2, 19):
+        half = min(7.0, 1.0 + (y - 2) * 0.62)
+        for x in range(20):
+            if abs(x + 0.5 - 10) <= half:
+                g.at(x, y, 'j' if x < 9 else 'J')
+    # the face in shadow
+    for y in range(9, 17):
+        for x in range(6, 15):
+            if ((x + 0.5 - 10) / 3.5) ** 2 + ((y + 0.5 - 12.5) / 3.6) ** 2 <= 1:
+                g.at(x, y, 'Z')
+    g.at(8, 11, '9'); g.at(12, 11, '9')
+    # leaves over and around the hood
+    for x, y, r in ((2, 6, 'kj'), (1, 7, 'Kkj'), (3, 8, 'j'), (15, 5, 'jkK'), (16, 6, 'kK'), (2, 15, 'Kkj'), (3, 16, 'kj'),
+                    (15, 15, 'jkK'), (16, 16, 'kj'), (9, 1, 'Kk'), (10, 2, 'k')):
+        g.at(x, y, r)
+    px(g, [(0, 11), (19, 10), (5, 1)], '8')
+    return g
+
 ICONS = {
     'thrust': thrust, 'slash': slash, 'rend': rend, 'whirlwind': whirlwind, 'warcry': warcry,
     'charge': charge, 'interrupt': interrupt, 'mortal': mortal, 'mount': mount,
     'sunder': sunder, 'deathblow': deathblow, 'bloodrage': bloodrage, 'berserk': berserk,
     'shieldbash': shieldbash, 'laststand': laststand, 'secondwind': secondwind,
+    'quickshot': quickshot, 'aimedshot': aimedshot, 'barbed': barbed, 'concussive': concussive,
+    'mark': mark, 'volley': volley, 'silence': silence, 'killshot': killshot, 'pierce': pierce,
+    'rapidfire': rapidfire, 'deadeye': deadeye, 'beartrap': beartrap, 'predator': predator,
+    'disengage': disengage, 'camouflage': camouflage,
 }
 
 if __name__ == '__main__':

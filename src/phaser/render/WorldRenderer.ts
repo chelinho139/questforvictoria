@@ -283,7 +283,10 @@ export class WorldRenderer {
       const jp = o.jumpT >= 0 ? Math.min(1, o.jumpT / 0.38) : -1;
       let fk: string;
       if (jp >= 0 && n('jump')) fk = animKey(key, 'jump', jp < 0.35 ? 0 : Math.min(n('jump') - 1, jp < 0.7 ? 1 : n('jump') - 1));
-      else if (o.atkAnimT > 0 && n('attack')) fk = animKey(key, 'attack', Math.min(n('attack') - 1, Math.floor((1 - o.atkAnimT / 0.36) * n('attack'))));
+      else if (o.atkAnimT > 0 && n(hitAnim(o))) {
+        const g = hitAnim(o);
+        fk = animKey(key, g, Math.min(n(g) - 1, Math.floor((1 - o.atkAnimT / 0.36) * n(g))));
+      }
       else if (v.walkingT > 0 && artFrames(key) > 1) fk = frameKey(key, Math.floor(now / 95) % artFrames(key));
       else if (n('idle')) fk = animKey(key, 'idle', Math.floor(now / 380) % n('idle'));
       else fk = frameKey(key, 0);
@@ -296,7 +299,7 @@ export class WorldRenderer {
         .setPosition(Math.round(qx), Math.round(qy + 8 - z))
         .setFlipX(o.face < 0)
         .setDepth(depth)
-        .setAlpha(o.dead ? 0.35 : 1)
+        .setAlpha(o.dead ? 0.35 : o.hiddenT > 0 ? 0.45 : 1)
         .setRotation(o.dead ? 0.6 : 0);
       if (o.flash > 0) v.img.setTintFill(0xffffff);
       else v.img.clearTint();
@@ -667,7 +670,8 @@ export class WorldRenderer {
       .setTexture(this.heroFrame(now, walking, kf, tumbling, jp))
       .setVisible(true)
       .setFlipX(flipX)
-      .setAlpha(alpha)
+      // camouflaged: a faint shape among the leaves
+      .setAlpha(this.sim.hero.hiddenT > 0 ? alpha * 0.45 : alpha)
       .setDepth(depth);
     if (tumbling) {
       // tumble frames are the tucked body turned in 90° steps: hold them around the body centre
@@ -702,9 +706,15 @@ export class WorldRenderer {
       const j = n('jump');
       return j ? animKey(K, 'jump', jp < 0.35 ? 0 : jp < 0.7 ? Math.min(1, j - 1) : j - 1) : frameKey(K, 0);
     }
-    if (s.attackP >= 0 && n('attack')) return animKey(K, 'attack', Math.min(n('attack') - 1, Math.floor(s.attackP * n('attack'))));
+    const hit = hitAnim(s.hero);
+    if (s.attackP >= 0 && n(hit)) return animKey(K, hit, Math.min(n(hit) - 1, Math.floor(s.attackP * n(hit))));
     if (walking && kf > 1) return frameKey(K, Math.floor(now / (kf > 4 ? 95 : 120)) % kf);
     if (n('idle')) return animKey(K, 'idle', Math.floor(now / 380) % n('idle'));
     return frameKey(K, 0);
   }
+}
+
+/** The animation a hero attacks with: an archer with a bow shoots, everyone else swings. */
+function hitAnim(h: { hasBow: boolean }): 'shoot' | 'attack' {
+  return h.hasBow ? 'shoot' : 'attack';
 }

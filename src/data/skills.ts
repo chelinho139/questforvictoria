@@ -1,4 +1,20 @@
-export type SkillKey = 'thrust' | 'slash' | 'rend' | 'whirlwind' | 'warcry' | 'charge';
+import { CLASSES } from './classes';
+
+/** Spells on the global cooldown (the warrior's first, then the archer's). */
+export type SkillKey =
+  | 'thrust'
+  | 'slash'
+  | 'rend'
+  | 'whirlwind'
+  | 'warcry'
+  | 'charge'
+  | 'quickshot'
+  | 'aimedshot'
+  | 'barbed'
+  | 'concussive'
+  | 'mark'
+  | 'volley';
+/** Instant spells, off the global cooldown. */
 export type ActionKey =
   | 'interrupt'
   | 'execute'
@@ -11,7 +27,17 @@ export type ActionKey =
   | 'bloodrage'
   | 'berserk'
   | 'shieldbash'
-  | 'laststand';
+  | 'laststand'
+  // the archer's
+  | 'silence'
+  | 'killshot'
+  | 'pierce'
+  | 'rapidfire'
+  | 'deadeye'
+  | 'beartrap'
+  | 'predator'
+  | 'disengage'
+  | 'camouflage';
 export type Key = SkillKey | ActionKey;
 /** Anything that can sit in a wheel, including the Rev toggle item. */
 export type WheelKey = Key | 'rev';
@@ -24,6 +50,8 @@ export interface SkillDef {
   col: string;
   range: number; // 0 = no target needed
   aoe?: number;
+  /** Shot from a bow: the arrow flies there, and the archer stands still to shoot. */
+  shot?: boolean;
   desc: string;
 }
 
@@ -43,6 +71,67 @@ export const SKILLS: Record<SkillKey, SkillDef> = {
   whirlwind: { n: 'Whirlwind', d: 7, c: 20, cd: 14, col: '#3ddbd9', range: 0, aoe: 84, desc: '7 AoE · 14 s' },
   warcry: { n: 'War Cry', d: 0, c: 15, cd: 40, col: '#f2c14e', range: 0, desc: '+20% 15 s · 40 s' },
   charge: { n: 'Charge', d: 4, c: 10, cd: 20, col: '#a78bfa', range: 230, desc: '4 + stun · far · 20 s' },
+  // the archer's: each mirrors a warrior spell's cost and cooldown, from 220 px away
+  quickshot: {
+    n: 'Quick Shot',
+    d: 5,
+    c: 4,
+    cd: 6,
+    col: '#d3dcea',
+    range: 220,
+    shot: true,
+    desc: '5 dmg · 6 s',
+  },
+  aimedshot: {
+    n: 'Aimed Shot',
+    d: 8,
+    c: 5,
+    cd: 9,
+    col: '#ff8c42',
+    range: 220,
+    shot: true,
+    desc: '8 · ×1.5 after Quick Shot · 9 s',
+  },
+  barbed: {
+    n: 'Barbed Arrow',
+    d: 3,
+    c: 10,
+    cd: 15,
+    col: '#e0504b',
+    range: 220,
+    shot: true,
+    desc: '3 + bleed 8 s · 15 s',
+  },
+  concussive: {
+    n: 'Concussive Shot',
+    d: 4,
+    c: 10,
+    cd: 20,
+    col: '#a78bfa',
+    range: 220,
+    shot: true,
+    desc: '4 + slow 50% 6 s · 20 s',
+  },
+  mark: {
+    n: "Hunter's Mark",
+    d: 0,
+    c: 15,
+    cd: 40,
+    col: '#f2c14e',
+    range: 260,
+    desc: '+20% to your mark 15 s · 40 s',
+  },
+  volley: {
+    n: 'Volley',
+    d: 7,
+    c: 20,
+    cd: 14,
+    col: '#3ddbd9',
+    range: 220,
+    aoe: 70,
+    shot: true,
+    desc: '7 to all near the target · 14 s',
+  },
 };
 
 export const ACTIONS: Record<ActionKey, ActionDef> = {
@@ -57,16 +146,30 @@ export const ACTIONS: Record<ActionKey, ActionDef> = {
   berserk: { n: 'Berserk', col: '#ff8c42', cd: 45, desc: '+50% swing, +20% dmg 10 s · 45 s' },
   shieldbash: { n: 'Shield Bash', col: '#93a0b8', cd: 12, c: 5, desc: '6 + stun 2 s · needs a shield · 12 s' },
   laststand: { n: 'Last Stand', col: '#6ccf6a', cd: 60, desc: 'heal 30%, −30% damage 8 s · 60 s' },
+  silence: { n: 'Silencing Shot', col: '#3ddbd9', cd: 15, desc: 'cuts the cast · far · 15 s' },
+  killshot: { n: 'Kill Shot', col: '#e0504b', cd: 0, desc: 'target < 25% · far' },
+  pierce: { n: 'Piercing Shot', col: '#f2c14e', cd: 30, desc: '12 through a line · 30 s' },
+  rapidfire: { n: 'Rapid Fire', col: '#c8d2e0', cd: 10, c: 8, desc: '3 arrows × 4 · 10 s' },
+  deadeye: { n: 'Deadeye', col: '#e0504b', cd: 20, c: 25, desc: '26 · resets on a kill · 20 s' },
+  beartrap: { n: 'Bear Trap', col: '#c8a05a', cd: 20, c: 10, desc: 'trap: 8 + held 3 s · 20 s' },
+  predator: { n: 'Predator', col: '#ff8c42', cd: 45, desc: '+50% shots, +20% dmg 10 s · 45 s' },
+  disengage: { n: 'Disengage', col: '#6ccf6a', cd: 12, c: 5, desc: 'leap back · 12 s' },
+  camouflage: { n: 'Camouflage', col: '#6ccf6a', cd: 60, desc: 'vanish, heal 20% · 60 s' },
 };
 
-export const PRESETS: Record<string, SkillKey[]> = {
-  mobs: ['charge', 'thrust', 'slash', 'whirlwind'],
-  boss: ['charge', 'warcry', 'thrust', 'slash'],
-  pvp: ['charge', 'thrust', 'rend', 'slash'],
-};
+/** The Rev sequencer's presets (each class has its own: data/classes.ts). */
+export const PRESETS: Record<string, SkillKey[]> = CLASSES.warrior.presets;
 
-export const DEFAULT_WHEEL_1: ActionKey[] = ['interrupt', 'target', 'execute', 'mortal'];
-export const DEFAULT_WHEEL_2: SkillKey[] = ['slash', 'thrust', 'rend', 'charge'];
+export const DEFAULT_WHEEL_1: ActionKey[] = CLASSES.warrior.wheel1;
+export const DEFAULT_WHEEL_2: SkillKey[] = CLASSES.warrior.wheel2;
+
+/** The archer's instant spells that loose an arrow (they need a bow and planted feet). */
+const SHOT_ACTIONS = new Set<string>(['silence', 'killshot', 'pierce', 'rapidfire', 'deadeye']);
+
+/** A spell that looses an arrow: the archer needs a bow and has to stand still. */
+export function isShot(k: string): boolean {
+  return (k in SKILLS && !!SKILLS[k as SkillKey].shot) || SHOT_ACTIONS.has(k);
+}
 
 export function isSkill(k: string): k is SkillKey {
   return k in SKILLS;

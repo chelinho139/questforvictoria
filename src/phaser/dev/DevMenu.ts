@@ -22,6 +22,7 @@ const DOC_LINKS: [string, string][] = [
   ['The Lore', '/lore.html'],
   ['Prologue & Act I', '/act1.html'],
   ['Online co-op plan', '/online.html'],
+  ['The archer', '/archer.html'],
 ];
 
 interface DevSettings {

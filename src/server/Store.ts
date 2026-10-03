@@ -3,6 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import type { SaveData } from '../sim/save';
 import { CHAR_MAX, CHAR_NAME } from '../net/protocol';
+import type { ClassId } from '../data/classes';
 
 /** An account: a browser's key opens it (only the key's hash is kept). */
 export interface AccountRecord {
@@ -18,6 +19,8 @@ export interface CharRecord {
   account: string;
   name: string;
   look: string;
+  /** Warrior or archer (characters from before classes: warriors). */
+  cls?: ClassId;
   created: number;
   /** The hero and the story they know; null until first played. */
   save: SaveData | null;
@@ -68,7 +71,12 @@ export class Store {
   }
 
   /** Make a character; a message instead if it can't be. */
-  create(a: AccountRecord, rawName: string, look: string): CharRecord | string {
+  create(
+    a: AccountRecord,
+    rawName: string,
+    look: string,
+    cls: ClassId = 'warrior'
+  ): CharRecord | string {
     const name = rawName.trim().replace(/\s+/g, ' ');
     if (a.chars.length >= CHAR_MAX)
       return `You can keep ${CHAR_MAX} characters. Delete one to make another.`;
@@ -81,6 +89,7 @@ export class Store {
       account: a.id,
       name,
       look,
+      cls,
       created: Date.now(),
       save: null,
     };

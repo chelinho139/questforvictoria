@@ -137,6 +137,18 @@ html, body { height: 100%; margin: 0; background: #0c1018; overflow: hidden; }
 .select-card:focus-visible { outline: 2px solid #c8392f; outline-offset: 1px; }
 .select-hint { margin: 0; font-size: 14px; color: #9a6a40; }
 .select-hint.bad { color: #b8392f; }
+/* the new-character screen's class choice */
+.select-classes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.select-class {
+  display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; text-align: left; cursor: pointer;
+  background: #ead0a0; border: 2px solid #b0763c; color: #4a2410; box-shadow: inset 0 2px 0 #fcecc4;
+  text-transform: none; letter-spacing: 0;
+}
+.select-class b { font: 700 14px Silkscreen, 'Courier New', monospace; }
+.select-class small { font: 13px 'Pixelify Sans', monospace; color: #7a4a24; }
+.select-class:hover { background: #f2dcae; }
+.select-class[aria-checked='true'] { background: #f2c14e; border-color: #8a4a1e; box-shadow: inset 0 2px 0 #ffe38a, 0 0 0 2px #4a2410; }
+.select-class-about { margin: 2px 0 0; font: 400 13px 'Pixelify Sans', monospace; color: #7a4a24; text-transform: none; letter-spacing: 0; }
 .select-panel > footer { display: flex; justify-content: flex-end; padding: 0 14px 14px; }
 .select-go {
   font: 700 14px Silkscreen, 'Courier New', monospace; letter-spacing: 0.04em; cursor: pointer;

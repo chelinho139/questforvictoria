@@ -82,6 +82,12 @@ SKIN = {'S': '#ffd8b4', 's': '#f2b88c', 'k': '#d08c64', 'E': '#2a2a3a', 'W': '#f
 
 # Gear letters never appear in a hero palette, so a gear layer can always be told apart.
 GEAR_PAL = {
+    # the archer's: bow woods (worn, hunting ash, yew), grips and tips, the string, arrows, quivers
+    'i': '#b8a07c', 'o': '#7a6248', 't': '#3a2c1e', 'T': '#e0d0a8',
+    'α': '#e0b070', 'β': '#9a6434', 'γ': '#8a4630', 'δ': '#f2ead6',
+    'ε': '#f0c888', 'ζ': '#9a4a1e', 'η': '#4e8a5a', 'θ': '#ffe07a',
+    '8': '#ece4d0', '9': '#a8784a', '`': '#f4f0e6', 'ξ': '#d85a48', 'π': '#9aa4b4',
+    'κ': '#c89060', 'λ': '#8a5a34', '}': '#e0b078', 'μ': '#7a4a2c', 'ν': '#4e2e18',
     # leather (cap, tunic, trousers, boots) and a dark belt strap
     'A': '#e0aa74', 'F': '#b67c48', 'I': '#885630', 'J': '#5c381c', '_': '#3e2412',
     # iron (helm, chainmail, greaves, shield rims, blades)
@@ -103,8 +109,8 @@ GEAR_PAL = {
 
 # ------------------------------------------------------------ items
 ITEMS_BY_SLOT = {
-    'weapon': ['rusty_sword', 'iron_sword', 'woodcutter_axe', 'pickaxe'],
-    'offhand': ['wooden_shield', 'iron_shield'],
+    'weapon': ['rusty_sword', 'iron_sword', 'woodcutter_axe', 'pickaxe', 'worn_shortbow', 'hunting_bow', 'yew_longbow'],
+    'offhand': ['wooden_shield', 'iron_shield', 'leather_quiver', 'hunters_quiver'],
     'head': ['leather_cap', 'iron_helm'],
     'body': ['leather_tunic', 'chainmail'],
     'legs': ['cloth_trousers', 'leather_trousers', 'iron_greaves'],
@@ -151,6 +157,14 @@ ATTACK = [
     dict(hand=(1, 1), weapon='low', bob=1, legs=dict(back=-2, front=3)),
 ]
 JUMP = [dict(legs='air', feet=-1), dict(legs='tuck'), dict(legs='air', feet=1)]
+# the archer's shot: bow up and an arrow nocked, the string drawn to the cheek, the loose, the
+# bow lowered; the feet stay planted (archers stand still to shoot)
+SHOOT = [
+    dict(hand=(2, -3), weapon='nock'),
+    dict(hand=(3, -3), weapon='draw'),
+    dict(hand=(3, -3), weapon='loose'),
+    dict(hand=(2, -1), weapon='lower'),
+]
 
 
 def line(v, x0, y0, x1, y1, ch):
@@ -342,9 +356,78 @@ FLOAT = {
 }
 
 
+# ------------------------------------------------------------ the archer's bows and quivers
+BOWS = {
+    'worn_shortbow': dict(lit='i', dark='o', grip='t', tip='o', wrap='T', size=-1),
+    'hunting_bow': dict(lit='α', dark='β', grip='γ', tip='δ', size=0),
+    'yew_longbow': dict(lit='ε', dark='ζ', grip='η', tip='θ', size=1),
+}
+
+
+def bow(v, gx, gy, mode, up, down, art, draw_hand=None):
+    """A bow held upright by its grip at (gx, gy) (the hand just left of it), bellying forward:
+    limbs `up` and `down` pixels long, lit above and shaded below, the string down its back
+    from tip to tip. Modes: 'rest' (carried), 'nock' (an arrow on the string), 'draw' (the
+    string pulled back to the drawing hand), 'loose' (the string snapped straight, the arrow
+    gone) and 'lower'. Anything else is carried."""
+    s = 2 if min(up, down) >= 5 else 1
+    tipx = gx - s
+    for dy in range(-up, down + 1):
+        L = up if dy < 0 else down
+        off = s * (1 - (dy / max(L, 1)) ** 2)
+        ch = art['grip'] if abs(dy) <= 1 else (art['lit'] if dy < 0 else art['dark'])
+        v.at(tipx + round(off), gy + dy, ch)
+    if art.get('wrap'):
+        for dy in (-up // 2, down // 2):
+            L = up if dy < 0 else down
+            v.at(tipx + round(s * (1 - (dy / max(L, 1)) ** 2)), gy + dy, art['wrap'])
+    v.at(tipx, gy - up, art['tip'])
+    v.at(tipx, gy + down, art['tip'])
+    if mode in ('nock', 'draw'):
+        nx = tipx - (6 if mode == 'draw' else 2)
+        line(v, tipx, gy - up, nx, gy, '8')
+        line(v, nx, gy, tipx, gy + down, '8')
+        v.at(nx, gy, '8')
+        # the arrow: shaft from the string to past the bow, a steel head, white fletching
+        for x in range(nx + 1, gx + 3):
+            v.at(x, gy, '9')
+        v.at(gx + 3, gy, 'NO')
+        v.at(gx + 3, gy - 1, 'U'); v.at(gx + 3, gy + 1, 'U')
+        v.at(nx + 1, gy - 1, '`'); v.at(nx + 1, gy + 1, '`')
+        if draw_hand:
+            v.at(nx - 1, gy, draw_hand)
+    else:
+        for y in range(gy - up + 1, gy + down):
+            v.at(tipx, y, '8')
+        if mode == 'loose' and draw_hand:
+            v.at(tipx - 6, gy - 1, draw_hand)
+
+
+def floating_bow(v, bx, y0, mode, art):
+    """The masked hero's bow hovers beside it; the string draws itself."""
+    bow(v, bx + 2, y0 + 12, mode, 8, 8, art)
+
+
+QUIVERS = {
+    'leather_quiver': ['`ξ`...', '.```..', '.9.9..', '}}}}..', 'κκλ...', 'κκλ...', '.κκλ..', '.κκλ..', '.}}}..', '..κλ..', '..κκλ.', '..λλλ.'],
+    'hunters_quiver': ['`π`...', '.```..', '.9.9..', 'OOOU..', 'μμν...', 'μμν...', '.μμν..', '.μμν..', '.OOU..', '..μν..', '..μμν.', '..ννν.'],
+}
+
+
+def quiver(v, hero, item, x, y):
+    """A quiver on the back: its mouth by the back shoulder, the fletching above it; drawn
+    behind the body."""
+    v.tag('offhand')
+    for i, r in enumerate(QUIVERS[item]):
+        v.at(x, y + i, r)
+
+
 def floating(v, bx, hy, mode, b, item='sig'):
     """The masked hero's weapon hovers beside it (3-wide blade, guard below), or a floating axe."""
     y0 = 3 - b
+    if item in BOWS:
+        floating_bow(v, bx, y0, mode, BOWS[item])
+        return
     if item == 'woodcutter_axe':
         floating_axe(v, bx, y0, mode)
         return
@@ -651,6 +734,11 @@ def weapon_spec(hero, item):
         return dict(base, kind='sword', L=max(4, L0 - 1), blade=['Oe', 'Oa', 'ae', 'Oe', 'Of', 'Oe'], guard='VUUV', grip='J', pommel='U', rest=W.get('rest', 'up'))
     if item == 'iron_sword':
         return dict(base, kind='sword', L=L0 + 1, low_L=L0, blade='NO', guard='ZYYZ', grip='J', pommel='Y', rest=W.get('rest', 'up'))
+    if item in BOWS:
+        # a bow's size follows the hero's (their sword's length), and never reaches the feet
+        half = max(4, min(9, round(L0 * 0.7) + 1 + BOWS[item]['size']))
+        feet = hero.legs['y0'] + hero.legs['n'] if hero.legs else 99
+        return dict(base, kind='bow', up=half, down=half, feet=feet, art=BOWS[item], rest='rest')
     if item == 'woodcutter_axe':
         return dict(base, kind='axe', L=max(6, L0), rest='up')
     if item == 'pickaxe':
@@ -669,6 +757,10 @@ def draw_weapon(v, spec, mode, hx, hy, b):
         axe(v, hx, hy, mode, spec['L'])
     elif k == 'pick':
         pick(v, hx, hy, mode, spec['L'])
+    elif k == 'bow':
+        down = min(spec['down'], spec['feet'] - hy - 2)
+        hand = spec['hand'][-1] if mode in ('nock', 'draw', 'loose') else None
+        bow(v, hx, hy, mode, spec['up'], down, spec['art'], hand)
     elif k == 'float':
         floating(v, spec['bx'], spec['hy'], mode, b, spec['item'])
 
@@ -751,6 +843,11 @@ def compose(hero, gear, *, b=0, sway=0, legs_mode='stand', weapon=None, hand=(0,
 
     if spec and behind and item_layer('weapon'):
         draw_weapon(v, spec, mode, hx, hy, b)
+    # a quiver hangs on the back, behind everything else
+    if gear.get('offhand') in QUIVERS and item_layer('offhand'):
+        qy = (3 - b) if floats else hero_oy(hero, b)
+        sx, sy = hero.shield
+        quiver(v, hero, gear["offhand"], sx + 1, qy + sy - 6)
     if only in ('weapon', 'offhand', 'trinket'):
         oy = (3 - b) if floats else hero_oy(hero, b)
     else:
@@ -771,7 +868,7 @@ def compose(hero, gear, *, b=0, sway=0, legs_mode='stand', weapon=None, hand=(0,
     if gear.get('trinket') and item_layer('trinket'):
         ax, ay, size = hero.amulet
         amulet(v, ax, oy + ay, size)
-    if gear.get('offhand') and item_layer('offhand'):
+    if gear.get('offhand') and gear['offhand'] not in QUIVERS and item_layer('offhand'):
         sx, sy = hero.shield
         shield(v, hero, gear['offhand'], sx - arm, oy + sy)
     if not floats and only in (None, 'weapon'):
@@ -806,6 +903,7 @@ def poses(hero):
             'walk': [dict(b=b, sway=i % 3) for i, b in enumerate((0, 1, 2, 1))],
             'idle': [dict(b=b, sway=s) for b, s in ((0, 0), (1, 0), (1, 1), (0, 1))],
             'attack': [dict(weapon=m) for m in ('back', 'raise', 'forward', 'low')],
+            'shoot': [dict(weapon=p['weapon']) for p in SHOOT],
             'jump': [dict(hem=21, b=1), dict(hem=19, b=1), dict(hem=22)],
             'tuck': [dict(hem=18, b=1)],
         }
@@ -814,6 +912,7 @@ def poses(hero):
         'walk': [dict(b=p['bob'], sway=p['cape'], legs_mode=walkmode(p), hand=(p['arm'], 0), arm=p['arm']) for p in WALK],
         'idle': [dict(b=p['bob'], sway=p['cape']) for p in IDLE],
         'attack': [dict(b=p['bob'], legs_mode=p['legs'], weapon=p['weapon'], hand=p['hand']) for p in ATTACK],
+        'shoot': [dict(legs_mode='stand', weapon=p['weapon'], hand=p['hand']) for p in SHOOT],
         'jump': [dict(legs_mode=dict(back=-1, front=0, feet=p.get('feet', 0)) if p['legs'] == 'air' else 'tuck', sway=1) for p in JUMP],
         'tuck': [dict(legs_mode='tuck', sway=1)],
     }

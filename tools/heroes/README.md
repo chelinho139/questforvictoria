@@ -9,6 +9,7 @@ write are generated: change the art here, then regenerate.
 - `emit3.py` — writes `src/phaser/render/hdHeroes.ts`: bare frames per hero plus one pixel layer per
   item per frame. `python3 emit3.py --check` also verifies that stacking layers matches drawing
   random kits directly (0 mismatched pixels expected).
+- `archery.py` — the archer's item icons (worn shortbow, hunting bow, yew longbow, leather and hunter's quivers); `gen_itemart.py` adds them to `itemArt.ts`. The bows and quivers on the heroes, and the 4-frame shooting animation (nock, draw, loose, lower), are in `cast2.py` (`bow`, `quiver`, `SHOOT`).
 - `menuicons.py` — the skull (Execute) and the menu bar's scroll, cog and book; `gen_itemart.py` writes `src/phaser/render/uiIcons.ts`.
 - `npcart.py` — NPCs (Warden Aldric's HD idle and flat version); `gen_itemart.py` writes `src/phaser/render/npcArt.ts` from it.
 - `craftart.py` — cooked meat, iron and gold bars, the crafting hammer, and the campfire and forge world sprites (`gen_itemart.py` also writes `src/phaser/render/structureArt.ts` from it).
