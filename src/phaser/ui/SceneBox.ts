@@ -1,4 +1,16 @@
 import type { Sim } from '../../sim/Sim';
+import type { VoiceSound } from '../../sim/types';
+import type { Sfx } from '../audio/Sfx';
+import { NPCS } from '../../data/npcs';
+import type { NpcId } from '../../data/npcs';
+import { KINDS } from '../../data/enemies';
+
+/** The voice a scene's speaker talks in, found by the name shown (the narrator has none). */
+function voiceOf(who: string): VoiceSound | null {
+  const npc = (Object.keys(NPCS) as NpcId[]).find(id => NPCS[id].name === who);
+  if (npc) return `${npc}Voice`;
+  return who === KINDS.bellringer.n ? 'bellringerVoice' : null;
+}
 
 /**
  * While a scene plays (data/scenes.ts): black bars top and bottom, and a box with who is
@@ -10,6 +22,8 @@ export class SceneBox {
   private readonly whoEl: HTMLElement;
   private readonly textEl: HTMLElement;
   private readonly off: () => void;
+  /** The line last shown (a new one is spoken). */
+  private said = '';
   private readonly onKey = (e: KeyboardEvent) => {
     if (!this.sim.scene) return;
     if (e.key === ' ' || e.key === 'Enter') {
@@ -19,7 +33,10 @@ export class SceneBox {
     }
   };
 
-  constructor(private readonly sim: Sim) {
+  constructor(
+    private readonly sim: Sim,
+    private readonly sfx: Sfx
+  ) {
     const root = (this.root = document.createElement('div'));
     root.className = 'scene';
     root.hidden = true;
@@ -47,7 +64,10 @@ export class SceneBox {
       this.whoEl.textContent = line.who;
       this.whoEl.hidden = !line.who;
       this.textEl.textContent = line.text;
+      const voice = voiceOf(line.who);
+      if (voice && line.text !== this.said) this.sfx.say(voice);
     }
+    this.said = line?.text ?? '';
   }
 
   destroy(): void {

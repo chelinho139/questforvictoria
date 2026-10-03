@@ -5,7 +5,10 @@ import { Session } from '../src/server/Session';
 import { SPELLS, SPELL_ORDER } from '../src/data/spells';
 import type { SpellKey } from '../src/data/spells';
 import type { SoundId } from '../src/sim/types';
-import { SOUNDS, renderSound } from '../src/phaser/audio/sounds';
+import { SOUNDS, renderSound, allTakes } from '../src/phaser/audio/sounds';
+import { KINDS } from '../src/data/enemies';
+import type { EnemyKind } from '../src/data/enemies';
+import { NPCS } from '../src/data/npcs';
 import { RATE, loudness, peak } from '../src/phaser/audio/synth';
 import { gameWith, skipScenes, run, standBy, make } from './helpers';
 import type { Hero } from '../src/sim/Hero';
@@ -13,21 +16,22 @@ import { GCD } from '../src/sim/Hero';
 import { TALENTS, xpToNext } from '../src/data/talents';
 
 test('every sound renders: its length, its loudness against the others, no clipping, ending in silence', () => {
-  const ids = Object.keys(SOUNDS) as SoundId[];
-  // how loud each came out for the loudness it asked for: about the same for all
-  const per = new Map<SoundId, number>();
-  for (const id of ids) {
-    const d = renderSound(id);
-    assert.equal(d.length, Math.ceil(SOUNDS[id].len * RATE), id);
-    assert.ok(d.every(Number.isFinite), `${id}: no NaN`);
-    assert.ok(peak(d) <= 1, `${id}: peaks under full scale`);
-    assert.ok(Math.abs(d[d.length - 1]) < 1e-3, `${id}: ends in silence`);
-    per.set(id, loudness(d) / SOUNDS[id].loud);
+  // how loud each take came out for the loudness it asked for: about the same for all
+  const per = new Map<string, number>();
+  for (const [id, take] of allTakes()) {
+    const d = renderSound(id, take);
+    const name = `${id} (take ${take + 1})`;
+    assert.equal(d.length, Math.ceil(SOUNDS[id].len * RATE), name);
+    assert.ok(d.every(Number.isFinite), `${name}: no NaN`);
+    assert.ok(peak(d) <= 1, `${name}: peaks under full scale`);
+    assert.ok(Math.abs(d[d.length - 1]) < 1e-3, `${name}: ends in silence`);
+    per.set(name, loudness(d) / SOUNDS[id].loud);
   }
   const mid = [...per.values()].sort((a, b) => a - b)[Math.floor(per.size / 2)];
   for (const [id, v] of per)
     assert.ok(Math.abs(v / mid - 1) < 0.1, `${id} is as loud as it should be`);
   assert.deepEqual(renderSound('warcry'), renderSound('warcry'), 'the same every time');
+  assert.notDeepEqual(renderSound('aldricVoice', 0), renderSound('aldricVoice', 1), 'takes differ');
 });
 
 /** A hero who knows spell `k` (level 25, its talent, a shield for Shield Bash), with an ogre to use it on. */
@@ -55,7 +59,10 @@ function caster(k: SpellKey) {
   if (k === 'execute' || k === 'killshot') e.hp = Math.round(e.hpMax * 0.1);
   if (k === 'interrupt' || k === 'silence') e.castT = 1;
   const heard: SoundId[] = [];
-  h.region.events.on('sound', p => heard.push(p.id));
+  // the ogre's own cries are another test's business
+  h.region.events.on('sound', p => {
+    if (!p.id.startsWith('ogre')) heard.push(p.id);
+  });
   return { game, h, e, heard };
 }
 
@@ -78,6 +85,8 @@ test('every spell sounds when cast, and its arrows when they land', () => {
     const { game, h, heard } = caster(k);
     assert.ok(h.castKey(k), `${k} casts`);
     assert.deepEqual(heard, [k] as SoundId[], `${k}: its own sound, once`);
+    // no auto-attacks from here on (the spell's arrows still fly)
+    h.setTarget(null);
     const land = LANDS[k];
     if (land) {
       assert.ok(!heard.includes(land), `${k}: not before the arrow lands`);
@@ -89,12 +98,14 @@ test('every spell sounds when cast, and its arrows when they land', () => {
 
 test('the horse comes and goes; a bear trap springs', () => {
   const m = caster('mount');
+  m.h.setTarget(null);
   m.h.castKey('mount');
   run(m.game, 1.2);
   m.h.castKey('mount');
   assert.deepEqual(m.heard, ['mount', 'mounted', 'dismount']);
 
   const t = caster('beartrap');
+  t.h.setTarget(null);
   t.h.castKey('beartrap');
   t.e.x = t.h.x + 2;
   run(t.game, 0.2);
@@ -155,7 +166,7 @@ test('the interface: a level, a talent, gold, loot, gear, food, a mistake', () =
   ]);
 });
 
-test('the interface: building, cooking, smithing', () => {
+test('the interface: building, cooking, smelting, smithing, woodwork', () => {
   const { game, heroes } = gameWith('Ana');
   const [h] = heroes;
   h.region.enemies = [];
@@ -163,13 +174,16 @@ test('the interface: building, cooking, smithing', () => {
   h.give('log', 20);
   h.give('stone', 8);
   h.give('iron_ore', 2);
+  h.give('iron_bar', 3);
   h.give('meat');
   make(game, h, 'campfire');
   make(game, h, 'cooked_meat');
+  make(game, h, 'hunting_bow');
   make(game, h, 'forge');
   make(game, h, 'iron_bar');
+  make(game, h, 'iron_sword');
   make(game, h, 'iron_bar');
-  assert.deepEqual(heard, ['build', 'cook', 'build', 'smith', 'error']);
+  assert.deepEqual(heard, ['build', 'cook', 'woodwork', 'build', 'smelt', 'smith', 'error']);
 });
 
 test('the interface: a quest taken, done and handed in, and the journal; the party hears its quests', () => {
@@ -217,4 +231,108 @@ test('online, your own sounds reach you and nobody else', () => {
   const mine = (sa.build(0.05).ev ?? []).filter(e => e[1] === 'sound');
   assert.deepEqual(mine, [['h', 'sound', { id: 'levelUp' }]]);
   assert.equal((sb.build(0.05).ev ?? []).filter(e => e[1] === 'sound').length, 0);
+});
+
+/** A warrior alone in the meadow (the creatures cleared away), and everything heard there. */
+function meadow(cls: 'warrior' | 'archer' = 'warrior') {
+  const game = new Game();
+  const h = game.addHero('h', 'Test');
+  h.cls = cls;
+  h.resetHero();
+  skipScenes(game);
+  h.region.enemies = [];
+  const heard: SoundId[] = [];
+  h.region.events.on('sound', p => heard.push(p.id));
+  const spawn = (kind: EnemyKind, dx: number) => {
+    const e = h.region.spawnEnemy(kind, h.x + dx, h.y, true);
+    h.region.enemies.push(e);
+    return e;
+  };
+  return { game, h, heard, spawn };
+}
+
+test('every creature cries out when hit and when it dies, but not at a bleed', () => {
+  for (const kind of Object.keys(KINDS) as EnemyKind[]) {
+    const { h, heard, spawn } = meadow();
+    const e = spawn(kind, 30);
+    h.dmgEnemy(e, 1, 'dot');
+    h.dmgEnemy(e, 1, '');
+    h.dmgEnemy(e, 99999, '');
+    assert.deepEqual(heard, [KINDS[kind].sounds.hurt, KINDS[kind].sounds.die], kind);
+  }
+});
+
+test('a goblin notices you and attacks; the blow lands on you', () => {
+  const { game, h, heard, spawn } = meadow();
+  h.cheats.god = false;
+  spawn('goblin', 60);
+  run(game, 4);
+  assert.equal(heard[0], 'goblinNotice');
+  assert.ok(heard.includes('goblinAttack'));
+  assert.ok(heard.includes('heroHurt'));
+});
+
+test("the shaman's fireball: the chant, the fire leaving, the fire landing", () => {
+  const { game, h, heard, spawn } = meadow();
+  // angry already, and ready to cast from where it stands
+  const sh = spawn('shaman', 110);
+  Object.assign(sh, { aggro: true, foe: h.id, castCd: 0 });
+  run(game, 3);
+  const at = (id: SoundId) => heard.indexOf(id);
+  assert.ok(at('shamanCast') >= 0 && at('shamanCast') < at('fireball'), 'chant, then fire');
+  assert.ok(at('fireball') < at('fireballHit'), 'and it lands');
+});
+
+test('the Bell-Ringer tolls, and the dead rise; at dawn they fall apart', () => {
+  const { game, h, heard, spawn } = meadow();
+  h.cheats.god = true;
+  const ringer = spawn('bellringer', 40);
+  ringer.phase = 1;
+  ringer.aggro = true;
+  ringer.foe = h.id;
+  run(game, 2);
+  assert.ok(heard.includes('bellToll'));
+  assert.ok(heard.includes('boneRise'), 'skeletons climb up through the floor');
+  const sk = spawn('skeleton', 80);
+  h.region.crumble(sk);
+  assert.equal(heard.at(-1), 'skeletonDie');
+});
+
+test('auto-attacks: a swing; a shot, and the arrow landing', () => {
+  const w = meadow();
+  const slime = w.spawn('slime', 20);
+  w.h.setTarget(slime);
+  run(w.game, 2);
+  assert.ok(w.heard.includes('autoSwing'));
+
+  const a = meadow('archer');
+  const cow = a.spawn('cow', 150);
+  a.game.cheats.freezeEnemies = true;
+  a.h.setTarget(cow);
+  run(a.game, 3);
+  assert.ok(a.heard.includes('autoShot'));
+  assert.ok(a.heard.indexOf('autoShot') < a.heard.indexOf('hitArrow'));
+});
+
+test('felling a tree and breaking a rock', () => {
+  const { game, h, heard } = meadow();
+  const near = <T extends { x: number; y: number }>(list: T[]) =>
+    list.reduce((a, b) =>
+      Math.hypot(b.x - h.x, b.y - h.y) < Math.hypot(a.x - h.x, a.y - h.y) ? b : a
+    );
+  h.startChop(near(h.region.trees.filter(t => t.stumpT === 0)));
+  run(game, 15);
+  assert.equal(heard.filter(id => id === 'chop').length, 4, 'four chops');
+  assert.equal(heard.at(-1), 'treeFall');
+  heard.length = 0;
+  h.startMine(near(h.region.rocks.filter(r => r.brokenT === 0)));
+  run(game, 25);
+  assert.equal(heard.filter(id => id === 'mine').length, 5, 'five swings');
+  assert.equal(heard.at(-1), 'rockBreak');
+});
+
+test('everyone who talks has a voice of their own', () => {
+  const voices = [...Object.keys(NPCS), 'bellringer'].map(who => `${who}Voice`);
+  for (const v of voices) assert.ok(v in SOUNDS, v);
+  assert.equal(new Set(voices.map(v => SOUNDS[v as SoundId].make)).size, voices.length);
 });

@@ -11,6 +11,57 @@ export type EnemyKind = 'goblin' | 'shaman' | 'ogre' | 'skeleton' | 'cow' | 'sli
  */
 export type Behavior = 'hostile' | 'neutral' | 'passive';
 
+/** A creature's sounds (the recipes are in src/phaser/audio/sounds.ts). */
+export type CreatureSound =
+  | 'slimeIdle'
+  | 'slimeAttack'
+  | 'slimeHurt'
+  | 'slimeDie'
+  | 'cowIdle'
+  | 'cowHurt'
+  | 'cowDie'
+  | 'goblinNotice'
+  | 'goblinAttack'
+  | 'goblinHurt'
+  | 'goblinDie'
+  | 'shamanNotice'
+  | 'shamanAttack'
+  | 'shamanCast'
+  | 'shamanHurt'
+  | 'shamanDie'
+  | 'ogreNotice'
+  | 'ogreAttack'
+  | 'ogreHurt'
+  | 'ogreDie'
+  | 'boneRise'
+  | 'skeletonNotice'
+  | 'skeletonAttack'
+  | 'skeletonHurt'
+  | 'skeletonDie'
+  | 'houndNotice'
+  | 'houndAttack'
+  | 'houndHurt'
+  | 'houndDie'
+  | 'ringerNotice'
+  | 'ringerAttack'
+  | 'ringerHurt'
+  | 'ringerDie';
+
+/**
+ * What a creature sounds like: noticing you, attacking (the swing or bite; the blow landing
+ * is the hero's own sound), hurt, dying (or crumbling at dawn), now and then while it
+ * wanders, climbing out of the ground, and starting a spell.
+ */
+export interface CreatureSounds {
+  notice?: CreatureSound;
+  attack?: CreatureSound;
+  hurt: CreatureSound;
+  die: CreatureSound;
+  idle?: CreatureSound;
+  rise?: CreatureSound;
+  cast?: CreatureSound;
+}
+
 export interface EnemyDef {
   n: string;
   hp: number;
@@ -30,6 +81,7 @@ export interface EnemyDef {
   behavior: Behavior;
   /** Rises from the ground at dusk and crumbles at dawn. */
   nightOnly?: boolean;
+  sounds: CreatureSounds;
   /** Squash-and-stretch hop instead of a walk bob. */
   bounce?: boolean;
   /** Floating text shown (sometimes) when hit. */
@@ -53,6 +105,7 @@ export const RESPAWN = 60;
 export const KINDS: Record<EnemyKind, EnemyDef> = {
   goblin: {
     n: 'Goblin',
+    sounds: { notice: 'goblinNotice', attack: 'goblinAttack', hurt: 'goblinHurt', die: 'goblinDie' },
     hp: 150,
     atk: 9,
     per: 2.2,
@@ -76,6 +129,13 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
   },
   shaman: {
     n: 'Goblin Shaman',
+    sounds: {
+      notice: 'shamanNotice',
+      attack: 'shamanAttack',
+      cast: 'shamanCast',
+      hurt: 'shamanHurt',
+      die: 'shamanDie',
+    },
     hp: 200,
     atk: 6,
     per: 2.6,
@@ -97,6 +157,7 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
   },
   ogre: {
     n: 'Ogre',
+    sounds: { notice: 'ogreNotice', attack: 'ogreAttack', hurt: 'ogreHurt', die: 'ogreDie' },
     hp: 600,
     atk: 18,
     per: 3.0,
@@ -115,6 +176,13 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
   },
   skeleton: {
     n: 'Skeleton',
+    sounds: {
+      rise: 'boneRise',
+      notice: 'skeletonNotice',
+      attack: 'skeletonAttack',
+      hurt: 'skeletonHurt',
+      die: 'skeletonDie',
+    },
     hp: 160,
     atk: 12,
     per: 2.0,
@@ -136,6 +204,7 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
   },
   cow: {
     n: 'Cow',
+    sounds: { idle: 'cowIdle', hurt: 'cowHurt', die: 'cowDie' },
     hp: 60,
     atk: 0,
     per: 99,
@@ -152,6 +221,7 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
   },
   slime: {
     n: 'Slime',
+    sounds: { idle: 'slimeIdle', attack: 'slimeAttack', hurt: 'slimeHurt', die: 'slimeDie' },
     hp: 90,
     atk: 6,
     per: 2.4,
@@ -177,6 +247,7 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
   // a test boss for the dev Test Field: three phases, a flag when it falls
   dev_boss: {
     n: 'Big Ogre',
+    sounds: { notice: 'ogreNotice', attack: 'ogreAttack', hurt: 'ogreHurt', die: 'ogreDie' },
     hp: 600,
     atk: 4,
     per: 2.6,
@@ -194,6 +265,13 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
   // the skeletons of the old King's hunting dogs: fast, in packs, only at night
   bonehound: {
     n: 'Bone Hound',
+    sounds: {
+      rise: 'boneRise',
+      notice: 'houndNotice',
+      attack: 'houndAttack',
+      hurt: 'houndHurt',
+      die: 'houndDie',
+    },
     hp: 85,
     atk: 12,
     per: 1.4,
@@ -211,6 +289,7 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
   // Millbrook's old sexton, ringing the death knell backwards in the belfry
   bellringer: {
     n: 'The Bell-Ringer',
+    sounds: { notice: 'ringerNotice', attack: 'ringerAttack', hurt: 'ringerHurt', die: 'ringerDie' },
     hp: 1300,
     atk: 8,
     per: 2.6,

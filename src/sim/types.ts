@@ -2,7 +2,7 @@ import type { PropKind } from '../data/props';
 import type { ItemId } from '../data/items';
 import type { StructureKind } from '../data/crafting';
 import type { NpcId } from '../data/npcs';
-import type { EnemyDef, EnemyKind } from '../data/enemies';
+import type { EnemyDef, EnemyKind, CreatureSound } from '../data/enemies';
 import type { SkillKey, ActionKey, Key, WheelKey } from '../data/skills';
 import type { ObjectKind } from '../data/regions/types';
 import type { SpellKey } from '../data/spells';
@@ -295,9 +295,24 @@ export interface HeroEvents extends Record<string, unknown> {
  * A sound effect. The recipes are in src/phaser/audio/sounds.ts.
  *
  * A spell's key is the sound of casting it, and these follow it: an arrow landing (hit…), a
- * bear trap springing, the horse arriving and being left. Everyone nearby hears those.
+ * bear trap springing, the horse arriving and being left. Everyone nearby hears those, and
+ * the world's sounds and the creatures' (data/enemies.ts) too.
  */
-export type SoundId = SpellKey | FollowSound | UiSound;
+export type SoundId = SpellKey | FollowSound | WorldSound | CreatureSound | UiSound | VoiceSound;
+/** Out in the world, heard nearby: the auto-attacks, a blow landing on a hero, felling a tree, breaking a rock, the shaman's fireball, the bell. */
+export type WorldSound =
+  | 'autoSwing'
+  | 'autoShot'
+  | 'heroHurt'
+  | 'chop'
+  | 'treeFall'
+  | 'mine'
+  | 'rockBreak'
+  | 'fireball'
+  | 'fireballHit'
+  | 'bellToll';
+/** Someone talking, in a conversation or a scene: each a voice of their own. */
+export type VoiceSound = `${NpcId | 'bellringer'}Voice`;
 export type FollowSound =
   | 'mounted'
   | 'dismount'
@@ -324,7 +339,9 @@ export type UiSound =
   | 'equip'
   | 'eat'
   | 'cook'
+  | 'smelt'
   | 'smith'
+  | 'woodwork'
   | 'build'
   | 'perfect'
   | 'error'

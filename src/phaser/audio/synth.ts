@@ -79,7 +79,7 @@ export class Biquad {
 }
 
 /** Glide from a to b over p in 0..1: exponential for frequencies (both > 0), else straight. */
-export function glide(a: number, b: number, p: number): number {
+function glide(a: number, b: number, p: number): number {
   if (a === b) return a;
   return a > 0 && b > 0 ? a * Math.pow(b / a, p) : a + (b - a) * p;
 }
@@ -171,50 +171,67 @@ export class Track {
 
   /** Mix rendered samples into the track from `at`, at level `v`. */
   mix(at: number, buf: Float32Array, v: number): void {
-    this.add(at, buf.length / RATE, (_t, i) => (buf[i] ?? 0) * v);
+    const [i0, i1] = this.span(at, buf.length / RATE);
+    for (let i = i0, j = 0; i < i1 && j < buf.length; i++, j++) this.data[i] += buf[j] * v;
   }
 
-  /** Mix a function of time into the track from `at` for `dur` seconds. */
-  private add(at: number, dur: number, fn: (t: number, i: number) => number): void {
+  /**
+   * The samples from `at` for `dur` seconds that fall inside the track. (Each sound below
+   * loops over its span itself: a callback a sample was most of the rendering time.)
+   */
+  private span(at: number, dur: number): [number, number] {
     const i0 = Math.max(0, Math.round(at * RATE));
-    const i1 = Math.min(this.data.length, Math.round((at + dur) * RATE));
-    for (let i = i0; i < i1; i++) this.data[i] += fn((i - i0) / RATE, i - i0);
+    return [i0, Math.min(this.data.length, Math.round((at + dur) * RATE))];
   }
 
   /** An oscillator with a pitch glide, vibrato and an attack/decay envelope. */
   tone(o: ToneOpts): void {
-    const at = o.at ?? 0;
     const a = o.a ?? 0.004;
-    const slide = o.slide ?? a + o.d;
+    const [i0, i1] = this.span(o.at ?? 0, a + o.d);
     const w = o.wave ?? 'sine';
     const lp = o.lp ? new Biquad('lowpass', o.lp) : null;
     const env = envelope(a, o.d);
+    // the glide, a sample at a time: exponential when both ends are above zero
+    const f1 = o.f1 ?? o.f;
+    const ns = Math.max(1, Math.round((o.slide ?? a + o.d) * RATE));
+    const expo = o.f > 0 && f1 > 0;
+    const step = expo ? Math.pow(f1 / o.f, 1 / ns) : (f1 - o.f) / ns;
+    const vibW = o.vib ? (2 * Math.PI * o.vib[0]) / RATE : 0;
+    const vibD = o.vib ? o.vib[1] : 0;
+    const d = this.data;
+    let f = o.f;
     let ph = 0;
-    this.add(at, a + o.d, t => {
-      let f = glide(o.f, o.f1 ?? o.f, Math.min(1, t / slide));
-      if (o.vib) f *= 1 + o.vib[1] * Math.sin(2 * Math.PI * o.vib[0] * t);
-      ph = (ph + f / RATE) % 1;
+    for (let i = i0, j = 0; i < i1; i++, j++) {
+      ph += (vibD ? f * (1 + vibD * Math.sin(vibW * j)) : f) / RATE;
+      ph -= Math.floor(ph);
+      if (j < ns) f = expo ? f * step : f + step;
       const s = wave(w, ph) * o.v * env();
-      return lp ? lp.run(s) : s;
-    });
+      d[i] += lp ? lp.run(s) : s;
+    }
   }
 
   /** White noise through a (sweeping) filter, with an envelope. */
   noise(o: NoiseOpts): void {
-    const at = o.at ?? 0;
     const a = o.a ?? 0.002;
     const total = a + o.d;
-    const flt = o.filter ? new Biquad(o.filter, o.f ?? 1000, o.q ?? 0.707) : null;
+    const [i0, i1] = this.span(o.at ?? 0, total);
+    const f0 = o.f ?? 1000;
+    const q = o.q ?? 0.707;
+    const flt = o.filter ? new Biquad(o.filter, f0, q) : null;
+    const sweep = flt && o.f1 !== undefined ? o.f1 : null;
     const env = envelope(a, o.d);
-    this.add(at, total, (t, i) => {
-      if (flt && o.f1 !== undefined && i % 16 === 0)
-        flt.set(glide(o.f ?? 1000, o.f1, t / total), o.q ?? 0.707);
+    const amW = o.am ? (2 * Math.PI * o.am[0]) / RATE : 0;
+    const amD = o.am ? o.am[1] : 0;
+    const n = total * RATE;
+    const d = this.data;
+    for (let i = i0, j = 0; i < i1; i++, j++) {
+      if (flt && sweep !== null && j % 16 === 0) flt.set(glide(f0, sweep, j / n), q);
       let s = this.rand() * 2 - 1;
       if (flt) s = flt.run(s);
       let g = o.v * env();
-      if (o.am) g *= 1 - o.am[1] * (0.5 + 0.5 * Math.sin(2 * Math.PI * o.am[0] * t));
-      return s * g;
-    });
+      if (amD) g *= 1 - amD * (0.5 + 0.5 * Math.sin(amW * j));
+      d[i] += s * g;
+    }
   }
 
   /**
@@ -229,14 +246,16 @@ export class Track {
     for (let i = 0; i < n; i++) line[i] = lp.run(this.rand() * 2 - 1);
     const keep = 0.5 * (o.damp ?? 0.996);
     const env = envelope(0, o.d);
+    const [i0, i1] = this.span(o.at ?? 0, o.d);
+    const d = this.data;
     let k = 0;
-    this.add(o.at ?? 0, o.d, (_t, i) => {
-      const nx = (k + 1) % n;
+    for (let i = i0, j = 0; i < i1; i++, j++) {
+      const nx = k + 1 === n ? 0 : k + 1;
       const out = line[k];
       line[k] = keep * (line[k] + line[nx]);
       k = nx;
-      return out * o.v * (i < 40 ? i / 40 : 1) * env();
-    });
+      d[i] += out * o.v * (j < 40 ? j / 40 : 1) * env();
+    }
   }
 
   /**
@@ -277,7 +296,7 @@ export class Track {
         lp = y * 0.6 + lp * 0.4;
         buf[k] = x[i] + lp * 0.8;
         out[i] += y / combs.length;
-        k = (k + 1) % n;
+        if (++k === n) k = 0;
       }
     }
     for (const n of [556, 441].map(m => Math.round(m * (RATE / 44100)))) {
@@ -288,7 +307,7 @@ export class Track {
         const y = -out[i] + b;
         buf[k] = out[i] + b * 0.5;
         out[i] = y;
-        k = (k + 1) % n;
+        if (++k === n) k = 0;
       }
     }
     for (let i = 0; i < x.length; i++) x[i] += out[i] * wet;

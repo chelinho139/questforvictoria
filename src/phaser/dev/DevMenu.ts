@@ -16,7 +16,10 @@ import { PC_KEYS } from '../../data/actionBar';
 import { xpToNext } from '../../data/talents';
 import { REGIONS } from '../../data/regions';
 import type { Sfx } from '../audio/Sfx';
-import type { SoundId, FollowSound, UiSound } from '../../sim/types';
+import type { SoundId, FollowSound, UiSound, WorldSound } from '../../sim/types';
+import type { CreatureSounds } from '../../data/enemies';
+import { NPCS } from '../../data/npcs';
+import type { NpcId } from '../../data/npcs';
 import { SPELLS, SPELL_ORDER } from '../../data/spells';
 import type { SpellKey } from '../../data/spells';
 import { SKILLS, ACTIONS, isSkill } from '../../data/skills';
@@ -106,14 +109,41 @@ const UI_SOUNDS: Record<UiSound, string> = {
   equip: 'Gear on or off',
   eat: 'Eating',
   cook: 'Cooking',
+  smelt: 'Smelting',
   smith: 'Smithing',
-  build: 'Building, woodwork',
+  woodwork: 'Woodwork (bows)',
+  build: 'Building',
   perfect: 'Perfect timing',
   error: "Can't do that",
   died: 'You die',
   respawn: 'You respawn',
   open: 'Window opens',
   close: 'Window closes',
+};
+
+/** The sound board's names for the world's sounds. */
+const WORLD_SOUNDS: Record<WorldSound, string> = {
+  autoSwing: 'Auto-attack: a swing',
+  autoShot: 'Auto-attack: a shot',
+  heroHurt: 'A blow lands on you',
+  chop: 'Chopping',
+  treeFall: 'A tree falls',
+  mine: 'Mining',
+  rockBreak: 'A rock breaks',
+  fireball: 'Fireball',
+  fireballHit: 'Fireball · lands',
+  bellToll: 'The bell tolls',
+};
+
+/** What the sound board calls a creature's moments. */
+const CREATURE_MOMENTS: Record<keyof CreatureSounds, string> = {
+  idle: 'wanders',
+  rise: 'rises',
+  notice: 'notices you',
+  cast: 'casts',
+  attack: 'attacks',
+  hurt: 'hurt',
+  die: 'dies',
 };
 
 const STORAGE_KEY = 'qfv-dev-settings';
@@ -340,6 +370,27 @@ export class DevMenu {
     ui.label = 'Interface';
     for (const [id, label] of Object.entries(UI_SOUNDS)) option(ui, id as UiSound, label);
     pick.append(ui);
+    const outside = el('optgroup');
+    outside.label = 'World';
+    for (const [id, label] of Object.entries(WORLD_SOUNDS)) option(outside, id as WorldSound, label);
+    pick.append(outside);
+    // each creature's sounds (one that sounds like another, the test boss, adds none)
+    const beasts = el('optgroup');
+    beasts.label = 'Creatures';
+    const listed = new Set<SoundId>();
+    for (const def of Object.values(KINDS))
+      for (const [moment, label] of Object.entries(CREATURE_MOMENTS)) {
+        const id = def.sounds[moment as keyof CreatureSounds];
+        if (!id || listed.has(id)) continue;
+        listed.add(id);
+        option(beasts, id, `${def.n} · ${label}`);
+      }
+    pick.append(beasts);
+    const people = el('optgroup');
+    people.label = 'Voices';
+    for (const id of Object.keys(NPCS) as NpcId[]) option(people, `${id}Voice`, NPCS[id].name);
+    option(people, 'bellringerVoice', KINDS.bellringer.n);
+    pick.append(people);
     const hear = () => this.sfx.play(pick.value as SoundId);
     pick.addEventListener('change', () => {
       hear();

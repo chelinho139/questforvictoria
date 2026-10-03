@@ -1,5 +1,5 @@
 import { KINDS, RESPAWN } from '../data/enemies';
-import type { EnemyKind } from '../data/enemies';
+import type { EnemyKind, CreatureSounds } from '../data/enemies';
 import { T, Tile, rockCentre, RegionMap, parseLayout, isoX, isoSpeedFactor } from './map';
 import { propSolidTiles } from '../data/props';
 import { REGIONS } from '../data/regions';
@@ -36,6 +36,8 @@ import type { Hero } from './Hero';
 
 /** Seconds a night creature takes to climb out of the ground. */
 export const RISE_DUR = 0.9;
+/** Seconds, on average, between a wandering creature's idle calls. */
+const IDLE_CALL = 18;
 
 interface Movable {
   x: number;
@@ -163,6 +165,11 @@ export class Region {
   /** A sound, heard from where it happened. */
   sound(id: SoundId, x: number, y: number): void {
     this.events.emit('sound', { id, x: Math.round(x), y: Math.round(y) });
+  }
+  /** A creature's sound, if it has one for this (data/enemies.ts). */
+  private cry(e: Enemy, what: keyof CreatureSounds): void {
+    const id = e.def.sounds[what];
+    if (id) this.sound(id, e.x, e.y);
   }
   burst(
     x: number,
@@ -565,6 +572,9 @@ export class Region {
       const delay = i * 0.55;
       const start = 14 - delay * 120;
       const max = 300;
+      // a stroke of the bell for each ring
+      if (i === 0) this.sound('bellToll', e.x, e.y);
+      else this.after(delay, () => this.sound('bellToll', e.x, e.y));
       this.hazards.push({
         x: e.x,
         y: e.y,
@@ -608,6 +618,7 @@ export class Region {
         sk.riseT = RISE_DUR;
         sk.aggro = true;
         this.enemies.push(sk);
+        this.cry(sk, 'rise');
       }
       this.logAll('The dead climb up through the floorboards.', 'h');
     }
@@ -728,7 +739,12 @@ export class Region {
       2,
       120
     );
-    if (e.hp > 0) return false;
+    if (e.hp > 0) {
+      // a bleed's ticks are quiet; a blow makes it cry out
+      if (cls !== 'dot') this.cry(e, 'hurt');
+      return false;
+    }
+    this.cry(e, 'die');
     e.alive = false;
     e.dieT = 1;
     e.respawnT = RESPAWN * (1 + this.game.rng.next() / 2);
@@ -781,6 +797,7 @@ export class Region {
     if (e.def.nightOnly) {
       e.riseT = RISE_DUR;
       this.burst(e.x, e.y + 2, 12, '#6b4a2b', 50, 0.6, 3, -30);
+      this.cry(e, 'rise');
     }
   }
 
@@ -793,6 +810,7 @@ export class Region {
     e.castT = -1;
     e.crumbleT = -1;
     e.respawnT = 0.5 + this.game.rng.next() * 4;
+    this.cry(e, 'die');
     for (const h of this.heroes())
       if (h.target === e) {
         h.target = null;
@@ -819,6 +837,8 @@ export class Region {
     }
     if (e.wx || e.wy) this.moveEntity(e, e.wx, e.wy, e.def.spd * speedK, dt, hw, hh);
     else e.walk = 0;
+    // a moo, a blorp, about every IDLE_CALL seconds (only for the ear: the game's dice stay out of it)
+    if (Math.random() < dt / IDLE_CALL) this.cry(e, 'idle');
   }
 
   /** Set a bear trap at a hero's feet (their old one, if any, is taken up). */
@@ -935,7 +955,9 @@ export class Region {
         const tx = foe.x;
         const ty = foe.y;
         this.fx({ type: 'fireball', x0: e.x, y0: e.y - 12, x1: tx, y1: ty - 8, dur: 0.35 });
+        this.sound('fireball', e.x, e.y);
         this.after(0.35, () => {
+          this.sound('fireballHit', tx, ty);
           this.burst(tx, ty - 8, 12, '#a78bfa', 100, 0.4, 3, 60);
           this.fx({ type: 'ring', x: tx, y: ty - 8, r0: 6, r1: 34, col: '#a78bfa', dur: 0.3 });
           if (!far && foe.regionId === this.id) foe.hurt(k.castDmg ?? 10, 'the fireball');
@@ -948,6 +970,7 @@ export class Region {
     if (!e.aggro && foe && k.behavior === 'hostile' && d < k.aggro) {
       e.aggro = true;
       e.foe = foe.id;
+      this.cry(e, 'notice');
     }
     if (e.kind === 'bellringer' && this.bellRinger(e, dt)) return;
     if (e.aggro && foe) {
@@ -970,6 +993,7 @@ export class Region {
       if (k.cast && e.castCd <= 0 && d < (k.castRange ?? 0) && d > 50) {
         e.castT = e.castTotal;
         e.tele = false;
+        this.cry(e, 'cast');
         foe.log(e.n + ' casts Fireball…', 'h');
         return;
       }
@@ -987,6 +1011,7 @@ export class Region {
         e.atkT -= dt;
         if (e.atkT <= 0.7) e.tele = true;
         if (e.atkT <= 0) {
+          this.cry(e, 'attack');
           if (Math.hypot(foe.x - e.x, foe.y - e.y) < k.range + 14)
             foe.hurt(k.atk, 'the ' + e.n + "'s hit");
           else foe.log(e.n + ' hits the air.', 't');

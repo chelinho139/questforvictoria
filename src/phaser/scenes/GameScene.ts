@@ -110,7 +110,7 @@ export class GameScene extends Phaser.Scene {
     this.crafting = new CraftingWindow(this.game, this.sim);
     this.registry.set('crafting', this.crafting);
     this.trade = new TradeWindow(this.sim);
-    this.dialog = new DialogWindow(this.game, this.sim, id => this.trade.open(id));
+    this.dialog = new DialogWindow(this.game, this.sim, this.sfx, id => this.trade.open(id));
     this.questLog = new QuestWindow(this.sim);
     this.registry.set('questLog', this.questLog);
     this.controls = new ControlsWindow();
@@ -120,7 +120,7 @@ export class GameScene extends Phaser.Scene {
     this.spellbook = new SpellbookWindow(this.game, this.sim);
     this.registry.set('spellbook', this.spellbook);
     this.quests = new QuestTracker(this.sim, () => this.questLog.toggle(true));
-    this.sceneBox = new SceneBox(this.sim);
+    this.sceneBox = new SceneBox(this.sim, this.sfx);
     this.bossBar = new BossBar(this.sim);
     this.shown = this.windows().map(w => w.isOpen);
     this.sim.events.on('sceneFade', ({ dir, s }) => (dir === 'out' ? this.cameras.main.fadeOut(s * 1000, 0, 0, 0) : this.cameras.main.fadeIn(s * 1000, 0, 0, 0)));

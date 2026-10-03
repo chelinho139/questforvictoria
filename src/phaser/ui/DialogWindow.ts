@@ -9,6 +9,7 @@ import type { ItemId } from '../../data/items';
 import { itemIcon } from '../render/itemArt';
 import { Tex } from '../render/textures';
 import { artFrames, frameKey } from '../render/art';
+import type { Sfx } from '../audio/Sfx';
 
 type Choice = { label: string; cls?: string; act: () => void };
 
@@ -38,6 +39,7 @@ export class DialogWindow {
   constructor(
     private readonly game: Phaser.Game,
     private readonly sim: Sim,
+    private readonly sfx: Sfx,
     /** Open a trader's stall (the trade window). */
     private readonly onTrade: (id: NpcId) => void = () => {}
   ) {
@@ -185,6 +187,8 @@ export class DialogWindow {
   private say(text: string, choices: Choice[], extra = ''): void {
     this.atHome = false;
     this.textEl.textContent = text;
+    // each line in their own voice
+    if (this.npc) this.sfx.say(`${this.npc}Voice`);
     this.extraEl.innerHTML = extra;
     this.extraEl.querySelectorAll<HTMLCanvasElement>('canvas[data-item]').forEach(cv => {
       const c = cv.getContext('2d')!;

@@ -1,11 +1,12 @@
-import type { SoundId } from '../../sim/types';
-import { Biquad, RATE, Track, glide, master } from './synth';
+import type { SoundId, VoiceSound } from '../../sim/types';
+import type { NpcId } from '../../data/npcs';
+import { Biquad, RATE, Track, master } from './synth';
 
 /**
  * Every sound in the game, as a recipe for the synthesizer (synth.ts). A spell's key is the
  * sound of casting it; arrows add the sound of landing (`hit…`). Sounds are built from a
- * few shared pieces (a whoosh, a thump, a bowstring…), so the warrior's blows and the
- * archer's arrows each sound like one family.
+ * few shared pieces (a whoosh, a thump, a bowstring, a voice…), so the warrior's blows, the
+ * archer's arrows, the goblins and the dead each sound like one family.
  *
  * `loud` sets how loud a sound is against the others (1: the biggest finishing blows);
  * the renderer brings each one to it, so levels inside a recipe only balance its parts.
@@ -17,6 +18,8 @@ export interface Recipe {
   loud: number;
   /** Seconds before it can play again (a held key that keeps failing shouldn't buzz). */
   gap?: number;
+  /** Takes to render, one picked each time it plays (a voice shouldn't say the same twice). */
+  takes?: number;
   make: (s: Track) => void;
 }
 
@@ -189,6 +192,22 @@ const UH: Formants = [
   [800, 0.5, 7],
   [2250, 0.2, 10],
 ];
+const EE: Formants = [
+  [300, 1, 6],
+  [2250, 0.5, 12],
+  [3000, 0.3, 14],
+];
+const EH: Formants = [
+  [530, 1, 6],
+  [1840, 0.6, 10],
+  [2480, 0.3, 12],
+];
+/** A cow's mouth: low and nasal. */
+const MOO: Formants = [
+  [300, 1, 4],
+  [650, 0.6, 6],
+  [2400, 0.15, 10],
+];
 
 /**
  * A throat: a buzz that climbs to `peak` in the first quarter and falls to `f1`, through
@@ -207,25 +226,36 @@ function voice(
     rough?: number;
     roughHz?: number;
     breath?: number;
+    /** Vibrato depth (a fraction of the pitch): an old voice trembles. */
+    vib?: number;
+    /** Seconds to come in (a bark is quick, a groan slow). */
+    a?: number;
   }
 ): void {
   const n = Math.round(o.d * RATE);
+  const vib = o.vib ?? 0.012;
+  const a = o.a ?? 0.04;
   const src = new Float32Array(n);
+  // up to the peak over the first quarter, down to f1 over the rest, a sample at a time
+  const n1 = Math.max(1, Math.round(n / 4));
+  const up = Math.pow(o.peak / o.f, 1 / n1);
+  const down = Math.pow(o.f1 / o.peak, 1 / Math.max(1, n - n1));
+  let f = o.f;
   let ph = 0;
   let drift = 0;
   for (let i = 0; i < n; i++) {
     const t = i / RATE;
-    const p = t / o.d;
-    const f = p < 0.25 ? glide(o.f, o.peak, p / 0.25) : glide(o.peak, o.f1, (p - 0.25) / 0.75);
+    f *= i < n1 ? up : down;
     // a voice never holds still: a slow wander and a little vibrato
     if (i % 256 === 0) drift = drift * 0.8 + (s.random() - 0.5) * 0.02;
-    ph = (ph + (f * (1 + drift + 0.012 * Math.sin(2 * Math.PI * 5.5 * t))) / RATE) % 1;
+    ph += (f * (1 + drift + vib * Math.sin(2 * Math.PI * 5.5 * t))) / RATE;
+    ph -= Math.floor(ph);
     let x = 2 * ph - 1 + (o.breath ?? 0.2) * (s.random() * 2 - 1);
     if (o.rough) {
       const r = Math.sin(2 * Math.PI * (o.roughHz ?? 30) * t + 3 * Math.sin(2 * Math.PI * 7 * t));
       x *= 1 - o.rough * (0.5 + 0.5 * r);
     }
-    src[i] = x * Math.min(1, t / 0.04) * Math.min(1, (o.d - t) / (o.d * 0.35));
+    src[i] = x * Math.min(1, t / a) * Math.min(1, (o.d - t) / (o.d * 0.35));
   }
   const out = new Float32Array(n);
   for (const [ff, g, q] of o.mouth) {
@@ -234,6 +264,129 @@ function voice(
   }
   s.mix(o.at, out, o.v);
 }
+
+/** A bubble in something wet: a quick note sliding up (or down, as it bursts). */
+function bubble(s: Track, at: number, f0: number, f1: number, v: number, d = 0.06): void {
+  s.tone({ at, f: f0, f1, slide: d * 0.8, v, a: 0.003, d });
+}
+
+/** Bone on bone: a dry, hollow click. */
+function clack(s: Track, at: number, v: number, f = 1300): void {
+  s.noise({ at, v, d: 0.01, filter: 'bandpass', f: f * 1.8, q: 3 });
+  s.tone({ at, f, v: v * 0.5, a: 0.001, d: 0.025 });
+}
+
+/** Dry bones rattling: `n` clacks over `d` seconds, crowded at the start. */
+function rattle(s: Track, at: number, d: number, v: number, n: number): void {
+  for (let i = 0; i < n; i++) {
+    const p = s.random();
+    clack(s, at + p * p * d, v * (1 - 0.7 * p) * (0.5 + 0.5 * s.random()), 900 + 1400 * s.random());
+  }
+}
+
+/** How someone sounds when they talk. */
+interface Speaker {
+  /** Pitch, Hz. */
+  f: number;
+  /** Mouth size: formants scaled (a woman's higher, a big man's lower). */
+  mouth: number;
+  /** Seconds a syllable. */
+  syl: number;
+  /** How far each syllable strays up or down. */
+  lilt: number;
+  rough?: number;
+  breath?: number;
+  /** An old voice's tremble. */
+  vib?: number;
+  /** How far the phrase falls by its end. */
+  fall?: number;
+  drive?: number;
+  /** An echo: a chapel, a belfry. */
+  room?: number;
+}
+
+/**
+ * Talking, in no language at all: a handful of syllables, each a mouth shape with a little
+ * consonant in front, wandering up and down and falling at the end of the phrase.
+ */
+function babble(s: Track, o: Speaker): void {
+  const mouths = [AH, EH, EE, OH, UH];
+  const n = 5 + Math.floor(s.random() * 4);
+  let t = 0.02;
+  for (let i = 0; i < n; i++) {
+    const p = i / (n - 1);
+    const f = o.f * (1.06 - (0.06 + (o.fall ?? 0.1)) * p) * (1 + (s.random() * 2 - 1) * o.lilt);
+    const d = o.syl * (0.75 + 0.5 * s.random());
+    const shape = mouths[Math.floor(s.random() * mouths.length)];
+    const mouth: Formants = shape.map(([ff, g, q]) => [ff * o.mouth, g, q]);
+    // a hiss (s, sh), a stop (t, k, p), or straight into the vowel
+    const c = s.random();
+    if (c < 0.3) s.noise({ at: t, v: 0.2, d: 0.035, filter: 'highpass', f: 3500 * o.mouth });
+    else if (c < 0.65)
+      s.noise({ at: t, v: 0.3, d: 0.012, filter: 'bandpass', f: 1200 + 2400 * s.random(), q: 1.5 });
+    voice(s, {
+      at: t + 0.012,
+      d,
+      f,
+      peak: f * 1.03,
+      f1: f * 0.97,
+      mouth,
+      v: 1,
+      rough: o.rough,
+      breath: o.breath ?? 0.2,
+      vib: o.vib,
+      a: Math.min(0.03, d * 0.3),
+    });
+    // a little pause now and then
+    t += d * 0.9 + (s.random() < 0.15 ? 0.07 : 0);
+  }
+  if (o.drive) s.drive(o.drive);
+  if (o.room) s.reverb(o.room, 1.2);
+}
+
+/** Each speaker's voice: the people of the Greenmarch and Millbrook, and one who was. */
+const SPEAKERS: Record<NpcId | 'bellringer', Speaker> = {
+  // Warden Aldric: old, gravelly, unhurried
+  aldric: { f: 98, mouth: 1, syl: 0.12, lilt: 0.07, rough: 0.25, breath: 0.35 },
+  // Nan Merrow, the queen's old nurse: high, and trembling
+  nan: { f: 225, mouth: 1.16, syl: 0.13, lilt: 0.1, breath: 0.4, vib: 0.045 },
+  // Maud Ashdown, the widow: soft, trailing off
+  maud: { f: 195, mouth: 1.13, syl: 0.12, lilt: 0.05, breath: 0.3, fall: 0.18 },
+  // Sergeant Pike: loud, clipped, official
+  pike: { f: 138, mouth: 1.02, syl: 0.075, lilt: 0.08, rough: 0.12, breath: 0.12, drive: 2 },
+  // Father Odo: calm and sing-song, as if in his chapel
+  odo: { f: 118, mouth: 1, syl: 0.11, lilt: 0.16, breath: 0.2, room: 0.25 },
+  // Tobin the peddler: quick and chatty, all ups and downs
+  tobin: { f: 165, mouth: 1.05, syl: 0.068, lilt: 0.2, breath: 0.18 },
+  // Bram the smith: big, deep, few words
+  bram: { f: 84, mouth: 0.94, syl: 0.1, lilt: 0.05, rough: 0.35, breath: 0.25, drive: 1.5 },
+  // the Bell-Ringer: hollow, slow, not quite alive
+  bellringer: {
+    f: 68,
+    mouth: 0.9,
+    syl: 0.18,
+    lilt: 0.04,
+    rough: 0.3,
+    breath: 0.5,
+    vib: 0.03,
+    fall: 0.2,
+    room: 0.45,
+  },
+};
+
+/** Everyone's voices: four takes each, so nobody says the same thing twice running. */
+const VOICES = Object.fromEntries(
+  (Object.keys(SPEAKERS) as (keyof typeof SPEAKERS)[]).map(who => {
+    const o = SPEAKERS[who];
+    const recipe: Recipe = {
+      len: 9 * o.syl + 0.6 + (o.room ? 1 : 0),
+      loud: 0.45,
+      takes: 4,
+      make: s => babble(s, o),
+    };
+    return [`${who}Voice`, recipe];
+  })
+) as Record<VoiceSound, Recipe>;
 
 // ---------------------------------------------------------------- the recipes
 
@@ -886,6 +1039,35 @@ export const SOUNDS: Record<SoundId, Recipe> = {
       crackle(s, 0, 0.8, 0.6, 120, 4000, 2500, 2);
     },
   },
+  smelt: {
+    len: 1.4,
+    loud: 0.55,
+    make: s => {
+      // the bellows (twice), the fire roaring up, the metal running and bubbling
+      for (const at of [0, 0.32])
+        s.noise({ at, v: 0.6, a: 0.15, d: 0.12, filter: 'lowpass', f: 300, f1: 900 });
+      s.noise({
+        at: 0.1,
+        v: 0.5,
+        a: 0.1,
+        d: 0.6,
+        filter: 'bandpass',
+        f: 350,
+        q: 0.8,
+        am: [9, 0.4],
+      });
+      s.noise({ at: 0.75, v: 0.35, a: 0.02, d: 0.5, filter: 'highpass', f: 3000 });
+      for (let k = 0; k < 5; k++)
+        bubble(
+          s,
+          0.8 + s.random() * 0.4,
+          110 + 120 * s.random(),
+          260 + 150 * s.random(),
+          0.35,
+          0.05
+        );
+    },
+  },
   smith: {
     len: 1.1,
     loud: 0.6,
@@ -897,6 +1079,27 @@ export const SOUNDS: Record<SoundId, Recipe> = {
         thump(s, at, 200, 0.3, 0.05);
       }
       s.noise({ at: 0.5, v: 0.35, a: 0.01, d: 0.45, filter: 'highpass', f: 2500 });
+    },
+  },
+  woodwork: {
+    len: 1,
+    loud: 0.5,
+    make: s => {
+      // three strokes of the knife along the wood, then the string tied on
+      for (const at of [0, 0.16, 0.32])
+        s.noise({
+          at,
+          v: 0.6,
+          a: 0.02,
+          d: 0.08,
+          filter: 'bandpass',
+          f: 2600,
+          f1: 1800,
+          q: 2,
+          am: [70, 0.5],
+        });
+      s.pluck({ at: 0.55, f: 220, v: 0.7, d: 0.3, bright: 0.8, damp: 0.997 });
+      thump(s, 0.55, 180, 0.3, 0.05);
     },
   },
   build: {
@@ -980,34 +1183,782 @@ export const SOUNDS: Record<SoundId, Recipe> = {
       thump(s, 0.05, 150, 0.6, 0.06);
     },
   },
+  // ------------------------------------------------------------ the world
+  autoSwing: {
+    len: 0.35,
+    loud: 0.38,
+    make: s => {
+      whoosh(s, 0, 0.1, 900, 2600, 0.9, 1.3);
+      thump(s, 0.07, 140, 0.6, 0.07);
+    },
+  },
+  autoShot: {
+    len: 0.3,
+    loud: 0.36,
+    make: s => twang(s, 0, 178, 0.7, 0.15),
+  },
+  heroHurt: {
+    len: 0.35,
+    loud: 0.45,
+    gap: 0.08,
+    make: s => {
+      // a blow landing on you: a thud, and your gear rattling
+      thump(s, 0, 115, 1, 0.12);
+      s.noise({ at: 0.005, v: 0.4, d: 0.09, filter: 'bandpass', f: 2600, q: 1.2, am: [45, 0.6] });
+    },
+  },
+  chop: {
+    len: 0.45,
+    loud: 0.55,
+    make: s => {
+      // the axe bites: a crack, the knock of the trunk, chips flying
+      s.noise({ v: 0.8, d: 0.006, filter: 'highpass', f: 2500 });
+      s.noise({ v: 0.8, d: 0.07, filter: 'bandpass', f: 650, q: 3 });
+      s.tone({ f: 240, f1: 210, v: 0.5, a: 0.001, d: 0.14 });
+      s.tone({ f: 470, v: 0.25, a: 0.001, d: 0.08 });
+      crackle(s, 0.01, 0.08, 0.4, 250, 3000, 2000);
+    },
+  },
+  treeFall: {
+    len: 1.8,
+    loud: 0.8,
+    make: s => {
+      // the trunk groans and splits, the crown rushes down, and the ground takes it
+      s.noise({
+        v: 0.6,
+        a: 0.15,
+        d: 0.15,
+        filter: 'bandpass',
+        f: 380,
+        f1: 220,
+        q: 9,
+        am: [14, 0.6],
+      });
+      crackle(s, 0.05, 0.3, 0.7, 120, 1800, 900, 1.2);
+      s.noise({ at: 0.15, v: 0.6, a: 0.2, d: 0.08, filter: 'bandpass', f: 900, f1: 400, q: 0.8 });
+      thump(s, 0.38, 50, 0.45, 0.4);
+      s.noise({ at: 0.38, v: 0.8, d: 0.35, filter: 'lowpass', f: 2500 });
+      crackle(s, 0.38, 0.5, 0.5, 120, 4000, 2500);
+      s.reverb(0.2);
+    },
+  },
+  mine: {
+    len: 0.4,
+    loud: 0.55,
+    make: s => {
+      // the pick on stone: a bright clink, the knock, chips of rock
+      s.metal({ f: 2350, v: 0.5, d: 0.12, ratios: [1, 2.6, 4.3] });
+      s.noise({ v: 0.7, d: 0.04, filter: 'bandpass', f: 1300, q: 2 });
+      thump(s, 0, 180, 0.4, 0.05);
+      crackle(s, 0.01, 0.1, 0.4, 200, 4500, 3000, 2);
+    },
+  },
+  rockBreak: {
+    len: 1.2,
+    loud: 0.75,
+    make: s => {
+      // a crack, and the rock tumbles apart
+      s.noise({ v: 0.5, d: 0.01, filter: 'highpass', f: 2000 });
+      thump(s, 0, 70, 0.5, 0.25);
+      s.noise({ at: 0.01, v: 0.7, a: 0.03, d: 0.5, filter: 'lowpass', f: 700, am: [25, 0.5] });
+      crackle(s, 0.02, 0.6, 0.8, 100, 1500, 600, 1.2);
+      crackle(s, 0.25, 0.6, 0.3, 40, 5000, 4000, 3);
+      s.reverb(0.12);
+    },
+  },
+  fireball: {
+    len: 0.6,
+    loud: 0.6,
+    make: s => {
+      // a ball of witch-fire leaving the staff
+      s.noise({
+        v: 0.8,
+        a: 0.05,
+        d: 0.35,
+        filter: 'bandpass',
+        f: 500,
+        f1: 1400,
+        q: 1,
+        am: [20, 0.4],
+      });
+      s.tone({
+        f: hz(-14),
+        f1: hz(-2),
+        slide: 0.3,
+        v: 0.25,
+        a: 0.02,
+        d: 0.35,
+        wave: 'tri',
+        vib: [11, 0.04],
+      });
+      crackle(s, 0, 0.4, 0.4, 100, 3000, 2000, 2);
+    },
+  },
+  fireballHit: {
+    len: 1.1,
+    loud: 0.75,
+    make: s => {
+      thump(s, 0, 60, 0.8, 0.3);
+      s.noise({ v: 1, a: 0.005, d: 0.45, filter: 'lowpass', f: 2200, f1: 500 });
+      crackle(s, 0, 0.5, 0.5, 120, 3500, 1500);
+      s.tone({ f: hz(-2), f1: hz(-19), slide: 0.4, v: 0.2, a: 0.005, d: 0.4, wave: 'tri' });
+      s.reverb(0.2);
+    },
+  },
+  bellToll: {
+    len: 1.7,
+    loud: 1,
+    make: s => {
+      // Millbrook's bell, gone wrong: the clapper's dull knock, then each stroke swells up out
+      // of silence and stops dead, as if the sound were sucked back into the bronze
+      thump(s, 0, 90, 0.5, 0.3);
+      const strike = hz(-19);
+      const partials: [number, number][] = [
+        [0.5, 0.6],
+        [1, 0.8],
+        [1.19, 0.5],
+        [1.5, 0.3],
+        [2, 0.9],
+        [2.52, 0.35],
+        [3, 0.3],
+        [4.17, 0.2],
+      ];
+      partials.forEach(([r, v], i) =>
+        s.tone({ f: strike * r, v: v * 0.4, a: 0.35, d: 1.6 / (1 + i * 0.25) })
+      );
+      // the rush of it being drawn back in
+      s.noise({ at: 1.05, v: 0.4, a: 0.4, d: 0.05, filter: 'bandpass', f: 2200, f1: 700, q: 1 });
+      const cut = Math.round(1.45 * RATE);
+      const fade = Math.round(0.03 * RATE);
+      for (let i = cut; i < s.data.length; i++) s.data[i] *= Math.max(0, 1 - (i - cut) / fade);
+    },
+  },
+  // ------------------------------------------------------------ the creatures
+  slimeIdle: {
+    len: 0.5,
+    loud: 0.32,
+    make: s => {
+      // blorp
+      bubble(s, 0, 170, 420, 0.8, 0.07);
+      bubble(s, 0.11, 230, 520, 0.5, 0.06);
+      s.noise({ v: 0.25, d: 0.1, filter: 'lowpass', f: 900 });
+    },
+  },
+  slimeAttack: {
+    len: 0.5,
+    loud: 0.5,
+    make: s => {
+      // it gathers itself and flops onto you
+      s.noise({ v: 0.6, a: 0.04, d: 0.12, filter: 'lowpass', f: 1200, am: [40, 0.6] });
+      bubble(s, 0, 200, 500, 0.6, 0.08);
+      s.noise({ at: 0.12, v: 0.7, d: 0.12, filter: 'bandpass', f: 800, q: 1 });
+    },
+  },
+  slimeHurt: {
+    len: 0.4,
+    loud: 0.42,
+    gap: 0.3,
+    make: s => {
+      s.noise({ v: 0.8, d: 0.12, filter: 'lowpass', f: 1500, am: [60, 0.7] });
+      bubble(s, 0.01, 520, 210, 0.6, 0.08);
+    },
+  },
+  slimeDie: {
+    len: 0.9,
+    loud: 0.58,
+    make: s => {
+      // it bursts
+      bubble(s, 0, 600, 150, 0.7, 0.12);
+      s.noise({ v: 0.9, d: 0.3, filter: 'lowpass', f: 2000, f1: 600 });
+      for (let k = 0; k < 6; k++)
+        bubble(
+          s,
+          0.08 + s.random() * 0.4,
+          300 + 600 * s.random(),
+          700 + 600 * s.random(),
+          0.25,
+          0.04
+        );
+    },
+  },
+  cowIdle: {
+    len: 1.2,
+    loud: 0.5,
+    make: s =>
+      voice(s, {
+        at: 0,
+        d: 0.95,
+        f: 118,
+        peak: 132,
+        f1: 104,
+        mouth: MOO,
+        v: 1,
+        rough: 0.12,
+        breath: 0.15,
+        a: 0.12,
+      }),
+  },
+  cowHurt: {
+    len: 0.8,
+    loud: 0.5,
+    gap: 0.4,
+    make: s =>
+      voice(s, {
+        at: 0,
+        d: 0.5,
+        f: 160,
+        peak: 195,
+        f1: 140,
+        mouth: MOO,
+        v: 1,
+        rough: 0.2,
+        breath: 0.2,
+        a: 0.03,
+      }),
+  },
+  cowDie: {
+    len: 1.5,
+    loud: 0.55,
+    make: s => {
+      voice(s, {
+        at: 0,
+        d: 0.9,
+        f: 145,
+        peak: 150,
+        f1: 90,
+        mouth: MOO,
+        v: 1,
+        rough: 0.3,
+        breath: 0.25,
+        a: 0.05,
+      });
+      thump(s, 0.75, 70, 0.9, 0.3);
+      s.noise({ at: 0.75, v: 0.4, d: 0.2, filter: 'lowpass', f: 800 });
+    },
+  },
+  goblinNotice: {
+    len: 0.7,
+    loud: 0.55,
+    make: s => {
+      // "hee-hee-hee!"
+      for (const [at, f] of [
+        [0, 380],
+        [0.11, 420],
+        [0.22, 460],
+      ])
+        voice(s, {
+          at,
+          d: 0.09,
+          f,
+          peak: f * 1.1,
+          f1: f,
+          mouth: EE,
+          v: 1,
+          rough: 0.35,
+          breath: 0.35,
+          a: 0.01,
+        });
+    },
+  },
+  goblinAttack: {
+    len: 0.4,
+    loud: 0.45,
+    make: s => {
+      // a dagger's quick slash, and a grunt
+      whoosh(s, 0, 0.08, 2000, 4500, 0.8, 1.6);
+      voice(s, {
+        at: 0.01,
+        d: 0.1,
+        f: 330,
+        peak: 360,
+        f1: 300,
+        mouth: AH,
+        v: 0.8,
+        rough: 0.3,
+        a: 0.01,
+      });
+    },
+  },
+  goblinHurt: {
+    len: 0.4,
+    loud: 0.45,
+    gap: 0.3,
+    make: s =>
+      voice(s, {
+        at: 0,
+        d: 0.18,
+        f: 420,
+        peak: 540,
+        f1: 340,
+        mouth: EE,
+        v: 1,
+        rough: 0.25,
+        breath: 0.3,
+        a: 0.01,
+      }),
+  },
+  goblinDie: {
+    len: 1,
+    loud: 0.55,
+    make: s => {
+      voice(s, {
+        at: 0,
+        d: 0.55,
+        f: 460,
+        peak: 500,
+        f1: 210,
+        mouth: AH,
+        v: 1,
+        rough: 0.3,
+        breath: 0.3,
+        a: 0.01,
+      });
+      thump(s, 0.45, 120, 0.6, 0.12);
+    },
+  },
+  shamanNotice: {
+    len: 0.9,
+    loud: 0.55,
+    make: s => {
+      // a higher cackle, and a glint of magic
+      for (const [at, f] of [
+        [0, 470],
+        [0.1, 520],
+        [0.2, 580],
+      ])
+        voice(s, {
+          at,
+          d: 0.08,
+          f,
+          peak: f * 1.1,
+          f1: f,
+          mouth: EH,
+          v: 1,
+          rough: 0.3,
+          breath: 0.35,
+          a: 0.01,
+        });
+      bell(s, 0.3, hz(14), 0.25, 0.5);
+    },
+  },
+  shamanAttack: {
+    len: 0.45,
+    loud: 0.45,
+    make: s => {
+      // a swing of the staff and its knock
+      whoosh(s, 0, 0.12, 500, 1500, 0.8);
+      s.noise({ at: 0.08, v: 0.6, d: 0.05, filter: 'bandpass', f: 700, q: 3 });
+      s.tone({ at: 0.08, f: 300, f1: 260, v: 0.4, a: 0.001, d: 0.08 });
+    },
+  },
+  shamanCast: {
+    len: 1.1,
+    loud: 0.55,
+    make: s => {
+      // a chanted word, and the fire gathering in the staff
+      voice(s, {
+        at: 0,
+        d: 0.7,
+        f: 230,
+        peak: 260,
+        f1: 220,
+        mouth: OH,
+        v: 1,
+        rough: 0.15,
+        breath: 0.25,
+        vib: 0.03,
+      });
+      s.tone({ at: 0.1, f: 200, f1: 700, v: 0.18, a: 0.5, d: 0.3, wave: 'tri', vib: [9, 0.03] });
+      crackle(s, 0.2, 0.7, 0.4, 80, 3000, 4500, 2);
+      s.reverb(0.15);
+    },
+  },
+  shamanHurt: {
+    len: 0.4,
+    loud: 0.45,
+    gap: 0.3,
+    make: s =>
+      voice(s, {
+        at: 0,
+        d: 0.17,
+        f: 480,
+        peak: 600,
+        f1: 400,
+        mouth: EH,
+        v: 1,
+        rough: 0.25,
+        breath: 0.3,
+        a: 0.01,
+      }),
+  },
+  shamanDie: {
+    len: 1.1,
+    loud: 0.55,
+    make: s => {
+      voice(s, {
+        at: 0,
+        d: 0.6,
+        f: 520,
+        peak: 560,
+        f1: 240,
+        mouth: EH,
+        v: 1,
+        rough: 0.3,
+        breath: 0.3,
+        a: 0.01,
+      });
+      // the staff clattering down
+      for (const at of [0.48, 0.58]) {
+        s.noise({ at, v: 0.5, d: 0.04, filter: 'bandpass', f: 800, q: 3 });
+        s.tone({ at, f: 320, v: 0.3, a: 0.001, d: 0.06 });
+      }
+    },
+  },
+  ogreNotice: {
+    len: 1.4,
+    loud: 0.8,
+    make: s => {
+      // a roar
+      voice(s, {
+        at: 0,
+        d: 0.85,
+        f: 78,
+        peak: 98,
+        f1: 68,
+        mouth: OH,
+        v: 1.6,
+        rough: 0.6,
+        roughHz: 28,
+        breath: 0.45,
+        a: 0.06,
+      });
+      s.drive(2.5);
+      s.reverb(0.2);
+    },
+  },
+  ogreAttack: {
+    len: 0.5,
+    loud: 0.6,
+    make: s => {
+      // the club comes round, with a grunt behind it
+      whoosh(s, 0, 0.18, 300, 1100, 1, 0.9);
+      voice(s, { at: 0, d: 0.12, f: 85, peak: 92, f1: 80, mouth: AH, v: 1.2, rough: 0.5, a: 0.01 });
+    },
+  },
+  ogreHurt: {
+    len: 0.5,
+    loud: 0.55,
+    gap: 0.35,
+    make: s => {
+      voice(s, {
+        at: 0,
+        d: 0.25,
+        f: 92,
+        peak: 100,
+        f1: 76,
+        mouth: AH,
+        v: 1.4,
+        rough: 0.45,
+        breath: 0.3,
+        a: 0.01,
+      });
+      s.drive(1.5);
+    },
+  },
+  ogreDie: {
+    len: 2,
+    loud: 0.8,
+    make: s => {
+      // a long groan, and a great weight hitting the ground
+      voice(s, {
+        at: 0,
+        d: 1.1,
+        f: 88,
+        peak: 92,
+        f1: 52,
+        mouth: OH,
+        v: 1.4,
+        rough: 0.5,
+        breath: 0.35,
+        a: 0.03,
+      });
+      thump(s, 1, 45, 0.8, 0.4);
+      s.noise({ at: 1, v: 0.5, d: 0.3, filter: 'lowpass', f: 700 });
+      s.drive(1.8);
+      s.reverb(0.2);
+    },
+  },
+  boneRise: {
+    len: 1.3,
+    loud: 0.55,
+    make: s => {
+      // the earth parting, bones knocking together, and a low moan from under it all
+      s.noise({ v: 0.5, a: 0.2, d: 0.5, filter: 'lowpass', f: 500 });
+      crackle(s, 0, 0.6, 0.5, 80, 1500, 800, 1.2);
+      rattle(s, 0.2, 0.7, 0.6, 14);
+      s.tone({
+        at: 0.1,
+        f: 110,
+        f1: 98,
+        v: 0.18,
+        a: 0.3,
+        d: 0.6,
+        wave: 'tri',
+        lp: 800,
+        vib: [5, 0.03],
+      });
+    },
+  },
+  skeletonNotice: {
+    len: 0.5,
+    loud: 0.45,
+    make: s => {
+      // its jaw chattering
+      for (let k = 0; k < 6; k++) clack(s, k / 14, 0.7 - k * 0.06, 1500 + 200 * s.random());
+    },
+  },
+  skeletonAttack: {
+    len: 0.4,
+    loud: 0.45,
+    make: s => {
+      // a rusty blade, and the creak of the arm swinging it
+      whoosh(s, 0, 0.1, 1200, 3200, 0.8, 1.3);
+      rattle(s, 0, 0.15, 0.4, 4);
+    },
+  },
+  skeletonHurt: {
+    len: 0.4,
+    loud: 0.45,
+    gap: 0.3,
+    make: s => {
+      s.noise({ v: 0.6, d: 0.03, filter: 'bandpass', f: 1800, q: 4 });
+      s.tone({ f: 900, v: 0.3, a: 0.001, d: 0.05 });
+      rattle(s, 0.01, 0.18, 0.8, 7);
+    },
+  },
+  skeletonDie: {
+    len: 1.1,
+    loud: 0.6,
+    make: s => {
+      // it comes apart, bone by bone, into the dust
+      rattle(s, 0, 0.7, 1, 26);
+      thump(s, 0.3, 110, 0.4, 0.1);
+      s.noise({ at: 0.2, v: 0.3, a: 0.05, d: 0.4, filter: 'bandpass', f: 1500, q: 0.6 });
+    },
+  },
+  houndNotice: {
+    len: 0.7,
+    loud: 0.6,
+    make: s => {
+      // two rough barks from a dry throat
+      for (const [at, f] of [
+        [0, 210],
+        [0.2, 195],
+      ])
+        voice(s, {
+          at,
+          d: 0.13,
+          f,
+          peak: f * 1.28,
+          f1: f * 0.85,
+          mouth: AH,
+          v: 1.3,
+          rough: 0.6,
+          roughHz: 40,
+          breath: 0.4,
+          a: 0.008,
+        });
+      rattle(s, 0, 0.4, 0.3, 6);
+      s.drive(2);
+    },
+  },
+  houndAttack: {
+    len: 0.4,
+    loud: 0.5,
+    make: s => {
+      // a snarl and the jaws snapping shut
+      voice(s, {
+        at: 0,
+        d: 0.15,
+        f: 120,
+        peak: 130,
+        f1: 110,
+        mouth: UH,
+        v: 1.2,
+        rough: 0.7,
+        roughHz: 45,
+        breath: 0.5,
+        a: 0.01,
+      });
+      for (const at of [0.08, 0.14]) {
+        s.noise({ at, v: 0.7, d: 0.008, filter: 'highpass', f: 2500 });
+        s.tone({ at, f: 1300, v: 0.35, a: 0.001, d: 0.02 });
+      }
+    },
+  },
+  houndHurt: {
+    len: 0.4,
+    loud: 0.5,
+    gap: 0.3,
+    make: s => {
+      voice(s, {
+        at: 0,
+        d: 0.15,
+        f: 520,
+        peak: 680,
+        f1: 420,
+        mouth: EE,
+        v: 1,
+        rough: 0.2,
+        breath: 0.3,
+        a: 0.008,
+      });
+      rattle(s, 0.02, 0.15, 0.4, 4);
+    },
+  },
+  houndDie: {
+    len: 1.1,
+    loud: 0.55,
+    make: s => {
+      // a whine falling away, and the bones giving way
+      voice(s, {
+        at: 0,
+        d: 0.5,
+        f: 620,
+        peak: 640,
+        f1: 260,
+        mouth: EE,
+        v: 1,
+        rough: 0.25,
+        breath: 0.3,
+        a: 0.01,
+      });
+      rattle(s, 0.35, 0.6, 0.8, 18);
+    },
+  },
+  ringerNotice: {
+    len: 2,
+    loud: 0.75,
+    make: s => {
+      // a groan from the belfry's dark, and the bell humming with it
+      voice(s, {
+        at: 0,
+        d: 1.1,
+        f: 70,
+        peak: 78,
+        f1: 62,
+        mouth: OH,
+        v: 1.4,
+        rough: 0.3,
+        breath: 0.5,
+        a: 0.2,
+        vib: 0.03,
+      });
+      s.tone({ f: hz(-31), v: 0.12, a: 0.3, d: 1.2 });
+      s.reverb(0.4, 1.3);
+    },
+  },
+  ringerAttack: {
+    len: 0.6,
+    loud: 0.6,
+    make: s => {
+      whoosh(s, 0, 0.2, 300, 1200, 1, 0.9);
+      voice(s, { at: 0, d: 0.15, f: 75, peak: 82, f1: 70, mouth: AH, v: 1.2, rough: 0.4, a: 0.01 });
+    },
+  },
+  ringerHurt: {
+    len: 0.8,
+    loud: 0.55,
+    gap: 0.4,
+    make: s => {
+      voice(s, {
+        at: 0,
+        d: 0.32,
+        f: 80,
+        peak: 84,
+        f1: 66,
+        mouth: OH,
+        v: 1.4,
+        rough: 0.35,
+        breath: 0.4,
+        a: 0.02,
+      });
+      s.metal({ f: 440, v: 0.12, d: 0.6, ratios: [1, 1.19, 2, 3] });
+      s.reverb(0.25);
+    },
+  },
+  ringerDie: {
+    len: 3.2,
+    loud: 0.9,
+    make: s => {
+      // a long last groan, and the cracked bell answering out of tune
+      voice(s, {
+        at: 0,
+        d: 1.8,
+        f: 80,
+        peak: 84,
+        f1: 40,
+        mouth: OH,
+        v: 1.4,
+        rough: 0.35,
+        breath: 0.5,
+        a: 0.05,
+        vib: 0.04,
+      });
+      for (const [r, v] of [
+        [1, 0.3],
+        [1.13, 0.25],
+        [2.07, 0.2],
+        [2.9, 0.12],
+      ])
+        s.tone({ at: 0.3, f: hz(-19) * r, v, a: 0.01, d: 2, vib: [3, 0.006] });
+      s.noise({ at: 0.3, v: 0.2, d: 1.2, filter: 'bandpass', f: 600, q: 4, am: [17, 0.8] });
+      s.reverb(0.4, 1.3);
+    },
+  },
+  // ------------------------------------------------------------ the people
+  ...VOICES,
 };
 
-const rendered = new Map<SoundId, Float32Array>();
+const rendered = new Map<string, Float32Array>();
 
-/** A sound's samples, rendered once (the loading screen renders them all: soundJobs). */
-export function soundSamples(id: SoundId): Float32Array {
-  let d = rendered.get(id);
-  if (!d) rendered.set(id, (d = renderSound(id)));
+/** A take of a sound, rendered once (the loading screen renders them all: soundJobs). */
+export function soundSamples(id: SoundId, take = 0): Float32Array {
+  const key = `${id}:${take}`;
+  let d = rendered.get(key);
+  if (!d) rendered.set(key, (d = renderSound(id, take)));
   return d;
+}
+
+/** Every take of every sound. */
+export function allTakes(): [SoundId, number][] {
+  return (Object.keys(SOUNDS) as SoundId[]).flatMap(id =>
+    Array.from({ length: SOUNDS[id].takes ?? 1 }, (_, k): [SoundId, number] => [id, k])
+  );
 }
 
 /** The loading screen's steps: every sound, a few at a time, so the bar keeps moving. */
 export function soundJobs(): { label: string; run: () => void }[] {
-  const ids = Object.keys(SOUNDS) as SoundId[];
-  const labels = ['Tuning the bowstrings…', 'Whetting the war cries…', 'Teaching the bards…'];
+  const all = allTakes();
+  const labels = [
+    'Tuning the bowstrings…',
+    'Whetting the war cries…',
+    'Rattling the bones…',
+    'Teaching the bards…',
+  ];
   const per = 6;
-  const n = Math.ceil(ids.length / per);
+  const n = Math.ceil(all.length / per);
   return Array.from({ length: n }, (_, i) => ({
     label: labels[Math.floor((i * labels.length) / n)],
-    run: () => ids.slice(i * per, (i + 1) * per).forEach(soundSamples),
+    run: () => all.slice(i * per, (i + 1) * per).forEach(([id, k]) => soundSamples(id, k)),
   }));
 }
 
-/** Render a sound to samples at RATE, at its loudness. */
-export function renderSound(id: SoundId): Float32Array {
+/** Render a take of a sound to samples at RATE, at its loudness. */
+export function renderSound(id: SoundId, take = 0): Float32Array {
   const r = SOUNDS[id];
-  // a seed per sound, so the same sound always comes out the same
-  let seed = 7;
+  // a seed per sound and take, so each always comes out the same
+  let seed = 7 + take * 7919;
   for (const ch of id) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
   const tr = new Track(r.len, seed);
   r.make(tr);

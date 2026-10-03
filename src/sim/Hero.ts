@@ -1424,6 +1424,7 @@ export class Hero {
     this.flash = 0.08;
     this.shake = 0.15;
     this.floater(this.x, this.y - 20, '-' + v, 'hurt');
+    this.sound('heroHurt');
     this.region.fx({ type: 'hit', x: this.x, y: this.y - 10, col: '#e0504b', dur: 0.2 });
     this.burst(this.x, this.y - 8, 6, '#e0504b', 80, 0.4, 2, 120);
     if (this.hp <= 0) {
@@ -1830,8 +1831,16 @@ export class Hero {
         ? `You cook the ${ITEMS[r.needs[0][0]].name.toLowerCase()}.`
         : `You ${item.endsWith('_bar') ? 'smelt' : r.station === 'forge' ? 'forge' : 'make'} ${a} ${name.toLowerCase()}.`;
     this.log(what, 'c');
-    // food sizzles on the fire, the forge rings, the rest (bows) is woodwork
-    this.hear(ITEMS[item].heal ? 'cook' : r.station === 'forge' ? 'smith' : 'build');
+    // food sizzles on the fire, ore melts down, the forge rings, the rest (bows) is woodwork
+    this.hear(
+      ITEMS[item].heal
+        ? 'cook'
+        : item.endsWith('_bar')
+          ? 'smelt'
+          : r.station === 'forge'
+            ? 'smith'
+            : 'woodwork'
+    );
     this.game.questEvent('craft', r.id);
     this.gainXp(XP_FOR.craft);
   }
@@ -2241,9 +2250,11 @@ export class Hero {
     this.atkAnimT = ATK_ANIM;
     tr.hp--;
     tr.shakeT = 0.25;
+    this.sound('chop', tr.x, tr.y);
     this.burst(tr.x, tr.y - 10, 6, '#c8a070', 70, 0.45, 2, 160);
     if (tr.hp > 0) return;
     // timber: the tree becomes a stump and drops its logs
+    this.sound('treeFall', tr.x, tr.y);
     const rng = this.game.rng;
     tr.stumpT = CHOP.regrow;
     tr.hp = CHOP.hits;
@@ -2304,9 +2315,11 @@ export class Hero {
     this.atkAnimT = ATK_ANIM;
     rk.hp--;
     rk.shakeT = 0.2;
+    this.sound('mine', rk.x, rk.y);
     this.burst(rk.x, rk.y - 8, 6, '#c4cad4', 80, 0.4, 2, 200);
     if (rk.hp > 0) return;
     // the rock breaks into rubble and gives up its stone (and maybe ore)
+    this.sound('rockBreak', rk.x, rk.y);
     const rng = this.game.rng;
     rk.brokenT = MINE.regrow;
     rk.hp = MINE.hits;
@@ -2628,19 +2641,26 @@ export class Hero {
           this.aaT = aa.period / (1 + this.tal.aaSpeed) / (this.predatorT > 0 ? 1.5 : 1);
           const crit = this.game.rng.next() < this.tal.crit;
           const far = d > 150 ? 1 + this.tal.farShot : 1;
-          this.loose(tg, e => {
-            this.dmgEnemy(
-              e,
-              Math.round(
-                (aa.dmg + this.tal.aaDmg) * this.dmgMult(e) * far * (crit ? this.critMult : 1)
-              ),
-              crit ? 'crit' : 'aa'
-            );
-            if (crit && this.tal.critSlow) {
-              e.slowT = Math.max(e.slowT, this.tal.critSlow);
-              e.slowK = Math.max(e.slowK, 0.5);
-            }
-          });
+          this.loose(
+            tg,
+            e => {
+              this.dmgEnemy(
+                e,
+                Math.round(
+                  (aa.dmg + this.tal.aaDmg) * this.dmgMult(e) * far * (crit ? this.critMult : 1)
+                ),
+                crit ? 'crit' : 'aa'
+              );
+              if (crit && this.tal.critSlow) {
+                e.slowT = Math.max(e.slowT, this.tal.critSlow);
+                e.slowK = Math.max(e.slowK, 0.5);
+              }
+            },
+            undefined,
+            false,
+            'hitArrow'
+          );
+          this.sound('autoShot');
           // a plain auto-shot only holds you still for a moment
           this.aimT = Math.min(this.aimT, 0.2);
         }
@@ -2651,6 +2671,7 @@ export class Hero {
           this.aaT = AA_PERIOD / (1 + this.tal.aaSpeed) / (this.berserkT > 0 ? 1.5 : 1);
           this.face = tg.x < this.x ? -1 : 1;
           this.region.fx({ type: 'swing', x: this.x, y: this.y, face: this.face, dur: 0.18 });
+          this.sound('autoSwing');
           this.atkAnimT = ATK_ANIM;
           this.region.fx({ type: 'hit', x: tg.x, y: tg.y - 6, col: '#d3dcea', dur: 0.18 });
           const crit = this.game.rng.next() < this.tal.crit;
