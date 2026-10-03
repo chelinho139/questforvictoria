@@ -25,7 +25,7 @@ function describe(id: ItemId): string {
 /**
  * Buying and selling, docked on the left like crafting. Opened from a trader's dialog
  * ("Let me see what you have."): what they sell, at its price, then everything in your bag
- * they would buy, at a third of its price. Shift-click sells the whole stack. Walking away
+ * they would buy, at a twentieth of its price. Shift-click sells the whole stack. Walking away
  * or Esc closes it.
  */
 export class TradeWindow {
@@ -47,7 +47,7 @@ export class TradeWindow {
     root.hidden = true;
     root.innerHTML = `<header><span></span><button type="button" class="inv-x" title="Close (Esc)">×</button></header>
       <div class="craft-list"><section><h3><span>For sale</span></h3><div class="trade-buy"></div></section>
-      <section><h3><span>Sell from your bag</span><em>a third of the price</em></h3><div class="trade-sell"></div></section></div>
+      <section><h3><span>Sell from your bag</span><em>a twentieth of the price</em></h3><div class="trade-sell"></div></section></div>
       <footer><b class="trade-gold"></b> · Shift-click to sell a whole stack.</footer>`;
     document.body.append(root);
     this.title = root.querySelector('header span')!;

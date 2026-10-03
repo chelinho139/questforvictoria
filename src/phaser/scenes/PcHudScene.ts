@@ -58,6 +58,24 @@ interface SlotView {
   cd: Text;
 }
 
+/** A red count on a menu button: talent points to spend, journal pages not yet read. */
+type Badge = Graphics;
+
+/** 3×5 pixel digits for the badges (a font this small blurs a 3 into an 8). */
+const BADGE_GLYPHS: Record<string, string[]> = {
+  '0': ['111', '101', '101', '101', '111'],
+  '1': ['010', '110', '010', '010', '111'],
+  '2': ['111', '001', '111', '100', '111'],
+  '3': ['111', '001', '011', '001', '111'],
+  '4': ['101', '101', '111', '001', '001'],
+  '5': ['111', '100', '111', '001', '111'],
+  '6': ['111', '100', '111', '101', '111'],
+  '7': ['111', '001', '001', '010', '010'],
+  '8': ['111', '101', '111', '101', '111'],
+  '9': ['111', '101', '111', '001', '111'],
+  '+': ['000', '010', '111', '010', '000'],
+};
+
 interface UnitFrame {
   x: number;
   y: number;
@@ -138,6 +156,9 @@ export class PcHudScene extends Phaser.Scene {
   private viewHover = false;
   private menuOpen = false;
   private menuNames: Text[] = [];
+  /** One badge per menu button, and one on the touch menu button (everything waiting, added up). */
+  private badges: Badge[] = [];
+  private menuBadge!: Badge;
   /** Experience bar above the action bar. */
   private xpBg!: NineSlice;
   private xpHover = false;
@@ -217,7 +238,7 @@ export class PcHudScene extends Phaser.Scene {
       ['spellbook', 'spellbook', 'Spellbook', 'Every spell; drag them onto your bar.', PC_KEYS.spellbook.bind],
       ['talents', 'talents', 'Talents', 'Spend a point every level in three trees.', PC_KEYS.talents.bind],
       ['craft', 'crafting', 'Crafting', 'Build a campfire or forge; cook, smelt and smith.', PC_KEYS.crafting.bind],
-      ['quests', 'questLog', 'Quests', 'In progress, to pick up, and completed.', PC_KEYS.journal.bind],
+      ['quests', 'questLog', 'Quests', 'Quests in progress, to pick up and done, and your journal.', PC_KEYS.journal.bind],
       ['settings', 'dev', 'Settings', 'Graphics, time of day, advanced options.', PC_KEYS.settings.bind],
       ['help', 'controls', 'Controls', 'Every key in one place.', PC_KEYS.controls.bind],
     ];
@@ -231,6 +252,11 @@ export class PcHudScene extends Phaser.Scene {
     this.viewBtn = mkSlot('rev', PC_KEYS.view.bind);
     this.viewBtn.icon.setTexture(Tex.icon('view_' + this.viewMode()));
     this.menuNames = this.menu.map(m => this.text(0, 0, m.name, 12, '#fce6b4', { bold: true, stroke: true }).setOrigin(0, 0.5));
+    // badges sit over the buttons (and over the dropped-down list on a touch screen)
+    const badgeDepth = this.compact ? D.list + 4 : D.text;
+    const mkBadge = (): Badge => this.add.graphics().setDepth(badgeDepth);
+    this.badges = this.menu.map(mkBadge);
+    this.menuBadge = mkBadge();
     if (this.compact) {
       // the list drops over the unit frames: above them, under the tooltips
       this.menuBack.setDepth(D.list);
@@ -1082,13 +1108,49 @@ export class PcHudScene extends Phaser.Scene {
     b.ring.setVisible(this.viewHover || mode !== 'iso').setTint(hex(mode !== 'iso' ? Colors.gold : '#fce6b4'));
   }
 
+  /** What a menu button's badge counts: talent points to spend, journal pages not yet read. */
+  private waitingFor(win: string): number {
+    const s = this.sim;
+    if (win === 'talents') return s.talentPoints;
+    if (win === 'questLog') return s.journal.filter(id => !s.flags['read:' + id]).length;
+    return 0;
+  }
+
+  /** A red badge with a count at the top-right corner of a button of size M (hidden at 0). It hops now and then. */
+  private drawBadge(g: Badge, n: number, x: number, y: number, M: number): void {
+    g.clear();
+    g.setVisible(n > 0);
+    if (n <= 0) return;
+    const label = n > 9 ? '9+' : String(n);
+    const w = label.length * 4 - 1;
+    const r = label.length > 1 ? 6.5 : 5.5;
+    const ph = (this.time.now % 2400) / 2400;
+    const hop = ph < 0.12 ? Math.round(Math.sin((ph / 0.12) * Math.PI) * 3) : 0;
+    // the glyphs' top-left, and the disc centred on them
+    const gx = Math.round(x + M - 3 - w / 2);
+    const gy = Math.round(y - hop);
+    const cx = gx + w / 2;
+    const cy = gy + 2.5;
+    g.fillStyle(hex('#3b1f0e'), 1).fillCircle(cx, cy + 1, r + 1);
+    g.fillStyle(hex('#c8392f'), 1).fillCircle(cx, cy, r);
+    g.fillStyle(hex('#ffffff'), 1);
+    [...label].forEach((ch, i) =>
+      BADGE_GLYPHS[ch].forEach((row, ry) => {
+        for (let rx = 0; rx < 3; rx++) if (row[rx] === '1') g.fillRect(gx + i * 4 + rx, gy + ry, 1, 1);
+      })
+    );
+  }
+
   /** Menu buttons light up while their window is open (and on hover); Talents glows while points wait. */
   private drawBagBtn(): void {
     const pulse = 0.55 + 0.45 * Math.sin(this.time.now / 220);
+    const counts = this.menu.map(m => this.waitingFor(m.win));
+    this.menu.forEach((m, i) => this.drawBadge(this.badges[i], this.menuOpen ? counts[i] : 0, m.view.x, m.view.y, this.menuSize));
+    this.drawBadge(this.menuBadge, this.compact && !this.menuOpen ? counts.reduce((a, b) => a + b, 0) : 0, this.menuBtn.x, this.menuBtn.y, MENU_BTN);
     if (this.compact) {
       // the menu button stands in for the bar while the list is shut: lit while it is open,
       // glowing while talent points wait
-      const waiting = !this.menuOpen && this.sim.talentPoints > 0;
+      const waiting = !this.menuOpen && counts.some(n => n > 0);
       this.menuBtn.bg.setTexture(this.menuOpen ? UI.slotHot : UI.slot);
       this.menuBtn.ring
         .setVisible(this.menuOpen || waiting)
@@ -1099,7 +1161,7 @@ export class PcHudScene extends Phaser.Scene {
       if (!this.menuOpen) return;
       const open = (this.registry.get(m.win) as { isOpen: boolean } | undefined)?.isOpen ?? false;
       const hover = this.menuHover === i;
-      const waiting = m.win === 'talents' && !open && this.sim.talentPoints > 0;
+      const waiting = !open && counts[i] > 0;
       m.view.bg.setTexture(hover ? UI.slotHot : UI.slot);
       m.view.ring
         .setVisible(open || hover || waiting)
@@ -1156,7 +1218,9 @@ export class PcHudScene extends Phaser.Scene {
       const b = m.view;
       this.tipPanel.setVisible(true);
       this.tipName.setVisible(true).setText(`${m.name}  [${m.bind}]`);
-      this.tipDesc.setVisible(true).setText(m.desc).setColor(Ink.mid);
+      const n = this.waitingFor(m.win);
+      const news = !n ? '' : m.win === 'talents' ? `${n} talent point${n > 1 ? 's' : ''} to spend!` : `${n} new journal page${n > 1 ? 's' : ''} to read!`;
+      this.tipDesc.setVisible(true).setText(news ? `${m.desc}\n${news}` : m.desc).setColor(Ink.mid);
       const w = Math.ceil(Math.max(this.tipName.width, this.tipDesc.width)) + 22;
       const h = Math.ceil(this.tipName.height + this.tipDesc.height) + 18;
       const x = Math.round(Math.max(8, Math.min(this.W - w - 8, b.x + this.menuSize / 2 - w / 2)));

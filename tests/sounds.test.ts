@@ -135,7 +135,9 @@ test('the interface: a level, a talent, gold, loot, gear, food, a mistake', () =
   const heard = ears(h);
   h.gainXp(xpToNext(h.level));
   h.learnTalent(Object.keys(TALENTS).find(t => !h.talentProblem(t))!);
+  // a kill that pays (a slime carries a coin only half the time)
   const e = h.region.spawnEnemy('slime', h.x + 20, h.y, true);
+  e.def = { ...e.def, gold: [2, 2] };
   h.region.enemies.push(e);
   h.dmgEnemy(e, 9999, '');
   h.region.spawnDrop(h.x, h.y, 'log', h.id);
