@@ -180,6 +180,7 @@ export class Session {
       swing: r2(h.swing),
       mounted: h.mounted,
       mountT: r2(h.mountT),
+      work: h.work && { ...h.work, p: r2(h.work.p) },
       target: h.target?.id ?? 0,
       cds: Object.fromEntries(
         Object.entries(h.cds)

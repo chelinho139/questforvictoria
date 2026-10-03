@@ -7,7 +7,7 @@ import type { SpellKey } from '../src/data/spells';
 import type { SoundId } from '../src/sim/types';
 import { SOUNDS, renderSound } from '../src/phaser/audio/sounds';
 import { RATE, loudness, peak } from '../src/phaser/audio/synth';
-import { gameWith, skipScenes, run, standBy } from './helpers';
+import { gameWith, skipScenes, run, standBy, make } from './helpers';
 import type { Hero } from '../src/sim/Hero';
 import { GCD } from '../src/sim/Hero';
 import { TALENTS, xpToNext } from '../src/data/talents';
@@ -156,18 +156,19 @@ test('the interface: a level, a talent, gold, loot, gear, food, a mistake', () =
 });
 
 test('the interface: building, cooking, smithing', () => {
-  const { heroes } = gameWith('Ana');
+  const { game, heroes } = gameWith('Ana');
   const [h] = heroes;
+  h.region.enemies = [];
   const heard = ears(h);
   h.give('log', 20);
   h.give('stone', 8);
   h.give('iron_ore', 2);
   h.give('meat');
-  h.craft('campfire');
-  h.craft('cooked_meat');
-  h.craft('forge');
-  h.craft('iron_bar');
-  h.craft('iron_bar');
+  make(game, h, 'campfire');
+  make(game, h, 'cooked_meat');
+  make(game, h, 'forge');
+  make(game, h, 'iron_bar');
+  make(game, h, 'iron_bar');
   assert.deepEqual(heard, ['build', 'cook', 'build', 'smith', 'error']);
 });
 

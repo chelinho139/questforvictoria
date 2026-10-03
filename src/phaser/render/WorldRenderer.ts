@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { Sim } from '../../sim/Sim';
 import { RISE_DUR } from '../../sim/Sim';
-import type { Enemy, Drop, Structure, NpcState, ObjectState, WandererState } from '../../sim/types';
+import type { Enemy, Drop, Structure, NpcState, ObjectState, WandererState, Work } from '../../sim/types';
 import type { Hero } from '../../sim/Hero';
 import { NPCS } from '../../data/npcs';
 import { Tile, T, isoX, isoY } from '../../sim/map';
@@ -15,6 +15,9 @@ import { PROP_ART } from './propArt';
 import { darknessLevel } from '../../sim/daylight';
 
 const OVERLAY_DEPTH = 1e5;
+
+/** The progress bar over the hero, by what they are doing: wood, stone, the forge's glow. */
+const WORK_COL: Record<Work['kind'], string> = { chop: '#c8a070', mine: '#c4cad4', make: '#ffa040' };
 
 /** A building's ground box (world px), its depth, and the screen box its art covers. */
 interface PropBox {
@@ -699,9 +702,11 @@ export class WorldRenderer {
     const hidden = !tumbling && this.hiddenByProp(s.x, s.y);
     this.ghost.setVisible(hidden);
     if (hidden) this.ghost.setTexture(this.knight.texture.key, this.knight.frame.name).setPosition(this.knight.x, this.knight.y).setScale(this.knight.scaleX, this.knight.scaleY).setFlipX(flipX);
-    if (s.mountT > 0) {
+    // mounting, chopping, mining or making something: how far along
+    const work = s.mountT > 0 ? { p: 1 - s.mountT, col: '#a78bfa' } : s.work ? { p: s.work.p, col: WORK_COL[s.work.kind] } : null;
+    if (work) {
       g.fillStyle(hex('#0a0d14')).fillRect(qx - 16, y - 12, 32, 6);
-      g.fillStyle(hex('#a78bfa')).fillRect(qx - 15, y - 11, Math.round(30 * (1 - s.mountT)), 4);
+      g.fillStyle(hex(work.col)).fillRect(qx - 15, y - 11, Math.round(30 * Math.min(1, Math.max(0, work.p))), 4);
     }
     this.buffMark.setPosition(qx + 14, y - 4);
   }

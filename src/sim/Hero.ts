@@ -42,6 +42,7 @@ import type {
   QuestProgress,
   SoundId,
   UiSound,
+  Work,
 } from './types';
 import type { Game } from './Game';
 import type { Region } from './Region';
@@ -210,10 +211,15 @@ export class Hero {
 
   /** The tree being chopped (walking to it first if needed). */
   chopTree: TreeState | null = null;
-  private chopT = 0;
   /** The rock being mined (walking to it first if needed). */
   mineRock: RockState | null = null;
-  private mineT = 0;
+  /** Seconds until the next swing at a tree or rock lands, and how long that wait is. Starting again never hurries it. */
+  private gatherT = 0;
+  private gatherLen = 1;
+  /** What is being made: seconds left on this one, how many more after it, and where you stand to make it. */
+  private making: { r: Recipe; t: number; more: number; x: number; y: number } | null = null;
+  /** What you are busy with, for the progress bar (worked out each tick; online, from the server). */
+  work: Work | null = null;
   private eatCd = 0;
   /** Walking over to talk to this NPC, or to use this object. */
   private talkTarget: NpcId | null = null;
@@ -302,6 +308,8 @@ export class Hero {
       sel2: 'slash',
       chopTree: null,
       mineRock: null,
+      making: null,
+      work: null,
       talkTarget: null,
       useTarget: null,
       exiting: null,
@@ -1536,8 +1544,7 @@ export class Hero {
     this.target = null;
     this.chopTree = null;
     this.mineRock = null;
-    this.chopT = 0;
-    this.mineT = 0;
+    this.making = null;
     this.talkTarget = null;
     this.useTarget = null;
     this.exiting = null;
@@ -1755,8 +1762,8 @@ export class Hero {
     return null;
   }
 
-  /** Make a recipe: use up its ingredients, then hand over the item (or build the structure). */
-  craft(id: string): boolean {
+  /** Start making a recipe (`n` of them, one after another): `time` seconds each, standing where you are. */
+  craft(id: string, n = 1): boolean {
     const r = RECIPES.find(x => x.id === id);
     if (!r) return false;
     const why = this.craftProblem(r);
@@ -1765,12 +1772,50 @@ export class Hero {
       this.hear('error');
       return false;
     }
+    this.stopMoving();
+    this.chopTree = null;
+    this.mineRock = null;
+    this.making = { r, t: r.time, more: Math.max(0, Math.min(49, n - 1)), x: this.x, y: this.y };
+    this.updateWork();
+    return true;
+  }
+
+  /** Put down what you were making (nothing is used up). */
+  stopCraft(): void {
+    this.making = null;
+    this.updateWork();
+  }
+
+  /** Keep working: stepping away, mounting or running short stops you; each one done starts the next. */
+  private updateCraft(dt: number): void {
+    const m = this.making;
+    if (!m) return;
+    const why =
+      this.mounted || Math.hypot(this.x - m.x, this.y - m.y) > 12
+        ? 'You stop working.'
+        : this.craftProblem(m.r);
+    if (why) {
+      this.making = null;
+      this.log(why, 'h');
+      return;
+    }
+    m.t -= dt;
+    if (m.t > 0) return;
+    this.finishCraft(m.r);
+    if (m.more > 0 && this.craftProblem(m.r) === null) {
+      m.more--;
+      m.t = m.r.time;
+    } else this.making = null;
+  }
+
+  /** Done: use up the ingredients and hand over the item (or build the structure). */
+  private finishCraft(r: Recipe): void {
     for (const [item, n] of r.needs) this.removeItem(item, n);
     this.atkAnimT = ATK_ANIM;
     if ('build' in r.makes) {
       const spot = this.buildSpot(r.makes.build);
       if (spot) this.build(r.makes.build, spot.c, spot.r);
-      return true;
+      return;
     }
     const { item, n = 1 } = r.makes;
     this.give(item, n);
@@ -1781,7 +1826,7 @@ export class Hero {
     this.floater(this.x, this.y - 28, `+${n} ${name}`, 'name', ITEMS[item].col);
     const a = /^[aeiou]/i.test(name) ? 'an' : 'a';
     const what =
-      r.station === 'campfire'
+      ITEMS[item].heal
         ? `You cook the ${ITEMS[r.needs[0][0]].name.toLowerCase()}.`
         : `You ${item.endsWith('_bar') ? 'smelt' : r.station === 'forge' ? 'forge' : 'make'} ${a} ${name.toLowerCase()}.`;
     this.log(what, 'c');
@@ -1789,7 +1834,6 @@ export class Hero {
     this.hear(ITEMS[item].heal ? 'cook' : r.station === 'forge' ? 'smith' : 'build');
     this.game.questEvent('craft', r.id);
     this.gainXp(XP_FOR.craft);
-    return true;
   }
 
   /** A free tile next to the hero to build on, preferring the side they face. */
@@ -2118,6 +2162,7 @@ export class Hero {
     }
     if (this.mounted) this.dismount('You dismount to chop.');
     this.mineRock = null;
+    this.making = null;
     const d = Math.hypot(tree.x - this.x, tree.y - this.y);
     if (d > CHOP.reach) {
       // stand on the near side of the trunk
@@ -2125,7 +2170,12 @@ export class Hero {
       if (!this.moveTo(tree.x + (this.x - tree.x) * k, tree.y + (this.y - tree.y) * k)) return;
     }
     this.chopTree = tree;
-    this.chopT = 0.2;
+    this.windUp();
+  }
+
+  /** A moment to get the first swing in; clicking again never cuts a swing short. */
+  private windUp(): void {
+    if (this.gatherT < 0.2) this.gatherT = this.gatherLen = 0.2;
   }
 
   /** B: use the nearest object, else chop the closest standing tree or mine the closest rock within reach. */
@@ -2164,7 +2214,7 @@ export class Hero {
     else this.log('Nothing to gather within reach. Walk up to a tree or rock, or click it.', 'h');
   }
 
-  private updateChop(dt: number): void {
+  private updateChop(): void {
     const tr = this.chopTree;
     if (!tr) return;
     if (this.dead || tr.stumpT > 0 || this.mounted) {
@@ -2182,10 +2232,9 @@ export class Hero {
       this.chopTree = null;
       return;
     }
-    this.chopT -= dt;
-    if (this.chopT > 0) return;
+    if (this.gatherT > 0) return;
     // an axe speeds chopping up; bare-handed (or with a sword) every chop takes twice as long
-    this.chopT =
+    this.gatherT = this.gatherLen =
       (this.gear.chop > 0 ? CHOP.period / (1 + this.gear.chop) : CHOP.period * CHOP.noTool) /
       (1 + this.tal.gather);
     this.face = tr.x < this.x ? -1 : 1;
@@ -2224,11 +2273,12 @@ export class Hero {
       if (!this.moveTo(rock.x + (this.x - rock.x) * k, rock.y + (this.y - rock.y) * k)) return;
     }
     this.chopTree = null;
+    this.making = null;
     this.mineRock = rock;
-    this.mineT = 0.2;
+    this.windUp();
   }
 
-  private updateMine(dt: number): void {
+  private updateMine(): void {
     const rk = this.mineRock;
     if (!rk) return;
     if (this.dead || rk.brokenT > 0 || this.mounted) {
@@ -2245,10 +2295,9 @@ export class Hero {
       this.mineRock = null;
       return;
     }
-    this.mineT -= dt;
-    if (this.mineT > 0) return;
+    if (this.gatherT > 0) return;
     // a pickaxe speeds mining up; without one every swing takes three times as long
-    this.mineT =
+    this.gatherT = this.gatherLen =
       (this.gear.mine > 0 ? MINE.period / (1 + this.gear.mine) : MINE.period * MINE.noTool) /
       (1 + this.tal.gather);
     this.face = rk.x < this.x ? -1 : 1;
@@ -2282,6 +2331,18 @@ export class Hero {
           : 'The rock breaks apart.',
       'c'
     );
+  }
+
+  /** The progress bar: how much of the tree is down, the rock broken or the thing made (filling smoothly between swings). */
+  private updateWork(): void {
+    const swing = 1 - this.gatherT / this.gatherLen;
+    const m = this.making;
+    const tr = this.chopTree;
+    const rk = this.mineRock;
+    if (m) this.work = { kind: 'make', recipe: m.r.id, p: 1 - m.t / m.r.time };
+    else if (tr && !this.path) this.work = { kind: 'chop', p: (CHOP.hits - tr.hp + swing) / CHOP.hits };
+    else if (rk && !this.path) this.work = { kind: 'mine', p: (MINE.hits - rk.hp + swing) / MINE.hits };
+    else this.work = null;
   }
 
   // ---------- click to move ----------
@@ -2454,10 +2515,10 @@ export class Hero {
   /** A replica in its player's browser: walk, and arrive where it was going (sending what it meant to do). */
   tickReplica(dt: number): void {
     this.tickMove(dt);
-    this.updateChop(dt);
+    this.updateChop();
     this.updateTalk();
     this.updateUse();
-    this.updateMine(dt);
+    this.updateMine();
   }
 
   /**
@@ -2605,12 +2666,15 @@ export class Hero {
     }
 
     this.eatCd = Math.max(0, this.eatCd - dt);
-    this.updateChop(dt);
+    this.gatherT = Math.max(0, this.gatherT - dt);
+    this.updateChop();
     this.updateTalk();
     this.updateUse();
     this.updateQuestPlaces();
     this.updateExits(dt);
-    this.updateMine(dt);
+    this.updateMine();
+    this.updateCraft(dt);
+    this.updateWork();
 
     // bleed
     if (tg && tg.alive && this.bleedT > 0) {

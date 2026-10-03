@@ -126,12 +126,9 @@ export class CraftingWindow {
     btn.type = 'button';
     btn.textContent = verb(r);
     btn.addEventListener('click', e => {
-      // shift: keep going while the ingredients last (without a "needs more" line at the end)
-      let made = 0;
-      do {
-        if (!this.sim.craft(r.id)) break;
-        made++;
-      } while (e.shiftKey && made < 50 && this.sim.craftProblem(r) === null);
+      // while it's being made the button stops it; shift keeps going while the ingredients last
+      if (this.making(r)) this.sim.stopCraft();
+      else this.sim.craft(r.id, e.shiftKey ? 50 : 1);
       this.render();
       btn.blur();
     });
@@ -187,10 +184,23 @@ export class CraftingWindow {
         n.count.textContent = `${Math.min(have, 999)}/${n.n}`;
         n.el.classList.toggle('short', have < n.n);
       }
+      if (this.making(v.r)) {
+        v.btn.textContent = 'Stop';
+        v.btn.disabled = false;
+        v.btn.title = 'Stop making it (nothing is used up)';
+        continue;
+      }
       const why = s.craftProblem(v.r);
+      v.btn.textContent = verb(v.r);
       v.btn.disabled = why !== null;
-      v.btn.title = why ?? (v.r.station === 'hand' ? '' : 'Shift-click: as many as you can');
+      v.btn.title = why ?? `Takes ${v.r.time} s${v.r.station === 'hand' ? '' : '. Shift-click: as many as you can'}`;
     }
+  }
+
+  /** Whether this recipe is what the hero is making right now. */
+  private making(r: Recipe): boolean {
+    const w = this.sim.work;
+    return w?.kind === 'make' && w.recipe === r.id;
   }
 
   private showTip(anchor: HTMLElement, r: Recipe): void {

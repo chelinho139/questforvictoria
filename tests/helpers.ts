@@ -1,5 +1,6 @@
 import { Game } from '../src/sim/Game';
 import type { Hero } from '../src/sim/Hero';
+import { RECIPES } from '../src/data/crafting';
 
 /** A game with these heroes in it (in the Greenmarch), the opening scene clicked through. */
 export function gameWith(...names: string[]): { game: Game; heroes: Hero[] } {
@@ -31,6 +32,13 @@ export function standBy(h: Hero, npc: string): void {
 /** Run the game for this many seconds, in server-sized steps. */
 export function run(game: Game, seconds: number): void {
   for (let t = 0; t < seconds; t += 0.05) game.tick(0.05);
+}
+
+/** Make a recipe and wait until it's made (crafting takes time). False when it couldn't start. */
+export function make(game: Game, h: Hero, id: string): boolean {
+  if (!h.craft(id)) return false;
+  run(game, RECIPES.find(r => r.id === id)!.time + 0.1);
+  return true;
 }
 
 /** A localStorage for Node (the browser's single-player characters live there). */

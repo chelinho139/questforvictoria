@@ -92,7 +92,8 @@ export const COMMANDS: Record<string, Command> = {
   unequip: (h, [s]) => str(s) && (SLOTS as string[]).includes(s) && h.unequip(s as Slot),
   buy: (h, [npc, id]) => isNpc(npc) && isItem(id) && void h.buy(npc, id),
   sell: (h, [npc, i, all]) => isNpc(npc) && int(i, 0, 99) && void h.sell(npc, i, all === true),
-  craft: (h, [id]) => str(id) && void h.craft(id),
+  craft: (h, [id, n]) => str(id) && void h.craft(id, int(n, 1, 50) ? n : 1),
+  stopCraft: h => h.stopCraft(),
   // spells and talents
   setBarSlot: (h, [i, k]) => int(i, 0, 11) && (k === null || isSpell(k)) && h.setBarSlot(i, k),
   learnTalent: (h, [id]) => str(id) && has(TALENTS, id) && void h.learnTalent(id),

@@ -36,28 +36,30 @@ export interface Recipe {
   /** What it makes: an item (n of them), or a structure built in front of you. */
   makes: { item: ItemId; n?: number } | { build: StructureKind };
   needs: [ItemId, number][];
+  /** Seconds it takes to make (standing still; the ingredients go when it's done). */
+  time: number;
 }
 
 export const RECIPES: Recipe[] = [
   // by hand
-  { id: 'campfire', station: 'hand', makes: { build: 'campfire' }, needs: [['log', 3]] },
-  { id: 'forge', station: 'hand', makes: { build: 'forge' }, needs: [['stone', 8], ['log', 2]] },
+  { id: 'campfire', station: 'hand', makes: { build: 'campfire' }, needs: [['log', 3]], time: 3 },
+  { id: 'forge', station: 'hand', makes: { build: 'forge' }, needs: [['stone', 8], ['log', 2]], time: 6 },
   // cooking
-  { id: 'cooked_meat', station: 'campfire', makes: { item: 'cooked_meat' }, needs: [['meat', 1]] },
+  { id: 'cooked_meat', station: 'campfire', makes: { item: 'cooked_meat' }, needs: [['meat', 1]], time: 2 },
   // smelting
-  { id: 'iron_bar', station: 'forge', makes: { item: 'iron_bar' }, needs: [['iron_ore', 2], ['log', 1]] },
-  { id: 'gold_bar', station: 'forge', makes: { item: 'gold_bar' }, needs: [['gold_nugget', 2], ['log', 1]] },
+  { id: 'iron_bar', station: 'forge', makes: { item: 'iron_bar' }, needs: [['iron_ore', 2], ['log', 1]], time: 3 },
+  { id: 'gold_bar', station: 'forge', makes: { item: 'gold_bar' }, needs: [['gold_nugget', 2], ['log', 1]], time: 3 },
   // smithing: weapons and tools first, then armour
-  { id: 'iron_sword', station: 'forge', makes: { item: 'iron_sword' }, needs: [['iron_bar', 3], ['log', 1]] },
-  { id: 'woodcutter_axe', station: 'forge', makes: { item: 'woodcutter_axe' }, needs: [['iron_bar', 2], ['log', 2]] },
-  { id: 'pickaxe', station: 'forge', makes: { item: 'pickaxe' }, needs: [['iron_bar', 2], ['log', 2]] },
-  { id: 'wooden_shield', station: 'forge', makes: { item: 'wooden_shield' }, needs: [['log', 4], ['iron_bar', 1]] },
-  { id: 'iron_shield', station: 'forge', makes: { item: 'iron_shield' }, needs: [['iron_bar', 5]] },
+  { id: 'iron_sword', station: 'forge', makes: { item: 'iron_sword' }, needs: [['iron_bar', 3], ['log', 1]], time: 6 },
+  { id: 'woodcutter_axe', station: 'forge', makes: { item: 'woodcutter_axe' }, needs: [['iron_bar', 2], ['log', 2]], time: 5 },
+  { id: 'pickaxe', station: 'forge', makes: { item: 'pickaxe' }, needs: [['iron_bar', 2], ['log', 2]], time: 5 },
+  { id: 'wooden_shield', station: 'forge', makes: { item: 'wooden_shield' }, needs: [['log', 4], ['iron_bar', 1]], time: 4 },
+  { id: 'iron_shield', station: 'forge', makes: { item: 'iron_shield' }, needs: [['iron_bar', 5]], time: 6 },
   // the archer's: staves bent over a fire, quivers banded at the forge
-  { id: 'hunting_bow', station: 'campfire', makes: { item: 'hunting_bow' }, needs: [['log', 4]] },
-  { id: 'yew_longbow', station: 'campfire', makes: { item: 'yew_longbow' }, needs: [['log', 6], ['iron_bar', 2]] },
-  { id: 'leather_quiver', station: 'forge', makes: { item: 'leather_quiver' }, needs: [['log', 3], ['iron_bar', 1]] },
-  { id: 'hunters_quiver', station: 'forge', makes: { item: 'hunters_quiver' }, needs: [['iron_bar', 4], ['log', 1]] },
-  { id: 'iron_helm', station: 'forge', makes: { item: 'iron_helm' }, needs: [['iron_bar', 3]] },
-  { id: 'vigour_amulet', station: 'forge', makes: { item: 'vigour_amulet' }, needs: [['gold_bar', 2]] },
+  { id: 'hunting_bow', station: 'campfire', makes: { item: 'hunting_bow' }, needs: [['log', 4]], time: 4 },
+  { id: 'yew_longbow', station: 'campfire', makes: { item: 'yew_longbow' }, needs: [['log', 6], ['iron_bar', 2]], time: 6 },
+  { id: 'leather_quiver', station: 'forge', makes: { item: 'leather_quiver' }, needs: [['log', 3], ['iron_bar', 1]], time: 4 },
+  { id: 'hunters_quiver', station: 'forge', makes: { item: 'hunters_quiver' }, needs: [['iron_bar', 4], ['log', 1]], time: 5 },
+  { id: 'iron_helm', station: 'forge', makes: { item: 'iron_helm' }, needs: [['iron_bar', 3]], time: 5 },
+  { id: 'vigour_amulet', station: 'forge', makes: { item: 'vigour_amulet' }, needs: [['gold_bar', 2]], time: 6 },
 ];

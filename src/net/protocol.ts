@@ -28,6 +28,7 @@
 
 import type { ItemId, Slot } from '../data/items';
 import type { ClassId } from '../data/classes';
+import type { Work } from '../sim/types';
 
 /** Bump when a message changes shape: the server turns away a browser that speaks another. */
 export const PROTOCOL = 3;
@@ -170,6 +171,8 @@ export interface MeSnap {
   swing: number;
   mounted: boolean;
   mountT: number;
+  /** Chopping, mining or making something, and how far along (the progress bar). */
+  work: Work | null;
   target: number;
   cds: Record<string, number>;
   acd: Record<string, number>;

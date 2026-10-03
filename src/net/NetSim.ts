@@ -146,6 +146,7 @@ export class NetSim extends Sim {
       dodgeCd: me.dodgeCd,
       mounted: me.mounted,
       mountT: me.mountT,
+      work: me.work,
       exiting: me.exiting,
       rev: me.rev,
       revAuto: me.revAuto,
@@ -693,9 +694,14 @@ export class NetSim extends Sim {
     this.cmd('sell', [npc, slot, all]);
     return true;
   }
-  override craft(id: string): boolean {
-    this.cmd('craft', [id]);
+  override craft(id: string, n = 1): boolean {
+    // you stand still to work (the server stops you if you walk off)
+    this.hero.stopMoving();
+    this.cmd('craft', [id, n]);
     return true;
+  }
+  override stopCraft(): void {
+    this.cmd('stopCraft');
   }
   override learnTalent(id: string): boolean {
     const ok = !this.hero.talentProblem(id);

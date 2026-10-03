@@ -10,7 +10,7 @@ import type { SpellKey } from '../src/data/spells';
 import { SKILLS, ACTIONS, isSkill } from '../src/data/skills';
 import type { EnemyKind } from '../src/data/enemies';
 import type { Enemy } from '../src/sim/types';
-import { skipScenes, run } from './helpers';
+import { skipScenes, run, make } from './helpers';
 
 /** A hero of a class, alone in a quiet meadow (the region's creatures cleared away). */
 function hero(cls: 'warrior' | 'archer', level = 1): { game: Game; h: Hero } {
@@ -153,8 +153,8 @@ test('an archer can forge the iron sword Warden’s Steel asks for', () => {
   h.give('stone', 8);
   h.give('log', 3);
   h.give('iron_bar', 3);
-  assert.ok(h.craft('forge'), 'builds a forge');
-  assert.ok(h.craft('iron_sword'), 'forges a sword it cannot wield');
+  assert.ok(make(game, h, 'forge'), 'builds a forge');
+  assert.ok(make(game, h, 'iron_sword'), 'forges a sword it cannot wield');
   assert.equal(h.count('iron_sword'), 1);
   assert.equal(game.questStatus('warden_steel', h), 'ready');
 });

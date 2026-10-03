@@ -192,6 +192,15 @@ export interface Structure {
   t: number;
 }
 
+/** What a hero is busy with, for the progress bar over their head. */
+export interface Work {
+  kind: 'chop' | 'mine' | 'make';
+  /** How far along: the tree felled, the rock broken, the thing made (0–1). */
+  p: number;
+  /** The recipe being made. */
+  recipe?: string;
+}
+
 /** An object you can use in the world (data/regions RegionObject). */
 export interface ObjectState {
   id: string;

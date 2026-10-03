@@ -16,7 +16,7 @@ import { Game } from './Game';
 import { Hero } from './Hero';
 import type { KeyInfo } from './Hero';
 import type { Region } from './Region';
-import type { Enemy, Fx, Particle, ButtonId, SimEvents, Stack, Drop, TreeState, RockState, Structure, NpcState, QuestProgress, QuestStatus, ObjectState, PropState, Hazard, WandererState, LogClass, Trap } from './types';
+import type { Enemy, Fx, Particle, ButtonId, SimEvents, Stack, Drop, TreeState, RockState, Structure, NpcState, QuestProgress, QuestStatus, ObjectState, PropState, Hazard, WandererState, LogClass, Trap, Work } from './types';
 
 export { GCD, WIN, AA_RANGE, JUMP_DUR, JUMP_HEIGHT, FLIP_DUR, FLIP_HEIGHT, FLIP_CHANCE, ATK_ANIM, AA_PERIOD, TALK_REACH } from './Hero';
 export type { KeyInfo } from './Hero';
@@ -650,8 +650,15 @@ export class Sim {
   craftProblem(r: Recipe): string | null {
     return this.hero.craftProblem(r);
   }
-  craft(id: string): boolean {
-    return this.hero.craft(id);
+  craft(id: string, n = 1): boolean {
+    return this.hero.craft(id, n);
+  }
+  stopCraft(): void {
+    this.hero.stopCraft();
+  }
+  /** Chopping, mining or making something, and how far along. */
+  get work(): Work | null {
+    return this.hero.work;
   }
   gainXp(n: number): void {
     this.hero.gainXp(n);
