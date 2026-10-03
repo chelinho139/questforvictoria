@@ -37,6 +37,10 @@ import { LIGHT, MAX_LIGHTS, billboardMaterial, flatMaterial, groundMaterial, two
 import { loadVoxels, voxelGeometry } from './voxels';
 import type { VoxelSet } from './voxels';
 import { CanvasGfx } from './CanvasGfx';
+import { Rain3D } from './Rain3D';
+import type { Bolt3D } from './Rain3D';
+import { boltShows } from '../render/WeatherFx';
+import type { WeatherFx } from '../render/WeatherFx';
 import { SceneKeys } from '../SceneKeys';
 
 /** How the world is seen: the 2D isometric art, a turnable 3D diorama, or close behind the hero. */
@@ -103,6 +107,8 @@ export class View3D {
   readonly canvas: HTMLCanvasElement;
   private readonly renderer: WebGLRenderer;
   private readonly scene = new Scene();
+  /** Rain and lightning, from the same weather the 2D view shows. */
+  private readonly rain = new Rain3D(this.scene);
   private readonly ortho = new OrthographicCamera(-1, 1, 1, -1, 1, 6000);
   private readonly persp = new PerspectiveCamera(55, 1, 2, 5000);
   private cam: Camera = this.ortho;
@@ -169,7 +175,8 @@ export class View3D {
     private readonly phaser: Phaser.Scene,
     private readonly sim: Sim,
     private readonly lighting: Lighting,
-    private readonly effects: Effects
+    private readonly effects: Effects,
+    private readonly weather: WeatherFx
   ) {
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'view3d';
@@ -542,7 +549,9 @@ export class View3D {
     }
     if (shake) cam.position.addScaledVector(this.right, shake);
     cam.updateMatrixWorld();
-    LIGHT.uFog.value.set(this.dist + 260, this.dist + 1100);
+    // rain closes the distance in
+    const wet = 1 - 0.45 * this.weather.gloom;
+    LIGHT.uFog.value.set((this.dist + 260) * wet, (this.dist + 1100) * wet);
   }
 
   // ---------- projection (the HUD's picking and floaters) ----------
@@ -597,6 +606,7 @@ export class View3D {
     }
     this.placeCamera(dt);
     this.light();
+    this.drawWeather(dt);
     this.syncSprites(world);
     this.drawEffects();
     const wave = Math.floor(now / 450) % 2 === 1;
@@ -632,13 +642,14 @@ export class View3D {
       .slice(0, MAX_LIGHTS);
     near.forEach(({ l, g }, i) => {
       LIGHT.uL.value[i].set(g.x, g.y, l.radius, L.lightAlpha(l));
-      LIGHT.uLC.value[i].set(Math.min(l.r, amb.r / 255), Math.min(l.g, amb.g / 255), Math.min(l.b, amb.b / 255));
+      const res = L.residual(l, amb);
+      LIGHT.uLC.value[i].set(res.r / 255, res.g / 255, res.b / 255);
     });
     LIGHT.uNL.value = near.length;
     // the sky (PoV) and the void round an indoor region, darkened like everything else
     const k = on ? L.getStrength() : 0;
-    const dim = (hexCol: string) => {
-      const c = new Color(hexCol);
+    const dim = (col: string | Color) => {
+      const c = new Color(col);
       c.r = Math.max(0, c.r - (amb.r / 255) ** 2 * k);
       c.g = Math.max(0, c.g - (amb.g / 255) ** 2 * k);
       c.b = Math.max(0, c.b - (amb.b / 255) ** 2 * k);
@@ -653,8 +664,10 @@ export class View3D {
     // a pale haze at the horizon (where the fog meets it), deeper blue overhead; at night both
     // sink toward the 2D view's night navy
     const night = darknessLevel(this.sim.day.t) * k;
-    const top = dim('#5d8fc4').lerp(new Color('#070b16'), night * 0.85);
-    const low = dim('#b4cfe0').lerp(new Color('#0e1626'), night * 0.8);
+    // under rain clouds the blue goes grey
+    const wet = this.weather.gloom;
+    const top = dim(new Color('#5d8fc4').lerp(new Color('#7a838e'), wet)).lerp(new Color('#070b16'), night * 0.85);
+    const low = dim(new Color('#b4cfe0').lerp(new Color('#a3abb2'), wet)).lerp(new Color('#0e1626'), night * 0.8);
     LIGHT.uFogCol.value.copy(low);
     const key = top.getHexString() + low.getHexString();
     if (key !== this.skyKey) {
@@ -669,6 +682,52 @@ export class View3D {
       this.skyTex.needsUpdate = true;
     }
     this.scene.background = this.skyTex;
+  }
+
+  // ---------- the weather ----------
+  /** Rain round what the camera looks at, and the bolts of lightning seen this moment. */
+  private drawWeather(dt: number): void {
+    const w = this.sim.weather;
+    const indoor = !!this.sim.regionDef.indoor;
+    const ox = Math.cos(this.yaw);
+    const oy = Math.sin(this.yaw);
+    const { w: vw, h: vh } = this.view();
+    // the rain's colour, darkened like everything else
+    const amb = LIGHT.uAmb.value;
+    const st = LIGHT.uStrength.value;
+    const col = new Color(Math.max(0.1, 0.78 - amb.x * amb.x * st), Math.max(0.1, 0.85 - amb.y * amb.y * st), Math.max(0.12, 0.93 - amb.z * amb.z * st));
+    if (indoor || w.rain < 0.002) this.rain.clear();
+    else if (this.mode === 'diorama') {
+      // the view's ground, and the ground toward the camera whose drops are still falling into the view
+      const s = Math.SQRT2 * this.zoom;
+      const p = this.pitch.diorama;
+      const toward = (0.5 * 260) / Math.tan(p);
+      const reach = Math.min(1600, Math.max(vw, vh / Math.sin(p)) / s / 2 + toward + 40);
+      this.rain.update(dt, { cx: this.at.x + ox * toward, cz: this.at.z + oy * toward, reach, density: 4, rain: w.rain, storm: w.storm, wind: w.wind, right: this.right, col });
+    } else {
+      const c = this.persp.position;
+      this.rain.update(dt, { cx: c.x - ox * 260, cz: c.z - oy * 260, reach: 360, density: 10, rain: w.rain, storm: w.storm, wind: w.wind, right: this.right, col });
+    }
+    const bolts: Bolt3D[] = [];
+    if (!indoor)
+      for (const b of this.weather.bolts) {
+        if (!boltShows(b.t)) continue;
+        const seed = b.seed;
+        if (this.mode === 'diorama') {
+          // out of sight in the diorama, as in 2D
+          if (b.far) continue;
+          const g = this.toGround(vw * (0.12 + 0.76 * b.u), vh * (0.3 + 0.5 * b.v));
+          if (g) bolts.push({ x: g.x, z: g.y, height: 900, right: this.right, seed, px: 1 / (Math.SQRT2 * this.zoom) });
+          continue;
+        }
+        // point of view: close ones come down ahead, far ones on the horizon
+        const c = this.persp.position;
+        const d = b.far ? 1400 + 900 * b.v : 260 + 380 * b.v;
+        const side = (b.u - 0.5) * d * 1.1;
+        const px = (d * 2 * Math.tan((this.persp.fov * Math.PI) / 360)) / vh;
+        bolts.push({ x: c.x - ox * d + this.right.x * side, z: c.z - oy * d + this.right.z * side, height: b.far ? 1100 : 700, right: this.right, seed, px });
+      }
+    this.rain.setBolts(bolts);
   }
 
   // ---------- sprites ----------
@@ -988,6 +1047,7 @@ export class View3D {
     for (const g of this.geoms.values()) g.dispose();
     for (const t of this.textures.values()) t.tex.dispose();
     this.overlay?.destroy();
+    this.rain.destroy();
     this.renderer.dispose();
     this.canvas.remove();
   }

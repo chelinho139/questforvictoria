@@ -13,6 +13,8 @@ import { QUESTS } from '../data/quests';
 import { REGIONS } from '../data/regions';
 import type { Hero } from '../sim/Hero';
 import type { ButtonId } from '../sim/types';
+import { WEATHER_KINDS } from '../sim/weather';
+import type { WeatherKind } from '../sim/weather';
 
 /** Argument checks: a command with arguments of the wrong kind is ignored. */
 const int = (v: unknown, lo: number, hi: number): v is number =>
@@ -123,6 +125,9 @@ export const DEV_COMMANDS: Record<string, Command> = {
   },
   setDay: (h, [t]) => typeof t === 'number' && t >= 0 && t < 1 && h.game.day.set(t),
   daySpeed: (h, [v]) => typeof v === 'number' && v >= 0 && v <= 100 && h.game.day.setSpeed(v),
+  setWeather: (h, [k]) => {
+    if (k === null || (str(k) && (WEATHER_KINDS as string[]).includes(k))) h.game.weather.forced = k as WeatherKind | null;
+  },
   enterRegion: (h, [id, spot]) =>
     str(id) && has(REGIONS, id) && str(spot) && h.game.moveHero(h, id, spot),
   setFlag: (h, [name]) => str(name) && h.game.setFlag(name),

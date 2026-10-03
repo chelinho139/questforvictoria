@@ -16,6 +16,8 @@ import { T } from './map';
 import { Rng } from './rng';
 import { Emitter } from './Emitter';
 import { DayCycle } from './daylight';
+import { Weather } from './weather';
+import type { WeatherKind } from './weather';
 import { Hero } from './Hero';
 import { Region } from './Region';
 import type { RegionMemory } from './Region';
@@ -41,6 +43,8 @@ export class Game {
   readonly events = new Emitter<RoomEvents>();
   readonly rng = new Rng(99);
   readonly day = new DayCycle();
+  /** Rain and storms (the same for everyone in the room). */
+  readonly weather = new Weather();
   heroes: Hero[] = [];
   /** The regions somebody is in, by id (built on arrival, put away when the last hero leaves). */
   readonly regions = new Map<string, Region>();
@@ -347,8 +351,18 @@ export class Game {
   tick(rawDt: number): void {
     const dt = rawDt * this.timeScale;
     this.day.advance(dt);
+    const was = this.weather.kind;
+    this.weather.advance(dt);
+    if (this.weather.kind !== was) this.weatherChanged(was, this.weather.kind);
     for (const r of [...this.regions.values()]) if (this.regions.has(r.id)) r.tick(dt);
     this.watchQuests();
+  }
+
+  /** Tell everyone the weather has turned. */
+  private weatherChanged(was: WeatherKind, now: WeatherKind): void {
+    const text =
+      now === 'storm' ? 'Thunder rolls in: a storm.' : now === 'rain' ? (was === 'storm' ? 'The storm passes; the rain keeps on.' : 'It starts to rain.') : 'The rain stops.';
+    for (const h of this.heroes) h.log(text, 't');
   }
 
   // ---------- saving (single player: one hero and the campaign) ----------

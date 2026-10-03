@@ -14,6 +14,7 @@ import { devSkipIntro, devArtReview } from '../dev/DevMenu';
 import { lastLocalChar, createLocalChar, localCharInfos } from '../saveStore';
 import type { CharInfo } from '../../net/protocol';
 import { soundJobs } from '../audio/sounds';
+import { loopJobs } from '../audio/ambience';
 
 /** The loading screen stays up at least this long so the logo can be seen. */
 const MIN_SPLASH_MS = 1600;
@@ -45,7 +46,7 @@ export class BootScene extends Phaser.Scene {
     // reachable only with the dev switch on
     setSpriteStyle(devArtReview() ? readSpriteStyle() : 'hdsil');
     buildUiKit(this);
-    this.jobs = [...textureJobs(this), ...soundJobs()];
+    this.jobs = [...textureJobs(this), ...soundJobs(), ...loopJobs()];
     if (devSkipIntro()) {
       // straight in: the single-player character played last (or a first one)
       const ch = lastLocalChar() ?? this.firstLocalChar();

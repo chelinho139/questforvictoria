@@ -31,7 +31,7 @@ import type { ClassId } from '../data/classes';
 import type { Work } from '../sim/types';
 
 /** Bump when a message changes shape: the server turns away a browser that speaks another. */
-export const PROTOCOL = 3;
+export const PROTOCOL = 4;
 
 /** Players a room takes. */
 export const ROOM_MAX = 8;
@@ -140,6 +140,8 @@ export interface Tick {
   sy?: { flags: Record<string, number>; quests: Record<string, unknown>; journal: string[] };
   /** The day: [t, day number] (every second). */
   dy?: [number, number];
+  /** The weather (with the day): [clock, seed, rain, storm, wind, forced] (Weather.snapshot). */
+  wx?: [number, number, number, number, number, number];
   ev?: NetEvent[];
 }
 
