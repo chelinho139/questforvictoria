@@ -22,7 +22,7 @@ import type { TalentFx, TreeId } from '../data/talents';
 import { SPELLS, SPELL_ORDER, HOME_SLOT } from '../data/spells';
 import type { SpellKey } from '../data/spells';
 import { BAR_KEYS } from '../data/actionBar';
-import { ITEMS, BAG_SLOTS, CHOP, MINE, STARTER, SLOTS, NO_STATS, canWield } from '../data/items';
+import { ITEMS, BAG_SLOTS, CHOP, MINE, STARTER, SLOTS, NO_STATS, canWield, sellValue } from '../data/items';
 import type { ItemId, Slot, Stats } from '../data/items';
 import { Emitter } from './Emitter';
 import { findPath } from './pathfind';
@@ -1343,6 +1343,7 @@ export class Hero {
   /** This hero hits a creature: the region settles what happens to it; the hero's talents and rewards apply. */
   dmgEnemy(e: Enemy, v: number, cls: FloaterClass): void {
     if (!e.alive) return;
+    if (e.homeT > 0) return this.region.evade(e, cls);
     // weapons add to every direct hit (not to bleeding)
     if (cls !== 'dot') v += this.gear.atk;
     if (e.sunderT > 0) v = Math.round(v * 1.2);
@@ -1351,9 +1352,13 @@ export class Hero {
     if (!this.region.hurtEnemy(e, v, cls, this)) return;
     // the kill: gold, XP and the talents that feed on kills
     this.kills++;
-    this.gold += e.def.gold;
-    this.banner('+' + e.def.gold + ' GOLD');
-    if (e.def.gold) this.hear('coins');
+    const [lo, hi] = e.def.gold;
+    const coins = hi > lo ? lo + Math.floor(this.game.rng.next() * (hi - lo + 1)) : lo;
+    if (coins) {
+      this.gold += coins;
+      this.banner('+' + coins + ' GOLD');
+      this.hear('coins');
+    }
     this.log(e.n + ' defeated.', 'c');
     if (this.target === e) {
       this.target = null;
@@ -1681,10 +1686,9 @@ export class Hero {
   }
 
   // ---------- trade ----------
-  /** What a trader pays for one: a third of its price, at least 1 (0: nobody buys it). */
+  /** What a trader pays for one: a twentieth of its price (0: they won't take it). */
   sellValue(id: ItemId): number {
-    const p = ITEMS[id].price;
-    return p ? Math.max(1, Math.floor(p / 3)) : 0;
+    return sellValue(id);
   }
 
   /** Buy one of an item from a trader you are standing next to. */
@@ -1719,7 +1723,8 @@ export class Hero {
     if (!s || !NPCS[npc].shop || !this.nearNpc(npc) || this.dead) return false;
     const v = this.sellValue(s.id);
     if (!v) {
-      this.log(`Nobody would buy the ${ITEMS[s.id].name.toLowerCase()}. Better keep it.`, 'h');
+      const name = ITEMS[s.id].name.toLowerCase();
+      this.log(ITEMS[s.id].price ? `The ${name} isn't worth a coin to a trader.` : `Nobody would buy the ${name}. Better keep it.`, 'h');
       return false;
     }
     const n = all ? s.n : 1;

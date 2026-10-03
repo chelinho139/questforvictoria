@@ -87,7 +87,7 @@ export interface ItemDef {
   fine?: boolean;
   /** Colour of its pickup text. */
   col: string;
-  /** What traders charge for it (they pay about a third). Items without a price can't be sold. */
+  /** What traders charge for it (they pay a twentieth, SELL_CUT). Items without a price can't be sold. */
   price?: number;
   /** Drawn like this item (its icon and how it looks worn), for unique versions of common gear. */
   looks?: ItemId;
@@ -103,37 +103,37 @@ const GEAR_COL = '#e8dcc0';
 const FINE_COL = '#7ae0a0';
 
 export const ITEMS: Record<ItemId, ItemDef> = {
-  meat: { name: 'Raw meat', desc: 'Fresh from the meadow. Eat for 30 health, or cook it on a campfire.', stack: 20, heal: 30, col: '#f49088', price: 3 },
-  cooked_meat: { name: 'Cooked meat', desc: 'Grilled over a campfire, hot and juicy. Restores 80 health.', stack: 20, heal: 80, col: '#e8a060', price: 8 },
+  meat: { name: 'Raw meat', desc: 'Fresh from the meadow. Eat for 30 health, or cook it on a campfire.', stack: 20, heal: 30, col: '#f49088', price: 4 },
+  cooked_meat: { name: 'Cooked meat', desc: 'Grilled over a campfire, hot and juicy. Restores 80 health.', stack: 20, heal: 80, col: '#e8a060', price: 12 },
   log: {
     name: 'Wood log',
     desc: 'Lumber from a felled tree. Save it for building and fires.',
     stack: 50,
     col: '#d0a868',
-    price: 2,
+    price: 3,
   },
   stone: {
     name: 'Stone',
     desc: 'Rough stone from a mined rock. Save it for building.',
     stack: 50,
     col: '#c8ccd4',
-    price: 2,
+    price: 3,
   },
   iron_ore: {
     name: 'Iron ore',
     desc: 'Rock shot through with rusty veins. A smith could make something of it.',
     stack: 50,
     col: '#f0a070',
-    price: 6,
+    price: 12,
   },
-  iron_bar: { name: 'Iron bar', desc: 'Smelted iron, ready for the anvil.', stack: 50, col: '#c8d2e0', price: 15 },
-  gold_bar: { name: 'Gold bar', desc: 'A small, heavy bar of gold.', stack: 50, col: '#ffe07a', price: 60 },
+  iron_bar: { name: 'Iron bar', desc: 'Smelted iron, ready for the anvil.', stack: 50, col: '#c8d2e0', price: 40 },
+  gold_bar: { name: 'Gold bar', desc: 'A small, heavy bar of gold.', stack: 50, col: '#ffe07a', price: 150 },
   gold_nugget: {
     name: 'Gold nugget',
     desc: 'A rare glint from deep in the rock.',
     stack: 50,
     col: '#ffe07a',
-    price: 25,
+    price: 60,
   },
 
   rusty_sword: {
@@ -143,7 +143,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     slot: 'weapon',
     stats: { atk: 2 },
     col: GEAR_COL,
-    price: 4,
+    price: 12,
     cls: 'warrior',
   },
   iron_sword: {
@@ -154,7 +154,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     stats: { atk: 6 },
     fine: true,
     col: FINE_COL,
-    price: 60,
+    price: 190,
     cls: 'warrior',
   },
   woodcutter_axe: {
@@ -164,7 +164,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     slot: 'weapon',
     stats: { atk: 3, chop: 1 },
     col: GEAR_COL,
-    price: 18,
+    price: 55,
   },
   pickaxe: {
     name: 'Pickaxe',
@@ -173,7 +173,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     slot: 'weapon',
     stats: { atk: 2, mine: 1 },
     col: GEAR_COL,
-    price: 18,
+    price: 55,
   },
   wooden_shield: {
     name: 'Wooden shield',
@@ -182,7 +182,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     slot: 'offhand',
     stats: { armor: 3 },
     col: GEAR_COL,
-    price: 14,
+    price: 40,
     cls: 'warrior',
   },
   iron_shield: {
@@ -193,7 +193,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     stats: { armor: 7 },
     fine: true,
     col: FINE_COL,
-    price: 70,
+    price: 210,
     cls: 'warrior',
   },
   worn_shortbow: {
@@ -203,7 +203,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     slot: 'weapon',
     stats: { atk: 2 },
     col: GEAR_COL,
-    price: 4,
+    price: 12,
     cls: 'archer',
   },
   hunting_bow: {
@@ -213,7 +213,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     slot: 'weapon',
     stats: { atk: 3 },
     col: GEAR_COL,
-    price: 18,
+    price: 55,
     cls: 'archer',
   },
   yew_longbow: {
@@ -224,7 +224,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     stats: { atk: 6 },
     fine: true,
     col: FINE_COL,
-    price: 60,
+    price: 190,
     cls: 'archer',
   },
   leather_quiver: {
@@ -234,7 +234,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     slot: 'offhand',
     stats: { atk: 1 },
     col: GEAR_COL,
-    price: 14,
+    price: 40,
     cls: 'archer',
   },
   hunters_quiver: {
@@ -245,7 +245,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     stats: { atk: 1, hp: 15 },
     fine: true,
     col: FINE_COL,
-    price: 70,
+    price: 210,
     cls: 'archer',
   },
   leather_cap: {
@@ -255,7 +255,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     slot: 'head',
     stats: { armor: 1 },
     col: GEAR_COL,
-    price: 8,
+    price: 25,
   },
   iron_helm: {
     name: 'Iron helm',
@@ -265,7 +265,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     stats: { armor: 4 },
     fine: true,
     col: FINE_COL,
-    price: 45,
+    price: 140,
   },
   leather_tunic: {
     name: 'Leather tunic',
@@ -274,7 +274,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     slot: 'body',
     stats: { armor: 2, hp: 10 },
     col: GEAR_COL,
-    price: 14,
+    price: 45,
   },
   chainmail: {
     name: 'Chainmail',
@@ -284,7 +284,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     stats: { armor: 6, hp: 10 },
     fine: true,
     col: FINE_COL,
-    price: 80,
+    price: 250,
   },
   cloth_trousers: {
     name: 'Cloth trousers',
@@ -293,7 +293,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     slot: 'legs',
     stats: { armor: 1 },
     col: GEAR_COL,
-    price: 3,
+    price: 10,
   },
   leather_trousers: {
     name: 'Leather trousers',
@@ -302,7 +302,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     slot: 'legs',
     stats: { armor: 2 },
     col: GEAR_COL,
-    price: 12,
+    price: 35,
   },
   iron_greaves: {
     name: 'Iron greaves',
@@ -312,7 +312,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     stats: { armor: 4 },
     fine: true,
     col: FINE_COL,
-    price: 50,
+    price: 150,
   },
   leather_boots: {
     name: 'Leather boots',
@@ -321,7 +321,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     slot: 'feet',
     stats: { armor: 1, speed: 0.05 },
     col: GEAR_COL,
-    price: 10,
+    price: 30,
   },
   swift_boots: {
     name: 'Swift boots',
@@ -331,7 +331,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     stats: { speed: 0.15 },
     fine: true,
     col: FINE_COL,
-    price: 90,
+    price: 280,
   },
   vigour_amulet: {
     name: 'Amulet of vigour',
@@ -341,7 +341,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     stats: { hp: 25 },
     fine: true,
     col: FINE_COL,
-    price: 120,
+    price: 360,
   },
   // ---- Act I: Millbrook
   edric_helm: {
@@ -371,17 +371,17 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     desc: "A long yellow fang from one of the old King's hunting dogs.",
     stack: 50,
     col: '#e8dcc0',
-    price: 4,
+    price: 20,
   },
   black_thorn: {
     name: 'Black thorn',
     desc: 'A thorn as long as a finger, cold to the touch. Nothing that grows should be this cold.',
     stack: 50,
     col: '#9a8aa8',
-    price: 3,
+    price: 5,
   },
-  bread: { name: 'Bread', desc: 'A round loaf from Millbrook. Restores 50 health.', stack: 20, heal: 50, col: '#e8b878', price: 5 },
-  bandage: { name: 'Bandage', desc: 'Clean linen and a little salve. Restores 40 health.', stack: 20, heal: 40, col: '#f0ece0', price: 6 },
+  bread: { name: 'Bread', desc: 'A round loaf from Millbrook. Restores 50 health.', stack: 20, heal: 50, col: '#e8b878', price: 8 },
+  bandage: { name: 'Bandage', desc: 'Clean linen and a little salve. Restores 40 health.', stack: 20, heal: 40, col: '#f0ece0', price: 10 },
   warm_cloak: {
     name: 'Warm cloak',
     desc: "Thick grey wool with a hood. Maud's husband wore it to the mill on winter mornings.",
@@ -402,7 +402,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     looks: 'leather_trousers',
     col: FINE_COL,
     fine: true,
-    price: 35,
+    price: 110,
   },
   sexton_lantern: {
     name: "Sexton's lantern",
@@ -417,6 +417,14 @@ export const ITEMS: Record<ItemId, ItemDef> = {
 };
 
 export const BAG_SLOTS = 24;
+
+/** Traders pay a twentieth of an item's price (a 190-gold sword fetches 9). */
+export const SELL_CUT = 20;
+
+/** What a trader pays for one (0: not worth a coin to them, or not for sale at all). */
+export function sellValue(id: ItemId): number {
+  return Math.floor((ITEMS[id].price ?? 0) / SELL_CUT);
+}
 
 export const ITEM_IDS = Object.keys(ITEMS) as ItemId[];
 

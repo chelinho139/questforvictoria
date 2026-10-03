@@ -1,6 +1,7 @@
 import { KINDS, RESPAWN } from '../data/enemies';
 import type { EnemyKind, CreatureSounds } from '../data/enemies';
 import { T, Tile, rockCentre, RegionMap, parseLayout, isoX, isoSpeedFactor } from './map';
+import { findPath } from './pathfind';
 import { propSolidTiles } from '../data/props';
 import { REGIONS } from '../data/regions';
 import type { RegionDef } from '../data/regions';
@@ -38,6 +39,13 @@ import type { Hero } from './Hero';
 export const RISE_DUR = 0.9;
 /** Seconds, on average, between a wandering creature's idle calls. */
 const IDLE_CALL = 18;
+/** A creature dragged this far from its post gives up the chase and walks back. */
+const LEASH = 380;
+/** One that loses its foe (dead, gone, hidden) this far from its post walks back too. */
+const STRAY = 150;
+/** The walk home: how much faster than a stroll, and how long before it is simply there. */
+const HOME_SPEED = 1.4;
+const HOME_MAX = 8;
 
 interface Movable {
   x: number;
@@ -273,6 +281,7 @@ export class Region {
       markBy: '',
       markK: 0,
       angerT: 0,
+      homeT: 0,
     };
     // night creatures placed during the day wait underground (staggered so they don't all rise at once)
     if (k.nightOnly && !temp && !this.isNight) {
@@ -581,7 +590,7 @@ export class Region {
         r: start,
         speed: 120,
         max,
-        dmg: 16,
+        dmg: 22,
         hit: false,
         what: 'the toll of the bell',
       });
@@ -708,6 +717,10 @@ export class Region {
   /** A hero hits a creature: damage, phases, death and loot. Returns true when it died of it. */
   hurtEnemy(e: Enemy, v: number, cls: FloaterClass, by: Hero): boolean {
     if (!e.alive) return false;
+    if (e.homeT > 0) {
+      this.evade(e, cls);
+      return false;
+    }
     e.hp = Math.max(0, e.hp - v);
     const boss = e.def.boss;
     if (boss?.phases && e.hp > 0) {
@@ -817,6 +830,58 @@ export class Region {
         h.seqI = 0;
       }
     this.burst(e.x, e.y - 8, 16, '#e8e4d8', 60, 0.8, 2, 80);
+  }
+
+  /** A blow (or a bleed) on a creature walking home doesn't land. */
+  evade(e: Enemy, cls: FloaterClass): void {
+    if (cls !== 'dot') this.floater(e.x, e.y - 14 * e.def.scale, 'EVADE', 'name', '#f4f1e6');
+  }
+
+  /** Give up the fight and head back to the post: untouchable, healing on the way. */
+  private sendHome(e: Enemy): void {
+    e.aggro = false;
+    e.foe = undefined;
+    e.tele = false;
+    e.castT = -1;
+    e.angerT = 0;
+    e.homeT = HOME_MAX;
+    const s = e.def.scale;
+    e.homePath = findPath(this.map, e, { x: e.sx, y: e.sy }, 6 * s, 5 * s) ?? [{ x: e.sx, y: e.sy }];
+  }
+
+  /** The walk home. Once there (or once it has taken too long) it is whole and fresh again. */
+  private goHome(e: Enemy, dt: number): void {
+    const k = e.def;
+    e.homeT -= dt;
+    e.hp = Math.min(e.hpMax, e.hp + (e.hpMax * dt) / 2);
+    const path = (e.homePath ??= [{ x: e.sx, y: e.sy }]);
+    let budget = dt;
+    while (budget > 0 && path.length) {
+      const w = path[0];
+      const dx = w.x - e.x;
+      const dy = w.y - e.y;
+      const d = Math.hypot(dx, dy);
+      const v = k.spd * HOME_SPEED * isoSpeedFactor(dx / (d || 1), dy / (d || 1)) * budget;
+      if (v < d) {
+        this.moveEntity(e, dx / d, dy / d, k.spd * HOME_SPEED, budget, 6 * k.scale, 5 * k.scale);
+        break;
+      }
+      // reach the bend, then spend what's left on the next leg
+      e.x = w.x;
+      e.y = w.y;
+      budget *= 1 - d / v;
+      path.shift();
+    }
+    if (path.length && e.homeT > 0) return;
+    if (path.length) {
+      // stuck on the way: it is simply back
+      this.burst(e.x, e.y - 8, 8, '#b8956a', 50, 0.5, 2, -20);
+      e.x = e.sx;
+      e.y = e.sy;
+    }
+    Object.assign(e, { homeT: 0, homePath: undefined, hp: e.hpMax, atkT: k.per, castCd: 3, wanderT: 1.5, walk: 0 });
+    Object.assign(e, { stunT: 0, rootT: 0, slowT: 0, sunderT: 0, markT: 0 });
+    if (k.boss) Object.assign(e, { phase: 0, tollT: undefined, tollN: 0 });
   }
 
   /** Amble around home, idling about half the time. */
@@ -930,6 +995,15 @@ export class Region {
       e.walk = 0;
       return;
     }
+    if (e.homeT > 0) {
+      this.goHome(e, dt);
+      return;
+    }
+    // out of the fight and far from home (its foe died, left or hid): back to the post
+    if (!e.aggro && k.behavior !== 'passive' && Math.hypot(e.x - e.sx, e.y - e.sy) > STRAY) {
+      this.sendHome(e);
+      return;
+    }
     const d = foe ? Math.hypot(foe.x - e.x, foe.y - e.y) : Infinity;
     const hw = 6 * k.scale;
     const hh = 5 * k.scale;
@@ -974,11 +1048,9 @@ export class Region {
     }
     if (e.kind === 'bellringer' && this.bellRinger(e, dt)) return;
     if (e.aggro && foe) {
-      if (Math.hypot(e.x - e.sx, e.y - e.sy) > 380) {
-        e.aggro = false;
-        e.foe = undefined;
-        e.hp = e.hpMax;
-        foe.log(e.n + ' returns to its post.');
+      if (Math.hypot(e.x - e.sx, e.y - e.sy) > LEASH) {
+        this.sendHome(e);
+        foe.log(e.n + ' gives up and returns to its post.');
         return;
       }
       // neutral creatures give up once you're out of reach (unless you just hit them)

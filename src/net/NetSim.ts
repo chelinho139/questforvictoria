@@ -310,6 +310,7 @@ export class NetSim extends Sim {
           markBy: '',
           markK: 0,
           angerT: 0,
+          homeT: 0,
         };
       }
       this.glide(e, x, y);
