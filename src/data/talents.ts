@@ -18,7 +18,7 @@ export const HP_PER_LEVEL = 5;
 
 /** Experience needed to go from `level` to the next (quick at first, slower later). */
 export function xpToNext(level: number): number {
-  return Math.round((60 * Math.pow(1.25, level - 1)) / 5) * 5;
+  return Math.round((100 * Math.pow(1.25, level - 1)) / 5) * 5;
 }
 
 /** Experience for things that are not kills or quests (kept small: the story and the fights carry levelling). */
@@ -217,6 +217,8 @@ export interface TalentDef {
   requires?: string;
   /** A new ability this talent teaches (see data/spells.ts). */
   grants?: SpellKey & ActionKey;
+  /** The spell this talent improves: no points in it until you know the spell. */
+  spell?: SpellKey;
   /** What `r` ranks do (r ≥ 1). */
   desc: (r: number) => string;
   /** What each rank adds. */
@@ -270,7 +272,8 @@ export const TALENTS: Record<string, TalentDef> = {
     1,
     3,
     r => `Thrust deals ${2 * r} more damage.`,
-    { thrust: 2 }
+    { thrust: 2 },
+    { spell: 'thrust' }
   ),
   lingering_rend: T(
     'blade',
@@ -280,7 +283,8 @@ export const TALENTS: Record<string, TalentDef> = {
     2,
     3,
     r => `Rend's bleed deals ${r} more damage every second.`,
-    { rendTick: 1 }
+    { rendTick: 1 },
+    { spell: 'rend' }
   ),
   keen_eye: T(
     'blade',
@@ -300,7 +304,8 @@ export const TALENTS: Record<string, TalentDef> = {
     1,
     2,
     r => `Slash right after Thrust deals ×${(1.5 + 0.25 * r).toFixed(2)} damage instead of ×1.5.`,
-    { slashCombo: 0.25 }
+    { slashCombo: 0.25 },
+    { spell: 'slash' }
   ),
   bloodletting: T(
     'blade',
@@ -311,7 +316,7 @@ export const TALENTS: Record<string, TalentDef> = {
     2,
     r => `Rend bleeds for ${3 * r} s longer.`,
     { rendDur: 3 },
-    { requires: 'lingering_rend' }
+    { spell: 'rend', requires: 'lingering_rend' }
   ),
   brutal_strikes: T(
     'blade',
@@ -344,7 +349,8 @@ export const TALENTS: Record<string, TalentDef> = {
     2,
     3,
     r => `Mortal Strike deals ${4 * r} more damage and is ready ${4 * r} s sooner.`,
-    { mortalDmg: 4, mortalCd: 4 }
+    { mortalDmg: 4, mortalCd: 4 },
+    { spell: 'mortal' }
   ),
   wardens_edge: T(
     'blade',
@@ -365,7 +371,8 @@ export const TALENTS: Record<string, TalentDef> = {
     1,
     2,
     r => `Execute works on foes below ${25 + 5 * r}% health and hits ${10 * r}% harder.`,
-    { execThreshold: 0.05, execDmg: 0.1 }
+    { execThreshold: 0.05, execDmg: 0.1 },
+    { spell: 'execute' }
   ),
   reaping_blows: T(
     'blade',
@@ -409,7 +416,8 @@ export const TALENTS: Record<string, TalentDef> = {
     1,
     2,
     r => `War Cry lasts ${5 * r} s longer.`,
-    { warcryDur: 5 }
+    { warcryDur: 5 },
+    { spell: 'warcry' }
   ),
   momentum: T(
     'fury',
@@ -419,7 +427,8 @@ export const TALENTS: Record<string, TalentDef> = {
     2,
     3,
     r => `Charge is ready ${3 * r} s sooner.`,
-    { chargeCd: 3 }
+    { chargeCd: 3 },
+    { spell: 'charge' }
   ),
   flurry: T(
     'fury',
@@ -441,7 +450,7 @@ export const TALENTS: Record<string, TalentDef> = {
     3,
     r => `War Cry raises your damage by ${20 + 5 * r}% instead of 20%.`,
     { warcryBonus: 0.05 },
-    { requires: 'booming_voice' }
+    { spell: 'warcry', requires: 'booming_voice' }
   ),
   stunning_charge: T(
     'fury',
@@ -452,7 +461,7 @@ export const TALENTS: Record<string, TalentDef> = {
     2,
     r => `Charge stuns for ${(0.5 * r).toFixed(1)} s longer.`,
     { chargeStun: 0.5 },
-    { requires: 'momentum' }
+    { spell: 'charge', requires: 'momentum' }
   ),
   bloodthirst: T(
     'fury',
@@ -483,7 +492,8 @@ export const TALENTS: Record<string, TalentDef> = {
     2,
     3,
     r => `Whirlwind deals ${2 * r} more damage and reaches ${10 * r} further.`,
-    { whirlDmg: 2, whirlReach: 10 }
+    { whirlDmg: 2, whirlReach: 10 },
+    { spell: 'whirlwind' }
   ),
   enrage: T(
     'fury',
@@ -504,7 +514,8 @@ export const TALENTS: Record<string, TalentDef> = {
     1,
     1,
     () => 'Every kill fires up War Cry for 6 s, or adds 6 s to it.',
-    { rampage: 6 }
+    { rampage: 6 },
+    { spell: 'warcry' }
   ),
   cyclone: T(
     'fury',
@@ -515,7 +526,7 @@ export const TALENTS: Record<string, TalentDef> = {
     1,
     () => 'Whirlwind is ready 6 s sooner.',
     { whirlCd: 6 },
-    { requires: 'improved_whirlwind' }
+    { spell: 'whirlwind', requires: 'improved_whirlwind' }
   ),
   berserk: T(
     'fury',
@@ -630,7 +641,8 @@ export const TALENTS: Record<string, TalentDef> = {
     1,
     2,
     r => `Interrupt is ready ${4 * r} s sooner and stuns ${(0.5 * r).toFixed(1)} s longer.`,
-    { intCd: 4, intStun: 0.5 }
+    { intCd: 4, intStun: 0.5 },
+    { spell: 'interrupt' }
   ),
   swift_feet: T(
     'warden',
@@ -682,7 +694,8 @@ Object.assign(TALENTS, {
     1,
     3,
     r => `Quick Shot deals ${2 * r} more damage.`,
-    { quickDmg: 2 }
+    { quickDmg: 2 },
+    { spell: 'quickshot' }
   ),
   long_shot: T(
     'marksman',
@@ -713,7 +726,8 @@ Object.assign(TALENTS, {
     2,
     r =>
       `Aimed Shot right after Quick Shot deals ×${(1.5 + 0.2 * r).toFixed(1)} damage instead of ×1.5.`,
-    { aimedCombo: 0.2 }
+    { aimedCombo: 0.2 },
+    { spell: 'aimedshot' }
   ),
   far_sight: T(
     'marksman',
@@ -757,7 +771,8 @@ Object.assign(TALENTS, {
     2,
     3,
     r => `Piercing Shot deals ${4 * r} more damage and is ready ${4 * r} s sooner.`,
-    { pierceDmg: 4, pierceCd: 4 }
+    { pierceDmg: 4, pierceCd: 4 },
+    { spell: 'pierce' }
   ),
   pinning_crits: T(
     'marksman',
@@ -778,7 +793,8 @@ Object.assign(TALENTS, {
     1,
     2,
     r => `Kill Shot works below ${25 + 5 * r}% health and hits ${pct(0.1 * r)} harder.`,
-    { execThreshold: 0.05, execDmg: 0.1 }
+    { execThreshold: 0.05, execDmg: 0.1 },
+    { spell: 'killshot' }
   ),
   scavenger: T(
     'marksman',
@@ -822,7 +838,8 @@ Object.assign(TALENTS, {
     1,
     2,
     r => `Hunter's Mark lasts ${5 * r} s longer.`,
-    { markDur: 5 }
+    { markDur: 5 },
+    { spell: 'mark' }
   ),
   snaring: T(
     'hunter',
@@ -832,7 +849,8 @@ Object.assign(TALENTS, {
     2,
     3,
     r => `Concussive Shot is ready ${3 * r} s sooner.`,
-    { concCd: 3 }
+    { concCd: 3 },
+    { spell: 'concussive' }
   ),
   swift_hands: T(
     'hunter',
@@ -854,7 +872,7 @@ Object.assign(TALENTS, {
     3,
     r => `Your Mark makes your prey take ${pct(0.2 + 0.05 * r)} more damage instead of 20%.`,
     { markBonus: 0.05 },
-    { requires: 'tracker' }
+    { spell: 'mark', requires: 'tracker' }
   ),
   crippling: T(
     'hunter',
@@ -865,7 +883,7 @@ Object.assign(TALENTS, {
     2,
     r => `Concussive Shot slows by ${pct(0.5 + 0.15 * r)} instead of half.`,
     { concSlow: 0.15 },
-    { requires: 'snaring' }
+    { spell: 'concussive', requires: 'snaring' }
   ),
   serrated_heads: T(
     'hunter',
@@ -875,7 +893,8 @@ Object.assign(TALENTS, {
     2,
     3,
     r => `Barbed Arrow's bleed deals ${r} more damage every second.`,
-    { rendTick: 1 }
+    { rendTick: 1 },
+    { spell: 'barbed' }
   ),
   bear_trap: T(
     'hunter',
@@ -908,7 +927,7 @@ Object.assign(TALENTS, {
     2,
     r => `Barbed Arrow bleeds ${3 * r} s longer.`,
     { rendDur: 3 },
-    { requires: 'serrated_heads' }
+    { spell: 'barbed', requires: 'serrated_heads' }
   ),
   trap_mastery: T(
     'hunter',
@@ -919,7 +938,7 @@ Object.assign(TALENTS, {
     1,
     () => 'Bear Trap is ready 8 s sooner and holds its catch 1 s longer.',
     { trapCd: 8, trapHold: 1 },
-    { requires: 'bear_trap' }
+    { spell: 'beartrap', requires: 'bear_trap' }
   ),
   pack_hunter: T(
     'hunter',
@@ -931,7 +950,7 @@ Object.assign(TALENTS, {
     () =>
       'When your marked prey dies, the Mark jumps to the nearest enemy with the time it had left.',
     { markJump: 1 },
-    { requires: 'hunters_feast' }
+    { spell: 'mark', requires: 'hunters_feast' }
   ),
   predator: T(
     'hunter',
@@ -978,7 +997,8 @@ Object.assign(TALENTS, {
     0,
     3,
     r => `Volley deals ${2 * r} more damage and covers ${10 * r} wider.`,
-    { volleyDmg: 2, volleyReach: 10 }
+    { volleyDmg: 2, volleyReach: 10 },
+    { spell: 'volley' }
   ),
   living_off_the_land: T(
     'ranger',
@@ -1043,7 +1063,7 @@ Object.assign(TALENTS, {
     1,
     () => 'Volley is ready 6 s sooner.',
     { volleyCd: 6 },
-    { requires: 'volley_master' }
+    { spell: 'volley', requires: 'volley_master' }
   ),
   watchful_eye: T(
     'ranger',
@@ -1053,7 +1073,8 @@ Object.assign(TALENTS, {
     1,
     2,
     r => `Silencing Shot is ready ${4 * r} s sooner and stuns ${(0.5 * r).toFixed(1)} s longer.`,
-    { intCd: 4, intStun: 0.5 }
+    { intCd: 4, intStun: 0.5 },
+    { spell: 'silence' }
   ),
   fleet_foot: T(
     'ranger',

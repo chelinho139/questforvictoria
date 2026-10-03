@@ -79,9 +79,8 @@ export class CraftingWindow {
       h.innerHTML = `<span>${STATION_NAMES[st]}</span><em></em>`;
       sec.append(h);
       this.stationState.set(st, h.querySelector('em')!);
-      // only what your class can use (swords and shields for warriors, bows and quivers for archers)
-      const mine = (r: (typeof RECIPES)[number]) => !('item' in r.makes) || canWield(r.makes.item, this.sim.cls);
-      for (const r of RECIPES.filter(x => x.station === st && mine(x))) sec.append(this.row(r));
+      // every recipe, your class's or not: a quest may ask for a sword, or a friend may want one
+      for (const r of RECIPES.filter(x => x.station === st)) sec.append(this.row(r));
       list.append(sec);
     }
     this.tip = document.createElement('div');
@@ -201,7 +200,8 @@ export class CraftingWindow {
     } else {
       const d = ITEMS[r.makes.item];
       const lines = statLines(d.stats).map(l => `<li>${l}</li>`).join('');
-      this.tip.innerHTML = `<b class="${d.fine ? 'fine' : ''}">${d.name}</b>${lines ? `<ul>${lines}</ul>` : ''}<p>${d.desc}</p>`;
+      const other = canWield(r.makes.item, this.sim.cls) ? '' : `<em>For ${d.cls === 'archer' ? 'archers' : 'warriors'}</em>`;
+      this.tip.innerHTML = `<b class="${d.fine ? 'fine' : ''}">${d.name}</b>${lines ? `<ul>${lines}</ul>` : ''}<p>${d.desc}</p>${other}`;
     }
     this.tip.hidden = false;
     const a = anchor.getBoundingClientRect();

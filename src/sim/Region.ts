@@ -1,4 +1,4 @@
-import { KINDS } from '../data/enemies';
+import { KINDS, RESPAWN } from '../data/enemies';
 import type { EnemyKind } from '../data/enemies';
 import { T, Tile, rockCentre, RegionMap, parseLayout, isoX, isoSpeedFactor } from './map';
 import { propSolidTiles } from '../data/props';
@@ -725,7 +725,7 @@ export class Region {
     if (e.hp > 0) return false;
     e.alive = false;
     e.dieT = 1;
-    e.respawnT = 8;
+    e.respawnT = RESPAWN * (1 + this.game.rng.next() / 2);
     e.castT = -1;
     e.foe = undefined;
     for (const h of this.heroes()) if (h.target === e) h.target = null;
@@ -931,7 +931,7 @@ export class Region {
         this.after(0.35, () => {
           this.burst(tx, ty - 8, 12, '#a78bfa', 100, 0.4, 3, 60);
           this.fx({ type: 'ring', x: tx, y: ty - 8, r0: 6, r1: 34, col: '#a78bfa', dur: 0.3 });
-          if (!far && foe.regionId === this.id) foe.hurt(k.n === 'Ogre' ? 14 : 10, 'the fireball');
+          if (!far && foe.regionId === this.id) foe.hurt(k.castDmg ?? 10, 'the fireball');
           else foe.log('The fireball misses.', 't');
         });
         e.castCd = 7;

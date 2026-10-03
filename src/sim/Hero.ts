@@ -1803,7 +1803,7 @@ export class Hero {
     if (!up) return;
     for (const k of SPELL_ORDER) {
       const s = SPELLS[k];
-      if (!s.level || s.level <= before || s.level > this.level) continue;
+      if (!s.level || s.level <= before || s.level > this.level || !this.knows(k)) continue;
       const slot = this.placeSpell(k);
       const name = isSkill(k) ? SKILLS[k].n : ACTIONS[k].n;
       this.log(
@@ -1854,6 +1854,12 @@ export class Hero {
     if (t.requires && (this.talents[t.requires] ?? 0) < TALENTS[t.requires].ranks) {
       const req = TALENTS[t.requires];
       return `Requires ${req.ranks}/${req.ranks} in ${req.name}.`;
+    }
+    // no sharpening a spell you haven't learned yet
+    if (t.spell && !this.knows(t.spell)) {
+      const k = t.spell;
+      const name = isSkill(k) ? SKILLS[k].n : ACTIONS[k].n;
+      return SPELLS[k].level ? `Requires ${name}, learned at level ${SPELLS[k].level}.` : `Requires ${name}.`;
     }
     if (this.talentPoints <= 0) return 'No talent points left. Gain a level to earn one.';
     return null;
@@ -1939,6 +1945,15 @@ export class Hero {
     }
     this.game.questEvent('talk', id);
     return first;
+  }
+
+  /** You heard someone out on one of their topics: it counts as asked, and its effect plays. */
+  asked(id: NpcId, i: number): void {
+    const t = NPCS[id].topics?.[i];
+    const flag = `asked:${id}:${i}`;
+    if (!t || !this.game.check(t.when, this) || (t.once && this.game.flags[flag])) return;
+    this.game.setFlag(flag);
+    this.game.applyEffect(t.then, this);
   }
 
   /** Reach goals: being close enough to the place counts. */

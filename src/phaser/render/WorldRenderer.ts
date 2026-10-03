@@ -6,8 +6,9 @@ import type { Hero } from '../../sim/Hero';
 import { NPCS } from '../../data/npcs';
 import { Tile, T, isoX, isoY } from '../../sim/map';
 import { Fonts, hex, PIXEL_SCALE } from '../config';
-import { Tex, WALL_H, TOWER_TOP, heroLookTexture } from './textures';
+import { Tex, WALL_H, TOWER_TOP, heroLookTexture, heroLookRider } from './textures';
 import type { BuiltWorld } from './textures';
+import type { RiderFit } from './styleArt';
 import { artScale, artFrames, artAnim, frameKey, animKey, riderFit } from './art';
 import { PROPS } from '../../data/props';
 import { PROP_ART } from './propArt';
@@ -53,7 +54,19 @@ export class WorldRenderer {
   private readonly objectViews = new Map<ObjectState, Phaser.GameObjects.Image>();
   private readonly wandererViews = new Map<WandererState, Phaser.GameObjects.Image>();
   /** The other players' heroes (online). */
-  private readonly otherViews = new Map<Hero, { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image; name: Phaser.GameObjects.Text; walkSeen: number; walkingT: number }>();
+  private readonly otherViews = new Map<
+    Hero,
+    {
+      img: Phaser.GameObjects.Image;
+      shadow: Phaser.GameObjects.Image;
+      name: Phaser.GameObjects.Text;
+      /** On horseback: the horse, and the hero cropped at the waist. */
+      horse: Phaser.GameObjects.Image;
+      rider: Phaser.GameObjects.Image;
+      walkSeen: number;
+      walkingT: number;
+    }
+  >();
   private lastNow = 0;
   private readonly npcViews = new Map<NpcState, { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image; name: Phaser.GameObjects.Text; mark: Phaser.GameObjects.Text }>();
   /** Static world sprites whose texture changes with the art style. */
@@ -258,7 +271,7 @@ export class WorldRenderer {
     const others = this.sim.others;
     for (const [o, v] of this.otherViews) {
       if (others.includes(o)) continue;
-      for (const x of [v.img, v.shadow, v.name]) x.destroy();
+      for (const x of [v.img, v.shadow, v.name, v.horse, v.rider]) x.destroy();
       this.otherViews.delete(o);
     }
     for (const o of others) {
@@ -269,6 +282,8 @@ export class WorldRenderer {
           img: this.image(0, 0, key).setOrigin(0.5, 1),
           shadow: this.image(0, 0, Tex.shadow).setAlpha(0.3),
           name: this.mark('8px', '#bfe0ff').setOrigin(0.5, 1),
+          horse: this.image(0, 0, Tex.horse).setOrigin(0.5, 1).setVisible(false),
+          rider: this.image(0, 0, key).setOrigin(0.5, 1).setVisible(false),
           walkSeen: o.walk,
           walkingT: 0,
         };
@@ -294,7 +309,22 @@ export class WorldRenderer {
       const qy = isoY(o.x, o.y);
       const z = jp >= 0 ? 16 * 4 * jp * (1 - jp) : 0;
       const depth = this.depthAt(o.x, o.y);
+      if (o.mounted && !o.dead) {
+        const walking = v.walkingT > 0;
+        const lift = this.trot(walking, now) + z;
+        const rc = heroLookRider(o.look);
+        v.img.setVisible(false);
+        v.horse.setScale(artScale(Tex.horse));
+        v.rider.setTexture(key).setCrop(0, 0, v.rider.frame.width, rc.rows);
+        const top = this.ride(v.horse, v.rider, rc, 1, qx, qy - lift, o.face, walking, now, o.hiddenT > 0 ? 0.45 : 1, depth);
+        v.shadow.setPosition(qx, qy + 5).setDisplaySize(40, 20).setDepth(depth - 0.5);
+        this.nameAndHealth(o, v.name, g, qx, top);
+        continue;
+      }
+      v.horse.setVisible(false);
+      v.rider.setVisible(false);
       v.img
+        .setVisible(true)
         .setTexture(fk)
         .setPosition(Math.round(qx), Math.round(qy + 8 - z))
         .setFlipX(o.face < 0)
@@ -304,15 +334,18 @@ export class WorldRenderer {
       if (o.flash > 0) v.img.setTintFill(0xffffff);
       else v.img.clearTint();
       v.shadow.setPosition(qx, qy + 5).setDisplaySize(26, 13).setDepth(depth - 0.5);
-      const top = qy + 8 - z - v.img.frame.height;
-      v.name.setText(`${o.name} · ${o.level}`).setPosition(Math.round(qx), Math.round(top - 6)).setVisible(true);
-      // a small health bar under the name
-      const w = 22;
-      const x0 = Math.round(qx - w / 2);
-      const y0 = Math.round(top - 4);
-      g.fillStyle(hex('#0a0d14')).fillRect(x0 - 1, y0 - 1, w + 2, 4);
-      g.fillStyle(hex('#5fc46a')).fillRect(x0, y0, Math.round((w * Math.max(0, o.hp)) / Math.max(1, o.hpMax)), 2);
+      this.nameAndHealth(o, v.name, g, qx, qy + 8 - z - v.img.frame.height);
     }
+  }
+
+  /** Another player's name and level over their head (at screen y `top`), with a small health bar under it. */
+  private nameAndHealth(o: Hero, name: Phaser.GameObjects.Text, g: Phaser.GameObjects.Graphics, qx: number, top: number): void {
+    name.setText(`${o.name} · ${o.level}`).setPosition(Math.round(qx), Math.round(top - 6)).setVisible(true);
+    const w = 22;
+    const x0 = Math.round(qx - w / 2);
+    const y0 = Math.round(top - 4);
+    g.fillStyle(hex('#0a0d14')).fillRect(x0 - 1, y0 - 1, w + 2, 4);
+    g.fillStyle(hex('#5fc46a')).fillRect(x0, y0, Math.round((w * Math.max(0, o.hp)) / Math.max(1, o.hpMax)), 2);
   }
 
   /** The grey postman: walking his round, fading as you come near. */
@@ -628,29 +661,10 @@ export class WorldRenderer {
     this.buffMark.setVisible(s.buffT > 0).setDepth(depth + 0.1);
 
     if (s.mounted) {
-      const bob = walking ? Math.round(Math.abs(Math.sin(now / 70)) * 3) : 0;
-      const lift = bob + z;
-      const hs = artScale(Tex.horse);
-      const hf = artFrames(Tex.horse);
+      const lift = this.trot(walking, now) + z;
       this.playerShadow.setPosition(qx, qy + 5).setDisplaySize(40 * shadowK, 20 * shadowK).setDepth(depth - 0.5);
       this.knight.setVisible(false);
-      this.horse
-        .setTexture(frameKey(Tex.horse, walking && hf > 1 ? Math.floor(now / 110) % hf : 0))
-        .setVisible(true)
-        .setPosition(qx, qy + 4 - lift)
-        .setFlipX(flipX)
-        .setAlpha(alpha)
-        .setDepth(depth);
-      // put the bottom of the cropped rider slice just below the horse's top edge
-      const rc = riderFit();
-      const horseTop = qy + 4 - lift - this.horse.frame.height * hs;
-      const hiddenBelow = (this.rider.frame.height - rc.rows) * ks;
-      this.rider
-        .setVisible(true)
-        .setPosition(qx + rc.dx * s.face, horseTop + rc.below + hiddenBelow)
-        .setFlipX(flipX)
-        .setAlpha(alpha)
-        .setDepth(depth + 0.05);
+      this.ride(this.horse, this.rider, riderFit(), ks, qx, qy - lift, s.face, walking, now, alpha, depth);
       this.buffMark.setPosition(qx + 18, qy - 28 - lift);
       this.ghost.setVisible(false);
       return;
@@ -690,6 +704,51 @@ export class WorldRenderer {
       g.fillStyle(hex('#a78bfa')).fillRect(qx - 15, y - 11, Math.round(30 * (1 - s.mountT)), 4);
     }
     this.buffMark.setPosition(qx + 14, y - 4);
+  }
+
+  /** How high a trotting horse lifts its rider this frame. */
+  private trot(walking: boolean, now: number): number {
+    return walking ? Math.round(Math.abs(Math.sin(now / 70)) * 3) : 0;
+  }
+
+  /**
+   * A hero on horseback, standing at (qx, qy) (already lifted by the trot and any jump): the
+   * horse, walking while it moves, and the rider (a hero sprite of scale `ks`, cropped at the
+   * waist by `rc`) in the saddle. Returns the screen y of the rider's head.
+   */
+  private ride(
+    horse: Phaser.GameObjects.Image,
+    rider: Phaser.GameObjects.Image,
+    rc: RiderFit,
+    ks: number,
+    qx: number,
+    qy: number,
+    face: 1 | -1,
+    walking: boolean,
+    now: number,
+    alpha: number,
+    depth: number
+  ): number {
+    const hs = artScale(Tex.horse);
+    const hf = artFrames(Tex.horse);
+    horse
+      .setTexture(frameKey(Tex.horse, walking && hf > 1 ? Math.floor(now / 110) % hf : 0))
+      .setVisible(true)
+      .setPosition(qx, qy + 4)
+      .setFlipX(face < 0)
+      .setAlpha(alpha)
+      .setDepth(depth);
+    // put the bottom of the cropped rider slice just below the horse's top edge
+    const horseTop = qy + 4 - horse.frame.height * hs;
+    const hiddenBelow = (rider.frame.height - rc.rows) * ks;
+    const y = horseTop + rc.below + hiddenBelow;
+    rider
+      .setVisible(true)
+      .setPosition(qx + rc.dx * face, y)
+      .setFlipX(face < 0)
+      .setAlpha(alpha)
+      .setDepth(depth + 0.05);
+    return y - rider.frame.height * ks;
   }
 
   /**

@@ -42,7 +42,7 @@ export class QuestWindow {
       const b = (e.target as HTMLElement).closest<HTMLElement>('[data-doc]');
       if (b) {
         this.reading = b.dataset.doc ?? null;
-        if (this.reading) this.sim.setFlag('read:' + this.reading);
+        if (this.reading) this.sim.readDoc(this.reading);
         this.render();
       } else if ((e.target as HTMLElement).closest('.doc-back')) {
         this.reading = null;
@@ -76,7 +76,7 @@ export class QuestWindow {
   show(tab: 'quests' | 'journal', doc?: string): void {
     this.tab = tab;
     this.reading = doc ?? null;
-    if (doc) this.sim.setFlag('read:' + doc);
+    if (doc) this.sim.readDoc(doc);
     this.toggle(true);
     this.render();
   }

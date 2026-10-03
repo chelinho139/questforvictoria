@@ -59,6 +59,8 @@ export const COMMANDS: Record<string, Command> = {
   // the world (the browser walks over first; these check the hero is close enough)
   talkTo: (h, [id]) => isNpc(id) && h.talkTo(id),
   talked: (h, [id]) => isNpc(id) && void h.talked(id),
+  asked: (h, [id, i]) => isNpc(id) && int(i, 0, 99) && h.asked(id, i),
+  readDoc: (h, [id]) => str(id) && h.game.readDoc(id),
   useObject: (h, [id]) => str(id) && h.useObject(id),
   chop: (h, [c, r]) => {
     const t =

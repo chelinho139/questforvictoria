@@ -120,8 +120,15 @@ export class GameScene extends Phaser.Scene {
     this.sceneBox = new SceneBox(this.sim);
     this.bossBar = new BossBar(this.sim);
     this.sim.events.on('sceneFade', ({ dir, s }) => (dir === 'out' ? this.cameras.main.fadeOut(s * 1000, 0, 0, 0) : this.cameras.main.fadeIn(s * 1000, 0, 0, 0)));
-    // a scene that ended (or was cut short by loading a save) never leaves the screen black
+    let inScene = false;
     this.sim.events.on('scene', () => {
+      // a scene starting clears the screen: every window is put away (dialog and trade close themselves)
+      if (this.sim.scene && !inScene) {
+        for (const w of [this.inventory, this.crafting, this.questLog, this.controls, this.talents, this.spellbook]) if (w.isOpen) w.toggle(false);
+        if (this.dev.isOpen) this.dev.setOpen(false);
+      }
+      inScene = !!this.sim.scene;
+      // a scene that ended (or was cut short by loading a save) never leaves the screen black
       const fade = this.cameras.main.fadeEffect;
       if (!this.sim.scene && !this.sim.exiting && fade.isComplete && fade.direction) this.cameras.main.fadeIn(400, 0, 0, 0);
     });

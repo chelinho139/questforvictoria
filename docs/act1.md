@@ -3,7 +3,7 @@
 *What the first playable slice of the campaign contains. Everything here comes from the lore (docs/lore.md).*
 
 > **Built (October 2026).** Everything below is in the game, played through end to end in testing. Where the build differs from this plan:
-> - **Levels:** with the new level curve, a hero reaches about level 4–5 by the end of the Prologue and 8–9 by the end of Act I (rather than 3 and 7). To tune in play.
+> - **Levels:** with the new level curve, a hero reaches about level 3–4 by the end of the Prologue and 6–7 by the end of Act I (a level takes 100 XP at first, up from 60, after playtesting found levelling too quick). To tune in play.
 > - **Letter at the Door** became Nan's quest *Letters at the Door*: after the first night she asks you to find one of the grey postman's letters.
 > - **Bram** sells iron gear and buys anything, but his forge is not a crafting station (build your own, as before).
 > - **Art:** every building, prop, villager and creature listed under *Art to make* is drawn; the crows are not (yet).

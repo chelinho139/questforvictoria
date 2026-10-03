@@ -88,7 +88,8 @@ export function createConfig(scenes: (typeof Phaser.Scene)[]): Phaser.Types.Core
 export function applyResize(scale: Phaser.Scale.ScaleManager): void {
   const { w, h } = physicalSize();
   PIXEL_SCALE = computePixelScale();
-  scale.setZoom(1 / dpr());
   scale.setGameSize(w, h);
-  scale.refresh();
+  // after the size: with scale mode NONE, Phaser only writes the canvas's CSS size when the
+  // zoom is set, so zooming first would show the previous size (a maximize fires one resize)
+  scale.setZoom(1 / dpr());
 }

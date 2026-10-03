@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { COMMANDS, DEV_COMMANDS } from '../src/net/commands';
+import { NPCS } from '../src/data/npcs';
 import { gameWith } from './helpers';
 
 /** Things a hostile or broken browser might send as arguments. */
@@ -39,6 +40,23 @@ test('commands do what they say with good arguments', () => {
   COMMANDS.setTarget(h, [null]);
   assert.equal(h.target, null);
   assert.equal(game.questStatus('slime_meadow', h), 'active');
+});
+
+test('reading the journal and asking about things count online', () => {
+  const { game, heroes } = gameWith('Ana');
+  const h = heroes[0];
+  COMMANDS.readDoc(h, ['diary_1']);
+  assert.equal(game.flags['read:diary_1'], undefined, 'only pages in the journal');
+  COMMANDS.acceptQuest(h, ['nans_pages']);
+  for (const d of ['diary_1', 'diary_2', 'diary_3']) COMMANDS.readDoc(h, [d]);
+  assert.equal(game.questStatus('nans_pages', h), 'ready');
+  // Maud's errand: ask Aldric about her son
+  const marcian = NPCS.aldric.topics!.findIndex(t => t.then?.flags?.includes('aldric_told_marcian'));
+  COMMANDS.asked(h, ['aldric', marcian]);
+  assert.equal(game.flags.aldric_told_marcian, undefined, 'not before Maud asks');
+  COMMANDS.acceptQuest(h, ['lamp_window']);
+  COMMANDS.asked(h, ['aldric', marcian]);
+  assert.equal(game.questStatus('lamp_window', h), 'ready');
 });
 
 test('travel only goes where the hero is actually leaving for', () => {

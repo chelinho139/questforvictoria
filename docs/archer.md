@@ -8,7 +8,7 @@
 
 - **From afar.** The auto-shot reaches **200**, spells **220** (the warrior's reach is 48 and 56). Each arrow **flies** to its mark at 600 a second and hits when it lands, so creatures take arrows on the way in.
 - **Stand still to shoot.** An archer only shoots with feet planted. If you're walking somewhere with a click, a shot stops you and fires. If you're holding a movement key, the shot is refused ("Stand still to shoot"). After each arrow you hold still for 0.3 s while you draw and loose; a plain auto-shot holds you for 0.2 s.
-- **Lighter.** An archer starts with **130 health** instead of 140, and has no shield. The off hand holds a **quiver**, which adds damage.
+- **Lighter.** An archer starts with **130 health** against the warrior's 160, and has no shield. The off hand holds a **quiver**, which adds damage.
 - **Creatures fight back.** A creature you shoot stays angry for 10 s, however far away you shot from. Without this, an archer could shoot slimes from outside their sight for free.
 - **Classes are chosen when you make a character**, in single player and multi player alike (the New character screen: Warrior | Archer). The class is saved with the character; characters from before classes are warriors.
 
@@ -81,7 +81,7 @@ Same shape as the warrior's: three trees of five tiers, a tier opening every 4 p
 | Off hand 1 | Wooden shield (+3 armour) | Leather quiver (+1 damage): Maud, or the forge |
 | Off hand 2 | Iron kite shield (+7 armour) | Hunter's quiver (+1 damage, +15 health): Bram, or the forge |
 
-- **Weapons and off hands belong to a class; armour, tools and amulets are for everyone.** Shops and the crafting window only show what your class can use.
+- **Weapons and off hands belong to a class; armour, tools and amulets are for everyone.** Shops only show what your class can use. Crafting shows every recipe (a quest may ask for a sword, and a friend may want one), and the tooltip marks the other class's gear.
 - **Loot is something you can use.** A sword drops as a longbow for an archer, a shield as a quiver, a hunting bow as an axe for a warrior. Loot tables stay as they are; the swap happens when the drop is made (`lootFor` in `src/data/items.ts`).
 - **The art:** bows and quivers on all eight heroes in every pose, a 4-frame shooting animation (nock, draw, loose, lower), arrows in flight, bear traps on the ground, and new icons for every spell and item (`tools/heroes/`: `cast2.py`, `archery.py`, `skillicons.py`).
 
@@ -102,9 +102,9 @@ Each fight runs over five random seeds. Two numbers per fight:
 
 | Mirrored builds | Average time × | Average cost × | Deaths |
 |---|---|---|---|
-| Blade warrior / Marksman archer | 1.02 | 0.94 | none |
-| Fury warrior / Hunter archer | 1.04 | 1.00 | none |
-| Warden warrior / Ranger archer | 1.02 | 1.02 | none |
+| Blade warrior / Marksman archer | 1.02 | 0.91 | none |
+| Fury warrior / Hunter archer | 1.04 | 0.96 | none |
+| Warden warrior / Ranger archer | 1.02 | 1.03 | none |
 
 The bands the tests enforce:
 - for each pair, average time between 0.95 and 1.10, and average cost between 0.90 and 1.10;
@@ -116,8 +116,8 @@ The fights (level, gear tier, creatures): L1 slime · L3 goblin · L6 two goblin
 **What the numbers say.**
 - Archers kill about as fast as warriors (1.02–1.04×).
 - Archers take less damage, because creatures walk through arrows to reach them. That's the archer's identity.
-- To pay for it, archers are lighter (130 health) and have no shield.
-- Marksman stays a little ahead on cost (0.94): it trades a slightly slower kill for safety, since things die before they arrive.
+- To pay for it, archers are lighter (130 health against 160) and have no shield.
+- Marksman stays a little ahead on cost (0.91): it trades a slightly slower kill for safety, since things die before they arrive.
 - Fast creatures (bonehounds) and groups (three skeletons) are the archer's hardest fights (1.12–1.20×): they close the gap quickly, and Volley covers less than a Whirlwind in the middle of a crowd. That's what Concussive Shot, Bear Trap and Disengage are for.
 
 **What changed while tuning** (the first run was already close; these closed the gaps):
@@ -130,6 +130,7 @@ The fights (level, gear tier, creatures): L1 slime · L3 goblin · L6 two goblin
   - Lethal Shots +0.2 → +0.15;
   - Steady Aim +0.25 → +0.2;
   - Deadeye 30 → 26.
+- **Creatures hit three times as hard** (playtesting: fights carried no risk). The heavier the hits, the more an archer saves by shooting creatures on the way in: Blade / Marksman fell to 0.88 on cost. So **warrior health** went 140 → 160: the one who stands in the middle of the group can take it.
 
 **What the simulation doesn't capture.**
 - Player skill: perfect-timing crits, kiting with Concussive Shot, and using Disengage and Bear Trap well.
@@ -157,6 +158,6 @@ Live playtesting should confirm the feel. The numbers to adjust are all in `src/
 - **The hero:** `src/sim/Hero.ts` (shots, arrows, abilities, auto-shot, standing still). The creatures' slow, root, mark, anger and traps are in `src/sim/Region.ts`.
 - **Screens:**
   - `src/phaser/ui/NewCharacter.ts` (class choice);
-  - the HUD, spellbook, talent window, shops and crafting show your class's things.
+  - the HUD, spellbook, talent window and shops show your class's things.
 - **Art:** `tools/heroes/cast2.py` (bows and quivers on the heroes, the shooting poses), `emit3.py`, `archery.py` (item icons), `skillicons.py` (spell icons).
 - **Tests:** `tests/classes.test.ts` (the class rules), `tests/balance.test.ts` and `tests/fight.ts` (fairness), and the online archer in `tests/server.test.ts`.

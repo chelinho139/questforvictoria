@@ -23,7 +23,7 @@ import type { StructureKind } from '../../data/crafting';
 import { ITEM_IDS, SLOTS } from '../../data/items';
 import type { ItemId, Slot } from '../../data/items';
 import type { SpriteStyle } from './art';
-import type { StyleArt, Frames, IsoTiles } from './styleArt';
+import type { StyleArt, Frames, IsoTiles, RiderFit } from './styleArt';
 import { WALL_H, TOWER_H, TOWER_TOP } from './styleArt';
 import { silhouetteArt } from './styles/gameArt';
 import { regrade } from './regrade';
@@ -576,7 +576,7 @@ export function applyHeroTextures(scene: Phaser.Scene, style: SpriteStyle): void
  * texture key (walk frames, and idle / attack / jump / flip animations, like Tex.knight).
  */
 export function heroLookTexture(scene: Phaser.Scene, look: string, equip: Partial<Record<Slot, ItemId | null>>): string {
-  const id = (HD_HERO_IDS as string[]).includes(look) ? (look as HdHeroId) : 'k1';
+  const id = lookId(look);
   const key = `hero:${id}:${SLOTS.map(s => equip[s] ?? '').join(',')}`;
   if (scene.textures.exists(frameKey(key, 0))) return key;
   const f = hdHeroFrames(id, equip);
@@ -587,6 +587,15 @@ export function heroLookTexture(scene: Phaser.Scene, look: string, equip: Partia
     scale: 1,
   });
   return key;
+}
+
+/** How another player's hero sits a horse: the rider crop of their look (see heroLookTexture). */
+export function heroLookRider(look: string): RiderFit {
+  return HD_HEROES[lookId(look)].rider;
+}
+
+function lookId(look: string): HdHeroId {
+  return (HD_HERO_IDS as string[]).includes(look) ? (look as HdHeroId) : 'k1';
 }
 
 /** HD iso tile set. */

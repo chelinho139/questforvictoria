@@ -158,10 +158,11 @@ export class TalentWindow {
       const why = s.talentProblem(id);
       const tierOpen = s.talentsSpent(d.tree) >= d.tier * TIER_POINTS;
       const reqOk = !d.requires || (s.talents[d.requires] ?? 0) >= TALENTS[d.requires].ranks;
+      const spellOk = !d.spell || s.knows(d.spell);
       v.rank.textContent = `${r}/${d.ranks}`;
       v.el.className = d.grants ? 'tal grant' : 'tal';
       if (r >= d.ranks) v.el.classList.add('max');
-      else if (!tierOpen || !reqOk) v.el.classList.add('locked');
+      else if (!tierOpen || !reqOk || !spellOk) v.el.classList.add('locked');
       else if (why === null) v.el.classList.add('open');
       if (r > 0 && r < d.ranks) v.el.classList.add('some');
     }

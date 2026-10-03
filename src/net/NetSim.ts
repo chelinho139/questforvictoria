@@ -667,6 +667,15 @@ export class NetSim extends Sim {
     this.cmd('talked', [id]);
     return first;
   }
+  // flags show at once here (the topic goes, the page stops being new); the server does the rest
+  override asked(id: NpcId, i: number): void {
+    this.game.setFlag(`asked:${id}:${i}`);
+    this.cmd('asked', [id, i]);
+  }
+  override readDoc(id: string): void {
+    super.readDoc(id);
+    this.cmd('readDoc', [id]);
+  }
   override useSlot(i: number): void {
     this.cmd('useSlot', [i]);
   }

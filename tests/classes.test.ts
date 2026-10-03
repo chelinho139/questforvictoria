@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { Game } from '../src/sim/Game';
 import type { Hero } from '../src/sim/Hero';
 import { CLASSES, CLASS_IDS } from '../src/data/classes';
-import { TALENTS, TREES, treesOf, TIERS, COLS } from '../src/data/talents';
+import { TALENTS, TREES, treesOf, TIERS, COLS, MAX_LEVEL, xpToNext } from '../src/data/talents';
 import { SPELLS, SPELL_ORDER, HOME_SLOT } from '../src/data/spells';
 import { ITEMS, lootFor, canWield } from '../src/data/items';
 import type { SpellKey } from '../src/data/spells';
+import { SKILLS, ACTIONS, isSkill } from '../src/data/skills';
 import type { EnemyKind } from '../src/data/enemies';
 import type { Enemy } from '../src/sim/types';
 import { skipScenes, run } from './helpers';
@@ -97,6 +98,36 @@ test('a class learns its own spells, and only its own', () => {
   assert.equal(a.talentProblem('sharp_arrows'), null);
 });
 
+test('a talent that names a spell waits for it', () => {
+  const nameOf = (k: SpellKey) => (isSkill(k) ? SKILLS[k].n : ACTIONS[k].n);
+  for (const [id, t] of Object.entries(TALENTS)) {
+    if (t.spell) assert.equal(SPELLS[t.spell].cls, TREES[t.tree].cls, `${id} improves its class's spell`);
+    if (t.grants) continue;
+    const named = SPELL_ORDER.filter(k => t.desc(t.ranks).includes(nameOf(k)));
+    if (named.length) assert.ok(t.spell && named.includes(t.spell), `${id} needs one of ${named}`);
+  }
+});
+
+test('no points in Tracker before Hunter’s Mark', () => {
+  const { h } = hero('archer', 2);
+  assert.equal(h.knows('mark'), false);
+  assert.match(h.talentProblem('tracker')!, /Hunter's Mark, learned at level 5/);
+  assert.equal(h.talentProblem('hunting_arrows'), null, 'the tree still has something to take');
+  while (h.level < 5) h.gainXp(xpToNext(h.level));
+  assert.equal(h.talentProblem('tracker'), null);
+  assert.ok(h.learnTalent('tracker'));
+});
+
+test('levelling up puts only your own class’s spells on the bar', () => {
+  for (const cls of CLASS_IDS) {
+    const { h } = hero(cls);
+    while (h.level < MAX_LEVEL) h.gainXp(xpToNext(h.level));
+    for (const k of h.bar) if (k) assert.ok(h.knows(k), `${cls} bar holds ${k}`);
+    const own = SPELL_ORDER.filter(k => SPELLS[k].level && !SPELLS[k].talent && h.knows(k));
+    for (const k of own) assert.ok(h.bar.includes(k), `${cls} gets ${k} on the bar`);
+  }
+});
+
 test('each class starts with its own kit, and weapons stay with their class', () => {
   const a = hero('archer').h;
   const w = hero('warrior').h;
@@ -113,6 +144,19 @@ test('each class starts with its own kit, and weapons stay with their class', ()
   a.give('iron_sword');
   a.equipFromBag(a.bag.findIndex(s => s?.id === 'iron_sword'));
   assert.equal(a.equip.weapon, CLASSES.archer.starter.weapon, 'the sword stays in the bag');
+});
+
+test('an archer can forge the iron sword Warden’s Steel asks for', () => {
+  const { game, h } = hero('archer');
+  h.questLog.set('stone_and_fire', 'done');
+  game.acceptQuest('warden_steel', h);
+  h.give('stone', 8);
+  h.give('log', 3);
+  h.give('iron_bar', 3);
+  assert.ok(h.craft('forge'), 'builds a forge');
+  assert.ok(h.craft('iron_sword'), 'forges a sword it cannot wield');
+  assert.equal(h.count('iron_sword'), 1);
+  assert.equal(game.questStatus('warden_steel', h), 'ready');
 });
 
 test('loot is something your class can use', () => {

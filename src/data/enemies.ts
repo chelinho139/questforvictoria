@@ -22,6 +22,8 @@ export interface EnemyDef {
   aggro: number;
   cast?: boolean;
   castRange?: number;
+  /** What its spell does when it lands. */
+  castDmg?: number;
   scale: number;
   /** Texture key (built in phaser/render/textures.ts). */
   tex: string;
@@ -45,11 +47,14 @@ export interface EnemyDef {
   boss?: { title: string; flag: string; phases?: number[]; onDeath?: Effect };
 }
 
+/** Seconds before a slain creature is back at its post (up to half as long again, so a camp doesn't all return at once). */
+export const RESPAWN = 60;
+
 export const KINDS: Record<EnemyKind, EnemyDef> = {
   goblin: {
     n: 'Goblin',
     hp: 150,
-    atk: 3,
+    atk: 9,
     per: 2.2,
     spd: 68,
     range: 40,
@@ -72,13 +77,14 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
   shaman: {
     n: 'Goblin Shaman',
     hp: 200,
-    atk: 2,
+    atk: 6,
     per: 2.6,
     spd: 58,
     range: 40,
     aggro: 150,
     cast: true,
     castRange: 150,
+    castDmg: 25,
     scale: 2,
     tex: 'goblin1',
     behavior: 'hostile',
@@ -92,7 +98,7 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
   ogre: {
     n: 'Ogre',
     hp: 600,
-    atk: 6,
+    atk: 18,
     per: 3.0,
     spd: 48,
     range: 50,
@@ -110,7 +116,7 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
   skeleton: {
     n: 'Skeleton',
     hp: 160,
-    atk: 4,
+    atk: 12,
     per: 2.0,
     spd: 62,
     range: 40,
@@ -147,7 +153,7 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
   slime: {
     n: 'Slime',
     hp: 90,
-    atk: 2,
+    atk: 6,
     per: 2.4,
     spd: 42,
     range: 36,
@@ -189,7 +195,7 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
   bonehound: {
     n: 'Bone Hound',
     hp: 85,
-    atk: 4,
+    atk: 12,
     per: 1.4,
     spd: 96,
     range: 30,

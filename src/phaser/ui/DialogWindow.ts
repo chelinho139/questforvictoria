@@ -124,8 +124,7 @@ export class DialogWindow {
         label: t.ask,
         act: () =>
           this.pages(t.pages, () => {
-            this.sim.setFlag(asked);
-            this.sim.applyEffect(t.then);
+            this.sim.asked(id, i);
             this.home(this.greeting(id));
           }),
       });

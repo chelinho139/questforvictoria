@@ -132,6 +132,11 @@ export class Game {
     this.events.emit('flags', { name });
   }
 
+  /** A page in the journal was opened: quests can ask for `read:<id>`. */
+  readDoc(id: string): void {
+    if (this.journal.includes(id)) this.setFlag('read:' + id);
+  }
+
   /** Make things happen: flags, documents, items (to the hero it happened to), a scene (where they stand). */
   applyEffect(e: Effect | undefined, hero?: Hero): void {
     if (!e) return;

@@ -613,6 +613,12 @@ export class Sim {
   talked(id: NpcId): boolean {
     return this.hero.talked(id);
   }
+  asked(id: NpcId, i: number): void {
+    this.hero.asked(id, i);
+  }
+  readDoc(id: string): void {
+    this.game.readDoc(id);
+  }
   count(id: ItemId): number {
     return this.hero.count(id);
   }

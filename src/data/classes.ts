@@ -32,7 +32,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     blurb: 'Steel up close: armour, a shield and a blade.',
     about:
       'Fights face to face: charges in, cuts, bleeds and whirls, wears a shield and shrugs off blows. Learns Blade, Fury and Warden talents.',
-    hp: 140,
+    hp: 160,
     aa: { range: 48, period: 1.3, dmg: 3, ranged: false },
     starter: { weapon: 'rusty_sword', legs: 'cloth_trousers' },
     presets: {
