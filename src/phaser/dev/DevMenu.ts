@@ -16,7 +16,9 @@ import { PC_KEYS } from '../../data/actionBar';
 import { xpToNext } from '../../data/talents';
 import { REGIONS } from '../../data/regions';
 import type { Sfx } from '../audio/Sfx';
-import type { SoundId, FollowSound, UiSound, WorldSound } from '../../sim/types';
+import type { SoundId, FollowSound, UiSound, WorldSound, WeatherSound } from '../../sim/types';
+import { WEATHER_KINDS, WEATHER_NAMES } from '../../sim/weather';
+import type { WeatherKind } from '../../sim/weather';
 import type { CreatureSounds } from '../../data/enemies';
 import { NPCS } from '../../data/npcs';
 import type { NpcId } from '../../data/npcs';
@@ -135,6 +137,13 @@ const WORLD_SOUNDS: Record<WorldSound, string> = {
   bellToll: 'The bell tolls',
 };
 
+/** The sound board's names for thunder. */
+const WEATHER_SOUNDS: Record<WeatherSound, string> = {
+  thunderNear: 'Thunder · close by',
+  thunder: 'Thunder · out of sight',
+  thunderFar: 'Thunder · far off',
+};
+
 /** What the sound board calls a creature's moments. */
 const CREATURE_MOMENTS: Record<keyof CreatureSounds, string> = {
   idle: 'wanders',
@@ -206,6 +215,8 @@ export class DevMenu {
   private readonly root: HTMLDivElement;
   private readonly fpsEl: HTMLDivElement;
   private readonly clockLabel: HTMLSpanElement;
+  private readonly weatherLabel: HTMLParagraphElement;
+  private readonly weatherBtns: HTMLButtonElement[] = [];
   private readonly clockSlider: HTMLInputElement;
   private readonly speedBtns: HTMLButtonElement[] = [];
   private draggingClock = false;
@@ -298,6 +309,27 @@ export class DevMenu {
       seg.append(b);
     }
     time.append(seg);
+
+    // ---- weather: what the sky is doing, and holding it
+    const sky = this.section('Weather');
+    // (a line of its own: it's longer than a row's value)
+    this.weatherLabel = el('p', 'dev-note');
+    sky.append(this.weatherLabel);
+    const skySeg = el('div', 'dev-seg');
+    for (const k of [null, ...WEATHER_KINDS]) {
+      const b = this.button(k ? WEATHER_NAMES[k] : 'Auto', () => {
+        this.sim.setWeather(k);
+        this.syncClock(true);
+      });
+      b.dataset.weather = k ?? '';
+      this.weatherBtns.push(b);
+      skySeg.append(b);
+    }
+    sky.append(skySeg);
+    const skyBtns = el('div', 'dev-btns');
+    skyBtns.append(this.button('Strike lightning', () => this.sim.weather.strikeNow('near')));
+    sky.append(skyBtns);
+    sky.append(el('p', 'dev-note', 'Auto: dry spells, rain, and now and then a storm, on their own. The others hold the weather until Auto.'));
 
     // ---- view: the 2D art, or the experimental 3D views
     const view = this.section('View (experimental)');
@@ -412,6 +444,10 @@ export class DevMenu {
         option(beasts, id, `${def.n} · ${label}`);
       }
     pick.append(beasts);
+    const weather = el('optgroup');
+    weather.label = 'Weather';
+    for (const [id, label] of Object.entries(WEATHER_SOUNDS)) option(weather, id as WeatherSound, label);
+    pick.append(weather);
     const people = el('optgroup');
     people.label = 'Voices';
     for (const id of Object.keys(NPCS) as NpcId[]) option(people, `${id}Voice`, NPCS[id].name);
@@ -618,6 +654,11 @@ export class DevMenu {
     const day = this.sim.day;
     this.clockLabel.textContent = `${day.clock} · ${phaseName(day.t)} · Day ${day.day}`;
     if (!this.draggingClock) this.clockSlider.value = String(Math.floor(day.t * 1440));
+    const w = this.sim.weather;
+    const pct = (v: number) => Math.round(v * 100) + '%';
+    this.weatherLabel.textContent = `Now: ${WEATHER_NAMES[w.kind]} · rain ${pct(w.rain)} · storm ${pct(w.storm)}${w.forced ? ' (held)' : w.coming !== w.kind ? ' · ' + WEATHER_NAMES[w.coming].toLowerCase() + ' coming' : ''}`;
+    const held: WeatherKind | '' = w.forced ?? '';
+    for (const b of this.weatherBtns) b.setAttribute('aria-pressed', String(b.dataset.weather === held));
   }
 
   /** Sit below the day dial and above the action bar, whatever the pixel scale. */

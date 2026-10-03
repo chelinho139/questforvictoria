@@ -34,6 +34,8 @@ import { OnlineBadge } from '../ui/OnlineBadge';
 import { SceneBox } from '../ui/SceneBox';
 import { BossBar } from '../ui/BossBar';
 import { Sfx } from '../audio/Sfx';
+import { WeatherAudio } from '../audio/WeatherAudio';
+import { WeatherFx } from '../render/WeatherFx';
 import { View3D, VIEW_MODES, VIEW_NAMES } from '../view3d/View3D';
 import type { ViewMode } from '../view3d/View3D';
 import { fromIso } from '../../sim/map';
@@ -69,6 +71,8 @@ export class GameScene extends Phaser.Scene {
   private sceneBox!: SceneBox;
   private bossBar!: BossBar;
   private sfx!: Sfx;
+  /** Rain, storms and lightning on screen, and their sound. */
+  private weather!: WeatherFx;
   /** Where the camera looks (eased toward the hero, or what a scene shows). */
   private camAt: { x: number; y: number } | null = null;
   /** Seconds left of easing back to the hero after a scene. */
@@ -123,6 +127,9 @@ export class GameScene extends Phaser.Scene {
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => badge.destroy());
     } else if (charId) this.setupAutosave(charId);
     this.sfx = new Sfx(this.game, this.sim);
+    this.weather = new WeatherFx(this, this.sim);
+    const bus = this.sfx.bus;
+    if (bus) this.weather.setAudio(new WeatherAudio(bus.ctx, bus.out));
     this.dev = new DevMenu(this.game, this.sim, this.lighting, this.clouds, this.effects, this.sfx);
     this.registry.set('dev', this.dev);
     this.inventory = new InventoryWindow(this.game, this.sim);
@@ -188,6 +195,7 @@ export class GameScene extends Phaser.Scene {
       this.effects.destroy();
       this.clouds.destroy();
       this.lighting.destroy();
+      this.weather.destroy();
       this.sfx.destroy();
       this.view3d?.destroy();
       this.view3d = null;
@@ -276,7 +284,7 @@ export class GameScene extends Phaser.Scene {
     const three = mode !== 'iso';
     if (three && !this.view3d) {
       try {
-        this.view3d = new View3D(this, this.sim, this.lighting, this.effects);
+        this.view3d = new View3D(this, this.sim, this.lighting, this.effects, this.weather);
         this.view3d.setRegion(this.world, this.built);
       } catch (e) {
         // no WebGL for a second canvas: stay in 2D
@@ -597,10 +605,13 @@ export class GameScene extends Phaser.Scene {
       const k = Math.min(1, dt * 4);
       this.camAt = { x: this.camAt.x + (want.x - this.camAt.x) * k, y: this.camAt.y + (want.y - this.camAt.y) * k };
     }
-    const shake = this.sim.shake > 0 ? Math.random() * 6 - 3 : 0;
+    const shake = (this.sim.shake > 0 ? Math.random() * 6 - 3 : 0) + this.weather.shake;
     this.cameras.main.centerOn(Math.round(this.camAt.x + shake), Math.round(this.camAt.y));
     this.world.draw(time);
     if (!this.view3d) this.effects.draw();
+    this.weather.update(dt, !this.view3d);
+    this.lighting.setWeather(this.weather.gloom, this.weather.flash);
+    this.clouds.setWeather(this.weather.gloom, this.sim.weather.storm);
     this.clouds.update(dt);
     // the player carries a small neutral light so night stays playable; a lantern adds a warm pool
     const px = isoX(this.sim.x, this.sim.y);

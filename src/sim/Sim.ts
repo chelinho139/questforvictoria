@@ -12,6 +12,7 @@ import type { SaveData } from './save';
 import type { RegionMap } from './map';
 import type { Pt } from './pathfind';
 import { Emitter } from './Emitter';
+import type { Weather, WeatherKind } from './weather';
 import { Game } from './Game';
 import { Hero } from './Hero';
 import type { KeyInfo } from './Hero';
@@ -291,6 +292,14 @@ export class Sim {
   /** Dev: run the day faster (0 stops it). */
   setDaySpeed(speed: number): void {
     this.game.day.setSpeed(speed);
+  }
+  /** Rain and storms. */
+  get weather(): Weather {
+    return this.game.weather;
+  }
+  /** Dev: hold the weather (null: back to the schedule). */
+  setWeather(kind: WeatherKind | null): void {
+    this.game.weather.forced = kind;
   }
 
   // ---------- the hero ----------

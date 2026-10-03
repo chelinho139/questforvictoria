@@ -13,6 +13,7 @@ import { STRUCTURES } from '../data/crafting';
 import type { StructureKind } from '../data/crafting';
 import { T } from '../sim/map';
 import type { SaveData } from '../sim/save';
+import type { WeatherKind } from '../sim/weather';
 import type { Enemy, ButtonId, Stack, QuestProgress, SceneLine } from '../sim/types';
 import type { Connection } from './Connection';
 import type { Tick, RoomInfo, EnemySnap, HeroSnap } from './protocol';
@@ -93,6 +94,7 @@ export class NetSim extends Sim {
       g.day.t = t.dy[0];
       g.day.day = t.dy[1];
     }
+    if (t.wx) g.weather.follow(t.wx);
     if (t.rg !== h.regionId) this.enter(t);
     const R = this.R;
     if (t.mf) {
@@ -523,6 +525,7 @@ export class NetSim extends Sim {
     for (const w of R.wanderers) glide(w as (typeof R.wanderers)[number] & Glide);
     for (const e of R.enemies) if (e.dieT > 0 && !e.alive) e.dieT = Math.max(0, e.dieT - dt);
     this.game.day.advance(dt);
+    this.game.weather.advance(dt);
     this.updateFx(dt);
     // tell the server where my hero is (20 a second while it changes, and a heartbeat)
     this.moveT -= dt;
@@ -572,6 +575,9 @@ export class NetSim extends Sim {
     // here too, so the clock runs at that speed between the server's corrections
     super.setDaySpeed(speed);
     this.cmd('daySpeed', [speed]);
+  }
+  override setWeather(kind: WeatherKind | null): void {
+    this.cmd('setWeather', [kind]);
   }
   override sceneNext(): void {
     this.cmd('sceneNext');

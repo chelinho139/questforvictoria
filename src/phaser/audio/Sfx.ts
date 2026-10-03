@@ -45,6 +45,11 @@ export class Sfx {
     this.off = sim.events.on('sound', ({ id, x, y }) => this.play(id, x, y));
   }
 
+  /** Where other sounds of the game join these (the weather's): the context and the volume they go through. */
+  get bus(): { ctx: AudioContext; out: GainNode } | null {
+    return this.ctx && this.out ? { ctx: this.ctx, out: this.out } : null;
+  }
+
   /** 0..1, as the settings slider shows it (heard on a curve, so half sounds about half as loud). */
   setVolume(v: number): void {
     if (this.out) this.out.gain.value = v * v;

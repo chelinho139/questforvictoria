@@ -126,6 +126,27 @@ function hoof(s: Track, at: number, v: number): void {
   s.tone({ at, f: 140, f1: 90, v: v * 0.5, a: 0.001, d: 0.07 });
 }
 
+/**
+ * Thunder rolling away: overlapping swells of deep noise, each a little later, lower and
+ * softer, every one wobbling as it rolls. Kept above 150 Hz enough that small speakers carry it.
+ */
+function rumble(s: Track, at: number, d: number, v: number, f: number, n = 7): void {
+  for (let i = 0; i < n; i++) {
+    const p = i / n;
+    s.noise({
+      at: at + p * d * 0.55 + s.random() * 0.2,
+      v: v * (1 - p * 0.5) * (0.6 + 0.4 * s.random()),
+      a: 0.08 + 0.35 * s.random(),
+      d: d * (0.45 + 0.3 * s.random()),
+      filter: 'lowpass',
+      f: f * (1 - p * 0.35),
+      f1: f * 0.5,
+      q: 1.1,
+      am: [2.5 + 6 * s.random(), 0.55],
+    });
+  }
+}
+
 /** A ratchet's tooth: a tiny steel click. */
 function click(s: Track, at: number, v: number): void {
   s.noise({ at, v, d: 0.008, filter: 'highpass', f: 2500 });
@@ -1915,6 +1936,43 @@ export const SOUNDS: Record<SoundId, Recipe> = {
         s.tone({ at: 0.3, f: hz(-19) * r, v, a: 0.01, d: 2, vib: [3, 0.006] });
       s.noise({ at: 0.3, v: 0.2, d: 1.2, filter: 'bandpass', f: 600, q: 4, am: [17, 0.8] });
       s.reverb(0.4, 1.3);
+    },
+  },
+  // ------------------------------------------------------------ the weather
+  thunderNear: {
+    len: 4.6,
+    loud: 0.95,
+    takes: 2,
+    make: s => {
+      // the bolt splits the air right here: a ripping crack, the slam, then the roll
+      s.noise({ v: 0.5, a: 0.002, d: 0.02, filter: 'highpass', f: 1800 });
+      crackle(s, 0, 0.5, 0.8, 600, 4200, 900, 1.1);
+      s.noise({ at: 0.01, v: 0.8, a: 0.01, d: 0.6, filter: 'bandpass', f: 1300, f1: 280, q: 0.7, am: [38, 0.6] });
+      thump(s, 0.03, 62, 0.45, 0.8);
+      rumble(s, 0.12, 4.5, 2.2, 480);
+      s.reverb(0.3, 1.8);
+    },
+  },
+  thunder: {
+    len: 5,
+    loud: 0.7,
+    takes: 2,
+    make: s => {
+      // a strike out of sight: a tearing roll that swells and grumbles away
+      crackle(s, 0, 0.7, 0.45, 200, 1500, 450, 1);
+      s.noise({ v: 0.55, a: 0.08, d: 0.9, filter: 'bandpass', f: 700, f1: 220, q: 0.6, am: [22, 0.5] });
+      rumble(s, 0.05, 5, 1, 420);
+      s.reverb(0.35, 1.8);
+    },
+  },
+  thunderFar: {
+    len: 5.4,
+    loud: 0.4,
+    takes: 2,
+    make: s => {
+      // far off: only the low roll arrives, soft and long
+      rumble(s, 0, 5.5, 1, 360, 6);
+      s.reverb(0.3, 1.8);
     },
   },
   // ------------------------------------------------------------ the people

@@ -144,6 +144,7 @@ export class Session {
       this.dayT = 1;
       this.sent.dy = '1';
       tick.dy = [Math.round(h.game.day.t * 1e5) / 1e5, h.game.day.day];
+      tick.wx = h.game.weather.snapshot();
     }
     if (this.events.length) {
       tick.ev = this.events;

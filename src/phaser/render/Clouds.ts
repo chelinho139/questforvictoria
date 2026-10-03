@@ -92,10 +92,25 @@ export class Clouds {
     return key;
   }
 
+  private gloom = -1;
+  private gust = 1;
+
+  /** Rain clouds: darker shadows, grey bodies; a storm drives them faster. */
+  setWeather(gloom: number, storm: number): void {
+    this.gust = 1 + 2.5 * storm;
+    if (Math.abs(gloom - this.gloom) < 0.01) return;
+    this.gloom = gloom;
+    const grey = Math.round(255 - 110 * gloom);
+    for (const cl of this.clouds) {
+      cl.shadow.setAlpha(0.2 + 0.14 * gloom);
+      cl.body.setTint(Phaser.Display.Color.GetColor(grey, grey, Math.min(255, grey + 12))).setAlpha(0.11 + 0.12 * gloom);
+    }
+  }
+
   update(dt: number): void {
     for (const cl of this.clouds) {
-      cl.x += WIND.x * cl.speed * dt;
-      cl.y += WIND.y * cl.speed * dt;
+      cl.x += WIND.x * cl.speed * this.gust * dt;
+      cl.y += WIND.y * cl.speed * this.gust * dt;
       if (cl.x > this.x0 + this.w + MARGIN) cl.x -= this.w + MARGIN * 2;
       if (cl.y > this.h + MARGIN) cl.y -= this.h + MARGIN * 2;
     }
