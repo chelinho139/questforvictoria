@@ -60,6 +60,13 @@ export interface Enemy {
   markK: number;
   /** Hit lately: keeps after whoever hit it, however far away they shot from. */
   angerT: number;
+  /**
+   * Gave up a chase and is walking back to its post: seconds left before it is simply there
+   * (0 when it isn't). Meanwhile nothing touches it, and it heals as it goes.
+   */
+  homeT: number;
+  /** Its way back, a few straight legs (pathfind.ts). */
+  homePath?: { x: number; y: number }[];
   /** The Bell-Ringer: seconds to the next toll, and tolls so far. */
   tollT?: number;
   tollN?: number;
