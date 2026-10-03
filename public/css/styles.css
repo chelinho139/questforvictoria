@@ -41,6 +41,11 @@ html, body { height: 100%; margin: 0; background: #0c1018; overflow: hidden; }
 .dev-note { margin: 0; color: #9a6a40; font-size: 13px; line-height: 1.2; }
 .dev-v { color: #a8701e; font-weight: 700; font-variant-numeric: tabular-nums; }
 .dev input[type='range'] { width: 100%; margin: 0; accent-color: #c8392f; cursor: pointer; }
+.dev select {
+  flex: 1; min-width: 0; font: 15px/1.1 'Pixelify Sans', VT323, monospace; color: #4a2410;
+  background: #fcecc4; border: 2px solid #4a2410; padding: 2px 3px; cursor: pointer; box-shadow: inset 0 2px 0 #e3c186;
+}
+.dev select:focus-visible { outline: 2px solid #c8392f; outline-offset: 1px; }
 .dev button {
   font: 700 10px 'Pixelify Sans', monospace; letter-spacing: 0.04em; text-transform: uppercase;
   color: #fce6b4; background: #a8622a; border: 2px solid #4a2410; padding: 4px 7px; cursor: pointer;

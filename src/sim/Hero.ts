@@ -40,6 +40,8 @@ import type {
   Structure,
   ObjectState,
   QuestProgress,
+  SoundId,
+  UiSound,
 } from './types';
 import type { Game } from './Game';
 import type { Region } from './Region';
@@ -387,6 +389,17 @@ export class Hero {
   private nudge(btn: ButtonId, key: WheelKey, err = false): void {
     this.events.emit('nudge', { btn, key, err });
   }
+  /**
+   * A sound everyone nearby hears (from the hero, unless it happened somewhere else). Online
+   * the server's hero makes it; the browser's copy only hears it, or it would sound twice.
+   */
+  private sound(id: SoundId, x = this.x, y = this.y): void {
+    if (this.driven !== 'replica') this.region.sound(id, x, y);
+  }
+  /** A sound for this hero alone, wherever they are: a level, a quest, loot, gold. */
+  hear(id: UiSound): void {
+    if (this.driven !== 'replica') this.events.emit('sound', { id });
+  }
   private burst(
     x: number,
     y: number,
@@ -720,6 +733,7 @@ export class Hero {
       if (!quiet) {
         this.log(why, 'h');
         this.nudge(btn, k, true);
+        this.hear('error');
       }
       return false;
     }
@@ -742,6 +756,7 @@ export class Hero {
     const R = this.region;
     this.floater(this.x, this.y - 36, a.n.toUpperCase(), 'name', a.col);
     this.castFlash(btn, k, a.col);
+    this.sound(k);
     this.nudge(btn, k);
     if (k === 'interrupt' && tg) {
       this.intCd = this.actionCd('interrupt');
@@ -793,7 +808,9 @@ export class Hero {
           this.banner('SILENCED', 'cool');
           R.fx({ type: 'shield', x: e.x, y: e.y, col: '#3ddbd9', dur: 0.4 });
         },
-        '#3ddbd9'
+        '#3ddbd9',
+        false,
+        'hitSilence'
       );
     } else if (k === 'killshot' && tg) {
       this.loose(
@@ -808,7 +825,9 @@ export class Hero {
           );
           this.banner('KILL SHOT!', 'bad');
         },
-        '#e0504b'
+        '#e0504b',
+        false,
+        'hitKillshot'
       );
     } else if (k === 'pierce' && tg) {
       this.acd.pierce = this.abilityCd('pierce');
@@ -890,7 +909,13 @@ export class Hero {
       for (let i = 0; i < 3; i++)
         R.after(i * 0.18, () => {
           if (tg.alive && this.regionId === R.id && !this.dead)
-            this.loose(tg, e => this.dmgEnemy(e, hit(4, e), crit ? 'crit' : ''), '#c8d2e0');
+            this.loose(
+              tg,
+              e => this.dmgEnemy(e, hit(4, e), crit ? 'crit' : ''),
+              '#c8d2e0',
+              false,
+              'hitArrow'
+            );
         });
     } else if (k === 'deadeye' && tg) {
       this.loose(
@@ -904,7 +929,9 @@ export class Hero {
             this.log('Deadeye! It is ready again.', 'c');
           }
         },
-        '#e0504b'
+        '#e0504b',
+        false,
+        'hitDeadeye'
       );
     } else if (k === 'beartrap') {
       R.setTrap(this, 3 + this.tal.trapHold);
@@ -962,6 +989,7 @@ export class Hero {
       if (along < 0 || along > len || off > 12 * e.def.scale) continue;
       R.after(along / ARROW_SPEED, () => {
         if (e.alive && this.regionId === R.id) {
+          R.sound('hitPierce', e.x, e.y);
           this.dmgEnemy(e, Math.round(dmg * this.dmgMult(e)), 'crit');
           if (this.tal.critBleed) this.bleedT = Math.max(this.bleedT, this.tal.critBleed);
         }
@@ -1066,6 +1094,7 @@ export class Hero {
         this.log(why, 'h');
         if (why.includes('range')) this.floater(this.x, this.y - 20, 'TOO FAR', 'hurt');
         this.nudge(btn, key, true);
+        this.hear('error');
       }
       return false;
     }
@@ -1095,6 +1124,7 @@ export class Hero {
       (key === 'volley' ? this.tal.volleyDmg : 0);
     this.floater(this.x, this.y - 36, sk.n.toUpperCase(), 'name', sk.col);
     this.castFlash(btn, key, sk.col);
+    this.sound(key);
     const tg = this.target;
     const critCls: FloaterClass = crit ? 'crit' : '';
     if (key === 'charge' && tg) {
@@ -1170,6 +1200,7 @@ export class Hero {
       this.loose(
         tg,
         () => {
+          R.sound('hitVolley', cx, cy);
           R.fx({ type: 'ring', x: cx, y: cy, r0: 6, r1: reach, col: sk.col, lw: 2, dur: 0.4 });
           this.burst(cx, cy - 6, 14, sk.col, 120, 0.5, 2, 160);
           for (const e of R.enemies)
@@ -1200,7 +1231,15 @@ export class Hero {
             e.slowK = Math.max(e.slowK, 0.5);
           }
         },
-        sk.col
+        sk.col,
+        false,
+        key === 'aimedshot'
+          ? 'hitAimed'
+          : key === 'barbed'
+            ? 'hitBarbed'
+            : key === 'concussive'
+              ? 'hitConcussive'
+              : 'hitArrow'
       );
     } else if (tg) {
       this.face = tg.x < this.x ? -1 : 1;
@@ -1237,6 +1276,7 @@ export class Hero {
     if (perfect) {
       this.perf++;
       this.banner('PERFECT!');
+      this.hear('perfect');
       R.fx({
         type: 'ring',
         x: this.x,
@@ -1258,9 +1298,16 @@ export class Hero {
   /**
    * Loose an arrow at a creature: it flies from the bow to where the creature stands, and
    * `hit` happens when it lands, if the creature is still alive (or always, for a volley's
-   * area). The archer holds still for the draw, and shooting ends Camouflage.
+   * area), with the sound `land` if it has one (a spell's arrow). The archer holds still for
+   * the draw, and shooting ends Camouflage.
    */
-  private loose(tg: Enemy, hit: (e: Enemy) => void, col = '#e8dcc0', always = false): void {
+  private loose(
+    tg: Enemy,
+    hit: (e: Enemy) => void,
+    col = '#e8dcc0',
+    always = false,
+    land?: SoundId
+  ): void {
     const R = this.region;
     const t = Math.max(0.08, this.dist(this, tg) / ARROW_SPEED);
     this.face = tg.x < this.x ? -1 : 1;
@@ -1275,7 +1322,9 @@ export class Hero {
     });
     R.after(t, () => {
       if (this.regionId !== R.id) return;
-      if (always || (tg.alive && R.enemies.includes(tg))) hit(tg);
+      if (!always && !(tg.alive && R.enemies.includes(tg))) return;
+      if (land) R.sound(land, tg.x, tg.y);
+      hit(tg);
     });
     this.aimT = AIM_HOLD;
     this.atkAnimT = ATK_ANIM;
@@ -1296,6 +1345,7 @@ export class Hero {
     this.kills++;
     this.gold += e.def.gold;
     this.banner('+' + e.def.gold + ' GOLD');
+    if (e.def.gold) this.hear('coins');
     this.log(e.n + ' defeated.', 'c');
     if (this.target === e) {
       this.target = null;
@@ -1372,6 +1422,7 @@ export class Hero {
       this.dead = 2.2;
       this.stopMoving();
       this.events.emit('died', {});
+      this.hear('died');
       this.log('You died. Respawning…', 'h');
     }
   }
@@ -1389,18 +1440,21 @@ export class Hero {
       return;
     }
     this.mountT = Math.max(0.1, 1 - this.tal.mountTime);
+    this.sound('mount');
     this.log('Mounting…');
   }
   private dismount(msg: string): void {
     if (!this.mounted) return;
     this.mounted = false;
     this.burst(this.x, this.y + 4, 8, '#b8956a', 60, 0.5, 3, -20);
+    this.sound('dismount');
     if (msg) this.log(msg);
   }
   private finishMount(): void {
     this.mounted = true;
     this.mountT = 0;
     this.burst(this.x, this.y + 4, 10, '#b8956a', 70, 0.5, 3, -20);
+    this.sound('mounted');
     this.floater(this.x, this.y - 36, 'MOUNTED', 'name', '#a78bfa');
     this.log('Mounted. Speed ×1.8. Attacking dismounts you.', 't');
   }
@@ -1601,6 +1655,7 @@ export class Hero {
     this.floater(this.x, this.y - 20, '+' + h, 'heal');
     this.burst(this.x, this.y - 14, 6, '#f49088', 40, 0.5, 2, -30);
     this.log(`You eat the ${def.name.toLowerCase()}. +${h} health.`, 't');
+    this.hear('eat');
     this.events.emit('bag', {});
   }
 
@@ -1635,6 +1690,7 @@ export class Hero {
     }
     if (this.gold < price) {
       this.log("You can't afford that.", 'h');
+      this.hear('error');
       return false;
     }
     if (this.addItem(id, 1) > 0) {
@@ -1643,6 +1699,7 @@ export class Hero {
     }
     this.gold -= price;
     this.log(`You buy the ${ITEMS[id].name.toLowerCase()} for ${price} gold.`, 'c');
+    this.hear('coins');
     this.events.emit('bag', {});
     this.events.emit('trade', {});
     return true;
@@ -1663,6 +1720,7 @@ export class Hero {
     if (s.n <= 0) this.bag[slot] = null;
     this.gold += v * n;
     this.log(`You sell ${n > 1 ? n + ' × ' : 'the '}${name} for ${v * n} gold.`, 'c');
+    this.hear('coins');
     this.events.emit('bag', {});
     this.events.emit('trade', {});
     return true;
@@ -1704,6 +1762,7 @@ export class Hero {
     const why = this.craftProblem(r);
     if (why) {
       this.log(why, 'h');
+      this.hear('error');
       return false;
     }
     for (const [item, n] of r.needs) this.removeItem(item, n);
@@ -1726,6 +1785,8 @@ export class Hero {
         ? `You cook the ${ITEMS[r.needs[0][0]].name.toLowerCase()}.`
         : `You ${item.endsWith('_bar') ? 'smelt' : r.station === 'forge' ? 'forge' : 'make'} ${a} ${name.toLowerCase()}.`;
     this.log(what, 'c');
+    // food sizzles on the fire, the forge rings, the rest (bows) is woodwork
+    this.hear(ITEMS[item].heal ? 'cook' : r.station === 'forge' ? 'smith' : 'build');
     this.game.questEvent('craft', r.id);
     this.gainXp(XP_FOR.craft);
     return true;
@@ -1781,6 +1842,7 @@ export class Hero {
         : 'You build a forge. Smelt ore and smith gear at it.',
       'c'
     );
+    this.hear('build');
     this.events.emit('bag', {});
     this.game.questEvent('build', kind);
     this.gainXp(XP_FOR.build, s.x, s.y);
@@ -1815,6 +1877,7 @@ export class Hero {
     this.hp = this.hpMax;
     this.mp = this.mpMax;
     this.banner(`LEVEL ${this.level}!`, 'cool');
+    this.hear('levelUp');
     this.log(`You reach level ${this.level}. You have a talent point to spend (N).`, 'c');
     this.region.fx({
       type: 'ring',
@@ -1863,6 +1926,7 @@ export class Hero {
     if (this.talentProblem(id)) return false;
     this.talents[id] = (this.talents[id] ?? 0) + 1;
     this.applyTalents();
+    this.hear('talent');
     const t = TALENTS[id];
     if (t.grants) {
       const slot = this.placeSpell(t.grants);
@@ -1970,6 +2034,7 @@ export class Hero {
     }
     this.applyGear();
     this.log(`You equip the ${ITEMS[s.id].name.toLowerCase()}.`);
+    this.hear('equip');
     this.events.emit('bag', {});
   }
 
@@ -1984,6 +2049,7 @@ export class Hero {
     this.equip[slot] = null;
     this.applyGear();
     this.log(`You take off the ${ITEMS[id].name.toLowerCase()}.`);
+    this.hear('equip');
     this.events.emit('bag', {});
   }
 
@@ -2457,6 +2523,7 @@ export class Hero {
         this.target = null;
         this.stopMoving();
         this.events.emit('respawned', {});
+        this.hear('respawn');
         this.log('You respawn on the road.');
       }
     }

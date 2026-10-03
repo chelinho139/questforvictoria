@@ -29,6 +29,7 @@ import type {
   Hazard,
   Trap,
   WandererState,
+  SoundId,
 } from './types';
 import type { Game } from './Game';
 import type { Hero } from './Hero';
@@ -158,6 +159,10 @@ export class Region {
   }
   fx(f: Omit<Fx, 't' | 'onEnd'>): void {
     this.events.emit('fx', f);
+  }
+  /** A sound, heard from where it happened. */
+  sound(id: SoundId, x: number, y: number): void {
+    this.events.emit('sound', { id, x: Math.round(x), y: Math.round(y) });
   }
   burst(
     x: number,
@@ -326,6 +331,7 @@ export class Region {
           if (got > 0) {
             this.floater(h.x, h.y - 28, `+${got} ${ITEMS[d.id].name}`, 'name', ITEMS[d.id].col);
             h.log(`Picked up ${got > 1 ? got + ' × ' : ''}${ITEMS[d.id].name.toLowerCase()}.`);
+            h.hear('pickup');
           } else if (d.age % 4 < dt) h.log('Your bag is full.', 'h');
           d.n = left;
         }
@@ -833,6 +839,7 @@ export class Region {
       tr.t = 0;
       e.rootT = Math.max(e.rootT, tr.hold);
       this.fx({ type: 'ring', x: tr.x, y: tr.y, r0: 4, r1: 22, col: '#c8a05a', lw: 3, dur: 0.35 });
+      this.sound('trapSnap', tr.x, tr.y);
       this.burst(tr.x, tr.y - 4, 10, '#c8a05a', 80, 0.4, 2, 80);
       this.floater(e.x + 10, e.y - 14 * e.def.scale - 8, 'CAUGHT', 'name', '#c8a05a');
       const owner = this.heroes().find(h => h.id === tr.owner);

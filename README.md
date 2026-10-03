@@ -28,6 +28,7 @@ npm run bot      # a test player for online play (see Online co-op)
 | `localStore.test.ts` | Single player's characters in the browser, and moving the old save into the first one |
 | `classes.test.ts` | The classes: tree shapes and points, each class's spells and gear, standing still to shoot, arrows landing when they arrive, Mark, Concussive Shot, bear traps, Volley, Piercing Shot, Camouflage, Disengage, angry slimes, saving the class |
 | `balance.test.ts` | Warrior and archer stay a fair match, build for mirrored build (see `docs/archer.md`); `fight.ts` is the fight simulator, `npx tsx tests/balance-report.ts` prints the tables |
+| `sounds.test.ts` | Every sound renders at its loudness, never clipping, ending in silence; every spell sounds when cast and its arrows when they land; the horse, the bear trap; the interface's sounds (a level, a talent, quests, the journal, gold, loot, gear, food, crafting, a mistake, dying) and who hears them; a save loads in silence; online, a sound reaches everyone in the region, and your own only you |
 | `netsim.test.ts` | The browser's online game against the server's, joined by a fake line: an archer shoots and walks on, stands still to shoot, a warrior walks |
 | `server.test.ts` | The real server over WebSockets: hello, hosting and joining, one room per character, saving on leaving and on stopping, junk messages, refused moves, no cheats in production |
 
@@ -39,7 +40,7 @@ npm run bot      # a test player for online play (see Online co-op)
 - `src/net/` — online play shared by browser and server: the messages (`protocol.ts`), the whitelist of commands a browser may send (`commands.ts`), the browser's socket (`Connection.ts`) and `NetSim`, the Sim a browser plays online.
 - `src/server/` — the game server, bundled to `dist/server/` and started by `server.js`: rooms, the 20-a-second loop, and a `Session` per player that builds their snapshots.
 - `src/data/` — tunables and pixel-art sources: skills, enemies, icon/sprite maps.
-- `src/phaser/` — Phaser layer: `BootScene` is the loading screen (logo, progress bar) and builds every texture in steps, `GameScene` ticks the sim and renders the world, `PcHudScene` is the Stardew/Terraria-style PC HUD (parchment unit frames, wooden action bar, day dial with gold box), `MobileHudScene` is the one-thumb touch HUD kept for a mobile build. `PLATFORM` in `src/phaser/config.ts` picks one. The canvas fills the window at an integer pixel scale.
+- `src/phaser/` — Phaser layer: `BootScene` is the loading screen (logo, progress bar) and builds every texture in steps, `GameScene` ticks the sim and renders the world, `PcHudScene` is the Stardew/Terraria-style PC HUD (parchment unit frames, wooden action bar, day dial with gold box), `MobileHudScene` is the one-thumb touch HUD kept for a mobile build. `PLATFORM` in `src/phaser/config.ts` picks one. The canvas fills the window at an integer pixel scale. `audio/` makes and plays the sounds (see Sound).
 - `public/` — static site; `public/dist/` is generated.
 - `index.html` — the original single-file prototype the game is seeded from.
 
@@ -60,6 +61,7 @@ Press `O` or `` ` `` (backtick), or click the cog on the menu bar. The panel cha
 - **Documents**: *The Lore* and *Prologue & Act I* (the build spec) open in the book viewer in a new tab, so the game keeps running; its *Back to the game* closes the tab. New specs go in `DOC_LINKS` (`src/phaser/dev/DevMenu.ts`) and `SPECS` (`server.js`).
 - **Time**: clock slider, Dawn / Noon / Sunset / Midnight, day speed (pause, 1× = 10-minute day, up to 600×).
 - **Graphics**: art style (the six candidates, switched instantly), HD hero, day/night lighting on/off, darkness strength, clouds on/off.
+- **Sound**: volume (all the way down is off), and a sound board: pick any spell, what follows it (its arrow landing, the trap springing, the horse coming) or one of the interface's sounds, to hear it.
 - **Player**: god mode, infinite mana, no cooldowns, move speed, full heal, back to start.
 - **Enemies**: freeze, kill all, respawn all (back to the starting creatures), reset game, spawn any creature near you.
 - **Debug**: draw the click-to-move path, FPS counter, skip loading screen.
@@ -80,6 +82,17 @@ All art is generated in code at load time; there are no image files.
 - **Icons**: the 14 action icons are hand-designed 20×20 items in `hdIcons.ts`, shared by every style.
 - **UI kit** in `src/phaser/render/uiKit.ts`: 9-slice parchment and wood panels, inset slots, selection ring, bar insets, heart/mana/coin/skull/star icons.
 - **Logo and loading screen** in `src/phaser/render/splash.ts`.
+
+## Sound
+
+Like the art, every sound is made in code at load time; there are no sound files.
+
+- **What sounds**: every spell when it's cast (a spell's key is its sound's name), and what follows: an arrow landing (each special arrow has its own), a bear trap springing, the horse coming and being left. Everyone nearby hears these. Auto-attacks are silent for now.
+- **The interface** (heard only by the hero it happens to): a level (a harp and a chord), a talent, a quest taken, its goals done and handed in (a fanfare), a journal entry, gold (a kill, buying, selling), an item picked up, gear on or off, eating, cooking, smithing, building (and woodwork, like bows), a perfect-timed tap, a mistake (a spell you can't cast, gold you don't have; it can't repeat faster than every 0.4 s), dying and coming back, and a window opening or closing (`GameScene` watches the windows, so a key, a button, Esc or another window taking its place all count). The jingles are tuned to D major so they sit together, and play at their own pitch.
+- **Recipes** (`src/phaser/audio/sounds.ts`): one per sound, built from shared pieces (a whoosh, a thump, a crunch, a bowstring, struck metal, a voice through mouth shapes, crackle, chimes), so the warrior's blows and the archer's arrows each sound like one family. `loud` sets a sound's loudness against the others (1: the biggest finishing blows); the renderer brings it there and rounds off any peak.
+- **The synthesizer** (`src/phaser/audio/synth.ts`): oscillators, filtered noise, a plucked string, struck metal, saturation and a small reverb, rendered sample by sample into a buffer. It uses no Web Audio and no Phaser, so the tests render every sound in Node.
+- **Playing** (`src/phaser/audio/Sfx.ts`): the loading screen renders every sound, a few per step (`soundJobs`). The sim sends `sound` as a region event (what, and where) or as a hero event (what, for that hero alone: `Hero.hear`), and `Sfx` plays it through Phaser's Web Audio context. A sound with a place is at full volume within 160 screen px of your hero, fades out by 720, is panned left or right, and is up to 4% higher or lower each time. Online the server's hero makes the sound and it travels in the snapshot, like the effects.
+- **Adding a sound**: give it an id in `SoundId` (`src/sim/types.ts`: a `FollowSound` or a `UiSound`) and a recipe in `SOUNDS`, and emit it with `region.sound(id, x, y)` or `hero.hear(id)`. A new spell needs only a recipe under its key; the type-check won't pass without one, nor without a sound board name for a new `UiSound`.
 
 ## HUD
 

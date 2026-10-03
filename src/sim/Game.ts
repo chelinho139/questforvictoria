@@ -147,7 +147,10 @@ export class Game {
     const d = DOCS[id];
     if (!d || this.journal.includes(id)) return;
     this.journal.push(id);
-    for (const h of this.heroes) h.log(`Added to your journal: ${d.title}. (J)`, 't');
+    for (const h of this.heroes) {
+      h.log(`Added to your journal: ${d.title}. (J)`, 't');
+      h.hear('journal');
+    }
     this.events.emit('journal', { doc: id });
   }
 
@@ -225,6 +228,7 @@ export class Game {
       if (h.questLog.has(id)) continue;
       h.questLog.set(id, 'active');
       h.log(`New quest: ${QUESTS[id].name}.`, 'c');
+      h.hear('questAccept');
     }
     this.events.emit('quests', {});
     if (fresh) this.applyEffect(QUESTS[id].onAccept, hero);
@@ -251,6 +255,7 @@ export class Game {
       .filter(Boolean)
       .join(', ');
     hero.banner('QUEST COMPLETE');
+    hero.hear('questComplete');
     hero.log(`Quest complete: ${def.name}.${got ? ` You receive ${got}.` : ''}`, 'c');
     hero.region.burst(hero.x, hero.y - 18, 16, '#f2c14e', 80, 0.8, 3, -60);
     this.events.emit('quests', {});
@@ -281,8 +286,10 @@ export class Game {
         }
       });
       if (before === 'active' && this.questStatus(id) === 'ready') {
-        for (const h of this.heroes)
+        for (const h of this.heroes) {
           h.log(`${QUESTS[id].name}: done! Return to ${NPCS[this.turnInOf(id)].name}.`, 'c');
+          h.hear('questReady');
+        }
         this.lastStatus.set(id, 'ready');
       }
     }
@@ -302,8 +309,10 @@ export class Game {
       if (before && before !== st) {
         changed = true;
         if (st === 'ready')
-          for (const h of this.heroes)
+          for (const h of this.heroes) {
             h.log(`${QUESTS[id].name}: done! Return to ${NPCS[this.turnInOf(id)].name}.`, 'c');
+            h.hear('questReady');
+          }
       }
       this.lastStatus.set(id, st);
     }

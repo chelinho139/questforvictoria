@@ -15,6 +15,12 @@ import { StyleBoard } from './styleBoard';
 import { PC_KEYS } from '../../data/actionBar';
 import { xpToNext } from '../../data/talents';
 import { REGIONS } from '../../data/regions';
+import type { Sfx } from '../audio/Sfx';
+import type { SoundId, FollowSound, UiSound } from '../../sim/types';
+import { SPELLS, SPELL_ORDER } from '../../data/spells';
+import type { SpellKey } from '../../data/spells';
+import { SKILLS, ACTIONS, isSkill } from '../../data/skills';
+import { CLASS_IDS, CLASSES } from '../../data/classes';
 
 /** Everything the panel can change that is worth keeping across reloads. */
 /** The documents in docs/, served by server.js in the book viewer. Add new specs here (and to SPECS in server.js). */
@@ -45,6 +51,8 @@ interface DevSettings {
   rev: boolean;
   /** The backup art styles: their buttons here, and the V / H keys in game. */
   artReview: boolean;
+  /** Sound effects, 0 (off) to 1. */
+  volume: number;
 }
 
 const DEFAULTS: DevSettings = {
@@ -63,6 +71,49 @@ const DEFAULTS: DevSettings = {
   freezeEnemies: false,
   showPath: false,
   fps: false,
+  volume: 0.7,
+};
+
+/** The sound board's names for what follows a cast (the casts go by their spell's name). */
+const FOLLOW_UPS: Partial<Record<SpellKey, [FollowSound, string][]>> = {
+  mount: [
+    ['mounted', 'the horse comes'],
+    ['dismount', 'getting off'],
+  ],
+  quickshot: [['hitArrow', 'lands']],
+  aimedshot: [['hitAimed', 'lands']],
+  barbed: [['hitBarbed', 'lands']],
+  concussive: [['hitConcussive', 'lands']],
+  silence: [['hitSilence', 'lands']],
+  killshot: [['hitKillshot', 'lands']],
+  volley: [['hitVolley', 'lands']],
+  pierce: [['hitPierce', 'lands']],
+  rapidfire: [['hitArrow', 'lands']],
+  deadeye: [['hitDeadeye', 'lands']],
+  beartrap: [['trapSnap', 'springs']],
+};
+
+/** The sound board's names for the interface's sounds. */
+const UI_SOUNDS: Record<UiSound, string> = {
+  levelUp: 'Level up',
+  talent: 'Talent learned',
+  questAccept: 'Quest taken',
+  questReady: 'Quest goals done',
+  questComplete: 'Quest handed in',
+  journal: 'Journal entry',
+  pickup: 'Item picked up',
+  coins: 'Gold',
+  equip: 'Gear on or off',
+  eat: 'Eating',
+  cook: 'Cooking',
+  smith: 'Smithing',
+  build: 'Building, woodwork',
+  perfect: 'Perfect timing',
+  error: "Can't do that",
+  died: 'You die',
+  respawn: 'You respawn',
+  open: 'Window opens',
+  close: 'Window closes',
 };
 
 const STORAGE_KEY = 'qfv-dev-settings';
@@ -144,7 +195,8 @@ export class DevMenu {
     private readonly sim: Sim,
     private readonly lighting: Lighting,
     private readonly clouds: Clouds,
-    private readonly effects: Effects
+    private readonly effects: Effects,
+    private readonly sfx: Sfx
   ) {
     this.root = el('div', 'dev');
     this.root.hidden = true;
@@ -263,6 +315,39 @@ export class DevMenu {
     look.append(this.slider('Darkness', 'strength', 0, 1, 0.05, v => Math.round(v * 100) + '%'));
     look.append(this.switchRow('Clouds', 'clouds'));
 
+    // ---- sound: the volume, and every spell's sounds to listen to
+    const sound = this.section('Sound');
+    sound.append(this.slider('Volume', 'volume', 0, 1, 0.05, v => (v ? Math.round(v * 100) + '%' : 'Off')));
+    const board = el('div', 'dev-row');
+    const pick = el('select');
+    pick.setAttribute('aria-label', 'A sound to hear');
+    const option = (parent: HTMLElement, id: SoundId, label: string) => {
+      const o = el('option', '', label);
+      o.value = id;
+      parent.append(o);
+    };
+    for (const cls of [...CLASS_IDS, undefined]) {
+      const group = el('optgroup');
+      group.label = cls ? CLASSES[cls].name : 'Everyone';
+      for (const k of SPELL_ORDER.filter(k => SPELLS[k].cls === cls)) {
+        const name = isSkill(k) ? SKILLS[k].n : ACTIONS[k].n;
+        option(group, k, name);
+        for (const [id, what] of FOLLOW_UPS[k] ?? []) option(group, id, `${name} · ${what}`);
+      }
+      pick.append(group);
+    }
+    const ui = el('optgroup');
+    ui.label = 'Interface';
+    for (const [id, label] of Object.entries(UI_SOUNDS)) option(ui, id as UiSound, label);
+    pick.append(ui);
+    const hear = () => this.sfx.play(pick.value as SoundId);
+    pick.addEventListener('change', () => {
+      hear();
+      pick.blur();
+    });
+    board.append(pick, this.button('Play', hear));
+    sound.append(board);
+
     // ---- player
     const player = this.section('Player');
     player.append(this.switchRow('God mode', 'god'));
@@ -375,7 +460,7 @@ export class DevMenu {
     return row;
   }
 
-  private slider(label: string, key: 'strength' | 'moveSpeed', min: number, max: number, step: number, fmt: (v: number) => string): HTMLElement {
+  private slider(label: string, key: 'strength' | 'moveSpeed' | 'volume', min: number, max: number, step: number, fmt: (v: number) => string): HTMLElement {
     const wrap = el('div', 'dev-col');
     const row = el('div', 'dev-row');
     row.append(el('span', 'dev-k', label));
@@ -400,7 +485,7 @@ export class DevMenu {
     return wrap;
   }
 
-  private readonly formatters: Partial<Record<'strength' | 'moveSpeed', (v: number) => string>> = {};
+  private readonly formatters: Partial<Record<'strength' | 'moveSpeed' | 'volume', (v: number) => string>> = {};
 
   // ---------- state ----------
   /** Push settings into the game and refresh every control. */
@@ -418,6 +503,7 @@ export class DevMenu {
       moveSpeed: s.moveSpeed,
     });
     this.effects.showPath = s.showPath;
+    this.sfx.setVolume(s.volume);
     this.sim.setRevEnabled(s.rev);
     this.fpsEl.hidden = !s.fps;
     if (this.reviewEl) this.reviewEl.hidden = !s.artReview;
@@ -433,7 +519,7 @@ export class DevMenu {
       sw.setAttribute('aria-checked', String(Boolean(s[k])));
     });
     this.root.querySelectorAll<HTMLSpanElement>('[data-value-for]').forEach(v => {
-      const k = v.dataset.valueFor as 'strength' | 'moveSpeed';
+      const k = v.dataset.valueFor as 'strength' | 'moveSpeed' | 'volume';
       v.textContent = this.formatters[k]?.(s[k]) ?? String(s[k]);
     });
     save(s);

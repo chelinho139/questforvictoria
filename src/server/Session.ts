@@ -30,6 +30,7 @@ const HERO_EVENTS = [
   'region',
   'exit',
   'trade',
+  'sound',
 ] as const;
 const REGION_EVENTS = [
   'floater',
@@ -39,6 +40,7 @@ const REGION_EVENTS = [
   'sceneFade',
   'bossPhase',
   'shake',
+  'sound',
 ] as const;
 const ROOM_EVENTS = ['quests', 'flags', 'journal'] as const;
 
