@@ -2,6 +2,7 @@ import type { EnemyKind } from '../enemies';
 import type { NpcId } from '../npcs';
 import type { Cond, Effect } from '../story';
 import type { PropKind } from '../props';
+import type { Mood } from '../music';
 
 /** How deep into the Blackthorn a region lies (docs/lore.md): 0 untouched to 5 Thornhallow. */
 export type Ring = 0 | 1 | 2 | 3 | 4 | 5;
@@ -97,6 +98,8 @@ export interface RegionDef {
   /** Indoors: as dim as dusk all day; lit only by `lights` (torches, tiles). */
   indoor?: boolean;
   lights?: At[];
+  /** The music here, when not what its ring and roof would choose (data/music.ts moodFor). */
+  music?: Mood;
   /** Scenes to play here (each once): on arrival, or as soon as `when` holds while you're here. */
   onEnter?: { scene: string; when?: Cond }[];
   /** Dev-only regions are reachable from the settings panel, never from play. */

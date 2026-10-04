@@ -13,6 +13,7 @@
     "verify": "npm run type-check && npm run test && npm run build",
     "share:art-board": "node tools/build-art-board.js",
     "share:lore": "node tools/build-lore-artifact.js",
+    "music": "node --import tsx tools/music/encode.ts",
     "bot": "node tools/net/bot.js"
   },
   "license": "PolyForm-Noncommercial-1.0.0",

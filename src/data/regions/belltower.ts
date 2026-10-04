@@ -9,6 +9,8 @@ export const belltower: RegionDef = {
   name: 'The Bell Tower',
   ring: 1,
   indoor: true,
+  // a haunted belfry, not a warm room
+  music: 'haunted',
   layout: [
     '&&&&&&&&&&&&&&&&&&&&',
     '&&&&&&&&#####&&&&&&&',

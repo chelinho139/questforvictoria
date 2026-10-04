@@ -20,8 +20,8 @@ app.get(['/lore', '/lore.html'], (req, res) => {
 });
 
 // Build specs (docs/<name>.md) read the same way: /act1.html shows docs/act1.md.
-const SPECS = { act1: 'Prologue & Act I spec', online: 'Online co-op plan', archer: 'The archer' };
-app.get(/^\/(act1|online|archer)(\.html)?$/, (req, res) => {
+const SPECS = { act1: 'Prologue & Act I spec', online: 'Online co-op plan', archer: 'The archer', credits: 'Credits' };
+app.get(/^\/(act1|online|archer|credits)(\.html)?$/, (req, res) => {
   const name = req.params[0];
   try {
     res.setHeader('Cache-Control', 'no-cache');

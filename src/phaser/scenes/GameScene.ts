@@ -34,6 +34,7 @@ import { OnlineBadge } from '../ui/OnlineBadge';
 import { SceneBox } from '../ui/SceneBox';
 import { BossBar } from '../ui/BossBar';
 import { Sfx } from '../audio/Sfx';
+import { Music } from '../audio/Music';
 import { WeatherAudio } from '../audio/WeatherAudio';
 import { WeatherFx } from '../render/WeatherFx';
 import { View3D, VIEW_MODES, VIEW_NAMES } from '../view3d/View3D';
@@ -71,6 +72,7 @@ export class GameScene extends Phaser.Scene {
   private sceneBox!: SceneBox;
   private bossBar!: BossBar;
   private sfx!: Sfx;
+  private music!: Music;
   /** Rain, storms and lightning on screen, and their sound. */
   private weather!: WeatherFx;
   /** Where the camera looks (eased toward the hero, or what a scene shows). */
@@ -127,10 +129,11 @@ export class GameScene extends Phaser.Scene {
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => badge.destroy());
     } else if (charId) this.setupAutosave(charId);
     this.sfx = new Sfx(this.game, this.sim);
+    this.music = new Music(this.game, this.sim);
     this.weather = new WeatherFx(this, this.sim);
     const bus = this.sfx.bus;
     if (bus) this.weather.setAudio(new WeatherAudio(bus.ctx, bus.out));
-    this.dev = new DevMenu(this.game, this.sim, this.lighting, this.clouds, this.effects, this.sfx);
+    this.dev = new DevMenu(this.game, this.sim, this.lighting, this.clouds, this.effects, this.sfx, this.music);
     this.registry.set('dev', this.dev);
     this.inventory = new InventoryWindow(this.game, this.sim);
     this.registry.set('inventory', this.inventory);
@@ -197,6 +200,7 @@ export class GameScene extends Phaser.Scene {
       this.lighting.destroy();
       this.weather.destroy();
       this.sfx.destroy();
+      this.music.destroy();
       this.view3d?.destroy();
       this.view3d = null;
       this.registry.set('view3d', null);
@@ -589,6 +593,7 @@ export class GameScene extends Phaser.Scene {
 
     this.sim.tick(dt);
     this.soundWindows();
+    this.music.update(dt);
     // the HUD steps aside while a scene plays (the black bars would cut through it)
     const hud = this.scene.get(PLATFORM === 'pc' ? SceneKeys.PcHud : SceneKeys.MobileHud);
     if (hud && hud.sys.settings.visible === !!this.sim.scene) hud.sys.setVisible(!this.sim.scene);
