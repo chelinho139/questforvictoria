@@ -1,5 +1,5 @@
 import { KINDS, RESPAWN } from '../data/enemies';
-import type { EnemyKind, CreatureSounds } from '../data/enemies';
+import type { EnemyKind, CreatureSounds, CastDef } from '../data/enemies';
 import { T, Tile, rockCentre, RegionMap, parseLayout, isoX, isoSpeedFactor, faceToward } from './map';
 import { findPath } from './pathfind';
 import { propSolidTiles } from '../data/props';
@@ -31,6 +31,9 @@ import type {
   Trap,
   WandererState,
   SoundId,
+  Foe,
+  Snare,
+  Fallen,
 } from './types';
 import type { Game } from './Game';
 import type { Hero } from './Hero';
@@ -46,6 +49,38 @@ const STRAY = 150;
 /** The walk home: how much faster than a stroll, and how long before it is simply there. */
 const HOME_SPEED = 1.4;
 const HOME_MAX = 8;
+/** How high an ambusher drops from, and how fast it falls (px, px/s). */
+const DROP_FROM = 70;
+const DROP_SPEED = 240;
+/** How long the dead who fell can still be sung up again (s), and how many raised walk at once. */
+const FALLEN_KEEP = 90;
+const RAISED_MAX = 6;
+/** A creature's part in a fight, cleared when it walks home or comes back to life. */
+const FIGHT_STATE: Partial<Enemy> = {
+  casting: undefined,
+  shieldT: undefined,
+  shieldCd: undefined,
+  hid: undefined,
+  z: undefined,
+  leap: undefined,
+  leapCd: undefined,
+  snareCd: undefined,
+  hatchT: undefined,
+  summonCd: undefined,
+  blinkCd: undefined,
+  fire: undefined,
+  smotherT: undefined,
+  lying: undefined,
+  tollT: undefined,
+  tollN: undefined,
+};
+/** What a creature says as it starts each kind of spell. */
+const CAST_SAY: Record<CastDef['what'], string> = {
+  fireball: 'casts Fireball…',
+  heal: 'begins to wail…',
+  raise: 'begins to sing…',
+  web: 'spits web!',
+};
 
 interface Movable {
   x: number;
@@ -86,6 +121,11 @@ export class Region {
   /** Bear traps archers have set (one each): the first creature to step on one is caught. */
   traps: Trap[] = [];
   private nextTrap = 1;
+  /** Snares goblin trappers have laid in the grass. */
+  snares: Snare[] = [];
+  private nextSnare = 1;
+  /** The dead who fell here lately, for a song that raises them. */
+  fallen: Fallen[] = [];
   /** Who walks this region's routes (the grey postman). */
   wanderers: WandererState[] = [];
   /** The scene playing here (data/scenes.ts), or null. Input and combat wait while it plays. */
@@ -99,6 +139,9 @@ export class Region {
   private sceneQueue: string[] = [];
   private storyT = 0;
   private wasNight = false;
+  /** A night being held (RegionDef.hold): under way, and seconds to the next one out of the dark. */
+  private holdOn = false;
+  private holdT = 0;
   private nextEnemy = 1;
   private nextDrop = 1;
   /** Things that happen a moment later (a fireball landing). */
@@ -118,7 +161,7 @@ export class Region {
       for (let r = e.area[1]; r <= e.area[3]; r++)
         for (let c = e.area[0]; c <= e.area[2]; c++) open.push([c, r]);
     this.map = new RegionMap(parseLayout(def.layout, id), open);
-    this.structures = memory?.structures ?? [];
+    this.structures = (memory?.structures ?? []).filter(st => !st.fixed);
     this.drops = memory?.drops ?? [];
     for (const d of this.drops) this.nextDrop = Math.max(this.nextDrop, d.uid + 1);
     for (const st of this.structures)
@@ -128,6 +171,7 @@ export class Region {
       .map(p => ({ kind: p.kind, c: p.at[0], r: p.at[1] }));
     for (const p of this.props)
       for (const [c, r] of propSolidTiles(p.kind, p.c, p.r)) this.map.setPropSolid(c, r);
+    this.syncFixed();
     this.trees = this.buildTrees();
     this.rocks = this.buildRocks();
     this.npcs = def.npcs.filter(n => this.game.check(n.when)).map(n => this.placeNpc(n.id, n.at));
@@ -146,9 +190,9 @@ export class Region {
     }));
   }
 
-  /** What to keep when the last hero leaves. */
+  /** What to keep when the last hero leaves (the region's own fires come back as they were). */
   memory(): RegionMemory {
-    return { structures: this.structures, drops: this.drops };
+    return { structures: this.structures.filter(st => !st.fixed), drops: this.drops };
   }
 
   /** The heroes standing here. */
@@ -156,11 +200,15 @@ export class Region {
     return this.game.heroes.filter(h => h.regionId === this.id);
   }
 
-  /** Night here (or the Blackthorn is deep enough, ring 3 and on, that the dead walk anyway). */
+  /**
+   * Night here (or the Blackthorn is deep enough, ring 3 and on, or the grave-mist thick
+   * enough, that the dead walk anyway). From ring 2 the night comes earlier and goes later.
+   */
   get isNight(): boolean {
-    if ((this.def.ring ?? 0) >= 3) return true;
+    const ring = this.def.ring ?? 0;
+    if (ring >= 3 || this.def.dusk) return true;
     const t = this.game.day.t;
-    return t >= 0.8 || t < 0.23;
+    return ring >= 2 ? t >= 0.77 || t < 0.25 : t >= 0.8 || t < 0.23;
   }
 
   // ---------- what everyone here sees ----------
@@ -198,6 +246,34 @@ export class Region {
   /** Tell everyone here. */
   logAll(text: string, cls: '' | 'c' | 'h' | 't' = ''): void {
     for (const h of this.heroes()) h.log(text, cls);
+  }
+  /** Someone says something out loud where they stand: shown over them, and in everyone's log. */
+  say(who: string, text: string, x: number, y: number): void {
+    this.events.emit('say', { who, text, x: Math.round(x), y: Math.round(y) });
+    this.logAll(`${who}: “${text}”`);
+  }
+
+  /**
+   * A call made from the bag (a Warden's whistle) by a hero: whatever here answers to it
+   * (EnemyDef.answers) stops dead, and lets go of whoever it held. True if anything answered.
+   */
+  call(call: string, by: Hero): boolean {
+    let any = false;
+    for (const e of this.enemies) {
+      const a = e.def.answers;
+      if (!a || a.call !== call || !e.alive || e.hid || Math.hypot(e.x - by.x, e.y - by.y) > 600) continue;
+      any = true;
+      e.stunT = Math.max(e.stunT, a.stun[Math.min(e.phase, a.stun.length - 1)]);
+      e.castT = -1;
+      e.shieldT = 0;
+      e.leap = undefined;
+      e.z = 0;
+      e.tele = false;
+      this.floater(e.x, e.y - 14 * e.def.scale - 12, 'FROZEN', 'name', '#e8e4d8');
+      if (a.say) this.say(e.n, a.say, e.x, e.y);
+      if (a.free) for (const f of this.foes()) f.free(a.free);
+    }
+    return any;
   }
 
   // ---------- building the place ----------
@@ -260,7 +336,7 @@ export class Region {
       tele: false,
       castT: -1,
       castTotal: 2.2,
-      castCd: 3,
+      castCd: k.firstCast ?? 3,
       stunT: 0,
       sunderT: 0,
       alive: true,
@@ -283,6 +359,9 @@ export class Region {
       angerT: 0,
       homeT: 0,
     };
+    // an ambusher waits unseen in the canopy; shields and snares start a little way off
+    if (k.ambush) e.hid = true;
+    if (k.shield) e.shieldCd = k.shield.every / 2;
     // night creatures placed during the day wait underground (staggered so they don't all rise at once)
     if (k.nightOnly && !temp && !this.isNight) {
       e.alive = false;
@@ -295,7 +374,14 @@ export class Region {
   spawns(): Enemy[] {
     return this.def.spawns
       .filter(sp => this.game.check(sp.when))
-      .map(sp => this.spawnEnemy(sp.kind, sp.at[0] * T + T / 2, sp.at[1] * T + T / 2));
+      .map(sp => {
+        const e = this.spawnEnemy(sp.kind, sp.at[0] * T + T / 2, sp.at[1] * T + T / 2);
+        if (sp.to) {
+          e.lx = sp.to[0] * T + T / 2;
+          e.ly = sp.to[1] * T + T / 2;
+        }
+        return e;
+      });
   }
 
   // ---------- drops ----------
@@ -386,6 +472,69 @@ export class Region {
     for (const h of this.heroes()) h.events.emit('bag', {});
   }
 
+  /** The region's own fires come and go with the story (a camp's fire once it is lit). */
+  private syncFixed(): void {
+    (this.def.structures ?? []).forEach((d, i) => {
+      // their ids are below zero, apart from anything built
+      const id = -1 - i;
+      const want = this.game.check(d.when, undefined, this);
+      const have = this.structures.find(st => st.id === id);
+      if (want && !have) {
+        const [c, r] = d.at;
+        const x = c * T + T / 2;
+        const y = r * T + T / 2;
+        this.structures.push({ id, kind: d.kind, c, r, x, y, t: Infinity, fixed: true });
+        if (STRUCTURES[d.kind].solid) this.map.setBlocker(c, r, { x, y, r: 10 });
+      } else if (!want && have) {
+        this.structures = this.structures.filter(st => st !== have);
+        if (STRUCTURES[d.kind].solid) this.map.setBlocker(have.c, have.r, null);
+      }
+    });
+  }
+
+  /**
+   * A night being held (RegionDef.hold): from dusk, while its condition holds, the dead keep
+   * coming out of the dark for the fires.
+   */
+  private updateHold(dt: number): void {
+    const h = this.def.hold;
+    if (!h || !this.isNight || !this.game.check(h.when, undefined, this)) return;
+    if (!this.holdOn) {
+      this.holdOn = true;
+      this.holdT = 3;
+    }
+    this.holdT -= dt;
+    if (this.holdT > 0) return;
+    this.holdT = h.spawns.every;
+    const sp = h.spawns;
+    if (this.enemies.filter(e => e.temp && e.alive && e.kind === sp.kind).length >= sp.max) return;
+    const [c, r] = sp.from[Math.floor(this.game.rng.next() * sp.from.length)];
+    const e = this.spawnEnemy(sp.kind, c * T + T / 2, r * T + T / 2, true);
+    if (e.def.nightOnly || e.def.dead) {
+      e.riseT = RISE_DUR;
+      this.cry(e, 'rise');
+    }
+    this.enemies.push(e);
+  }
+
+  /**
+   * Dawn: a night held is won if enough of its fires still burn, lost otherwise (and its dead
+   * go back to the earth); the region's own fires are tended by day and lit again.
+   */
+  private dawn(): void {
+    const h = this.def.hold;
+    if (h && this.holdOn) {
+      this.holdOn = false;
+      const lit = this.structures.filter(st => st.kind === h.fire && this.burning(st)).length;
+      if (lit >= h.need) {
+        this.game.setFlag(h.flag);
+        this.logAll(h.won, 'c');
+      } else this.logAll(h.lost, 'h');
+      for (const e of this.enemies) if (e.temp && e.alive && e.kind === h.spawns.kind) this.crumble(e);
+    }
+    for (const st of this.structures) if (st.fixed) st.out = false;
+  }
+
   private updateRocks(dt: number): void {
     for (const k of this.rocks) {
       if (k.shakeT > 0) k.shakeT = Math.max(0, k.shakeT - dt);
@@ -447,6 +596,12 @@ export class Region {
       h.log(def.needSay ?? 'Not now.', 't');
       return;
     }
+    const short = (def.cost ?? []).find(([id, n]) => h.count(id) < n);
+    if (short) {
+      h.log(def.needSay ?? `You need ${short[1]} × ${ITEMS[short[0]].name.toLowerCase()}.`, 't');
+      return;
+    }
+    for (const [id, n] of def.cost ?? []) h.removeItem(id, n);
     if (def.say) h.log(def.say, 't');
     if (def.once) {
       this.game.setFlag(`used:${this.id}:${o.id}`);
@@ -472,6 +627,7 @@ export class Region {
     if (this.storyT > 0) return;
     this.storyT = 0.4;
     this.syncObjects();
+    this.syncFixed();
     const heroes = this.heroes();
     for (const on of this.def.onEnter ?? [])
       if (!this.game.flags['scene:' + on.scene] && this.game.check(on.when, heroes[0], this))
@@ -714,12 +870,23 @@ export class Region {
   }
 
   // ---------- creatures ----------
-  /** A hero hits a creature: damage, phases, death and loot. Returns true when it died of it. */
-  hurtEnemy(e: Enemy, v: number, cls: FloaterClass, by: Hero): boolean {
+  /**
+   * A hero hits a creature (or `from`, a companion, does, for that hero): damage, phases, death
+   * and loot. Returns true when it died of it.
+   */
+  hurtEnemy(e: Enemy, v: number, cls: FloaterClass, by: Hero, from: Foe = by): boolean {
     if (!e.alive) return false;
     if (e.homeT > 0) {
       this.evade(e, cls);
       return false;
+    }
+    // knocked out of the canopy before it could drop
+    if (e.hid) this.reveal(e, from, DROP_FROM / 2);
+    // shields up: a blow from in front mostly glances off (a bleed gets round it)
+    const sh = e.def.shield;
+    if (sh && cls !== 'dot' && (e.shieldT ?? 0) > 0 && e.stunT <= 0 && this.inFront(e, from)) {
+      v = Math.max(1, Math.round(v * sh.cut));
+      this.floater(e.x + 10, e.y - 14 * e.def.scale - 8, 'BLOCKED', 'name', '#c4cedc');
     }
     e.hp = Math.max(0, e.hp - v);
     const boss = e.def.boss;
@@ -731,13 +898,17 @@ export class Region {
       }
     }
     e.flash = 0.08;
-    // passive creatures bolt; everything else fights back, and stays angry a while however
-    // far away the hit came from (an archer can't shoot a slime from out of its sight for free)
+    // passive creatures bolt; eggs and lures never fight; everything else fights back, and stays
+    // angry a while however far away the hit came from (an archer can't shoot a slime from out
+    // of its sight for free)
     if (e.def.behavior === 'passive') e.fleeT = 3;
-    else {
+    else if (e.def.behavior === 'inert') e.hatchT ??= e.def.hatch?.t;
+    else if (!e.def.lure) {
+      const was = e.aggro;
       e.aggro = true;
-      e.foe ??= by.id;
+      e.foe ??= from.id;
       e.angerT = 10;
+      if (!was) this.howl(e, from);
     }
     if (e.def.hitSay && Math.random() < 0.6)
       this.floater(e.x + 12, e.y - 14 * e.def.scale - 8, e.def.hitSay, 'name', '#f4f1e6');
@@ -755,6 +926,7 @@ export class Region {
     if (e.hp > 0) {
       // a bleed's ticks are quiet; a blow makes it cry out
       if (cls !== 'dot') this.cry(e, 'hurt');
+      if (e.def.lure && cls !== 'dot') this.blink(e);
       return false;
     }
     this.cry(e, 'die');
@@ -763,8 +935,14 @@ export class Region {
     e.respawnT = RESPAWN * (1 + this.game.rng.next() / 2);
     e.castT = -1;
     e.foe = undefined;
+    e.lying = false;
+    e.leap = undefined;
+    e.z = 0;
     for (const h of this.heroes()) if (h.target === e) h.target = null;
     this.burst(e.x, e.y - 8, 14, '#f2c14e', 70, 0.7, 3, 60);
+    // the dead can be sung up again where they fell; a mount falls and its rider fights on
+    if (e.def.dead && !e.def.boss) this.fallen.push({ kind: e.kind, x: e.x, y: e.y, t: 0 });
+    if (e.def.rider) this.dismount(e, e.def.rider, from);
     if (boss) {
       this.game.setFlag(boss.flag);
       for (const h of this.heroes()) h.banner(`${e.n.toUpperCase()} DEFEATED`, 'cool');
@@ -805,8 +983,8 @@ export class Region {
 
   /** Bring a dead enemy back at its post (night creatures climb out of the ground). */
   private respawn(e: Enemy): void {
-    const id = e.id;
-    Object.assign(e, this.spawnEnemy(e.kind, e.sx, e.sy), { id });
+    const { id, lx, ly } = e;
+    Object.assign(e, FIGHT_STATE, this.spawnEnemy(e.kind, e.sx, e.sy), { id, lx, ly });
     if (e.def.nightOnly) {
       e.riseT = RISE_DUR;
       this.burst(e.x, e.y + 2, 12, '#6b4a2b', 50, 0.6, 3, -30);
@@ -879,8 +1057,8 @@ export class Region {
       e.x = e.sx;
       e.y = e.sy;
     }
-    Object.assign(e, { homeT: 0, homePath: undefined, hp: e.hpMax, atkT: k.per, castCd: 3, wanderT: 1.5, walk: 0 });
-    Object.assign(e, { stunT: 0, rootT: 0, slowT: 0, sunderT: 0, markT: 0 });
+    Object.assign(e, { homeT: 0, homePath: undefined, hp: e.hpMax, atkT: k.per, castCd: k.firstCast ?? 3, wanderT: 1.5, walk: 0 });
+    Object.assign(e, { stunT: 0, rootT: 0, slowT: 0, sunderT: 0, markT: 0 }, FIGHT_STATE);
     if (k.boss) Object.assign(e, { phase: 0, tollT: undefined, tollN: 0 });
   }
 
@@ -934,16 +1112,16 @@ export class Region {
   }
 
   /**
-   * The hero a creature is after: the one it fought last, or the nearest alive one it can
+   * Who a creature is after: the one it fought last, or the nearest one up and about it can
    * see (a camouflaged archer is nowhere to be seen).
    */
-  private foeOf(e: Enemy, heroes: Hero[]): Hero | null {
-    const kept = e.foe ? heroes.find(h => h.id === e.foe && !h.dead && h.hiddenT <= 0) : undefined;
+  private foeOf(e: Enemy, foes: Foe[]): Foe | null {
+    const kept = e.foe ? foes.find(h => h.id === e.foe && !h.dead && h.hiddenT <= 0) : undefined;
     if (kept) return kept;
     if (e.foe) e.foe = undefined;
-    let best: Hero | null = null;
+    let best: Foe | null = null;
     let bd = Infinity;
-    for (const h of heroes) {
+    for (const h of foes) {
       if (h.dead || h.hiddenT > 0) continue;
       const d = Math.hypot(h.x - e.x, h.y - e.y);
       if (d < bd) {
@@ -954,7 +1132,368 @@ export class Region {
     return best;
   }
 
-  private updateEnemy(e: Enemy, dt: number, heroes: Hero[]): void {
+  /** Everyone a creature here could fight: the heroes, and the companions walking with them. */
+  foes(): Foe[] {
+    return [...this.heroes(), ...this.game.companionsIn(this.id)];
+  }
+
+  /** Whether `f` stands in front of a creature (on the side it faces). */
+  inFront(e: Enemy, f: { x: number; y: number }): boolean {
+    return faceToward(e.x, e.y, f.x, f.y, e.face) === e.face;
+  }
+
+  /** An ambusher drops out of the canopy onto `f` (from `z` px up). */
+  reveal(e: Enemy, f: Foe | undefined, z = DROP_FROM): void {
+    e.hid = false;
+    e.z = z;
+    e.aggro = true;
+    if (f) e.foe = f.id;
+    e.angerT = Math.max(e.angerT, 6);
+    this.cry(e, 'notice');
+    this.burst(e.x, e.y - z, 10, '#3a4a2a', 60, 0.6, 2, 120);
+    for (const c of this.game.companionsIn(this.id)) c.bark('ambush');
+  }
+
+  /** It noticed `f` (or was hit by them): every creature that howls within reach comes too. */
+  private howl(e: Enemy, f: Foe): void {
+    const hw = e.def.howl;
+    if (!hw) return;
+    for (const o of this.enemies) {
+      if (o === e || !o.alive || o.aggro || o.hid || !o.def.howl || o.homeT > 0) continue;
+      if (Math.hypot(o.x - e.x, o.y - e.y) > hw.r) continue;
+      o.aggro = true;
+      o.foe = f.id;
+    }
+  }
+
+  /** A lure struck: it blinks further along toward where it is going (or anywhere, once there). */
+  private blink(e: Enemy): void {
+    if ((e.blinkCd ?? 0) > 0) return;
+    const rng = this.game.rng;
+    const gx = e.lx ?? e.sx;
+    const gy = e.ly ?? e.sy;
+    const d = Math.hypot(gx - e.x, gy - e.y);
+    const a = d > 40 ? Math.atan2(gy - e.y, gx - e.x) + (rng.next() - 0.5) * 0.8 : rng.next() * Math.PI * 2;
+    for (const r of [90, 60, 30]) {
+      const x = e.x + Math.cos(a) * r;
+      const y = e.y + Math.sin(a) * r;
+      if (this.map.blocked(x, y, 6, 5)) continue;
+      this.burst(e.x, e.y - 10, 10, '#cfe8ff', 60, 0.5, 2, -20);
+      e.x = x;
+      e.y = y;
+      e.blinkCd = 1.2;
+      return;
+    }
+  }
+
+  /** A mount falls: its rider fights on, on foot, where it fell. */
+  private dismount(e: Enemy, kind: EnemyKind, f: Foe): void {
+    const x = e.x;
+    const y = e.y;
+    this.after(0, () => {
+      const r = this.spawnEnemy(kind, x, y, true);
+      r.aggro = true;
+      r.foe = f.id;
+      r.angerT = 10;
+      r.atkT = r.def.per;
+      this.enemies.push(r);
+      this.floater(x, y - 14 * r.def.scale - 8, 'ON FOOT', 'name', '#f4f1e6');
+    });
+  }
+
+  /** A fire that is still burning (a campfire, a kiln). */
+  burning(s: Structure): boolean {
+    return !!STRUCTURES[s.kind].fire && !s.out && s.t > 0;
+  }
+
+  /** A fire goes out: a smothered kiln stays cold; a campfire is gone. */
+  putOut(s: Structure): void {
+    s.out = true;
+    s.smother = 0;
+    if (!s.fixed) {
+      this.structures = this.structures.filter(x => x !== s);
+      for (const h of this.heroes()) h.events.emit('bag', {});
+    }
+    this.burst(s.x, s.y - 8, 16, '#6a6a6a', 30, 1.2, 3, -40);
+    this.sound('fireOut', s.x, s.y);
+    this.logAll(`The ${STRUCTURES[s.kind].name.toLowerCase()} goes out.`, 'h');
+  }
+
+  /**
+   * A smotherer goes for the nearest fire still burning and lies on it until it is out. True
+   * while it is busy with one; with no fire left it fights like anything else.
+   */
+  private smother(e: Enemy, dt: number): boolean {
+    const t = e.def.smother!.t;
+    let s = e.fire !== undefined ? this.structures.find(x => x.id === e.fire && this.burning(x)) : undefined;
+    if (!s) {
+      e.lying = false;
+      e.smotherT = 0;
+      let bd = 900;
+      for (const x of this.structures) {
+        const d = Math.hypot(x.x - e.x, x.y - e.y);
+        if (this.burning(x) && d < bd) {
+          bd = d;
+          s = x;
+        }
+      }
+      e.fire = s?.id;
+    }
+    if (!s) return false;
+    e.tele = false;
+    const d = Math.hypot(s.x - e.x, s.y - e.y);
+    if (!e.lying && d > 14) {
+      const k = e.def;
+      this.moveEntity(e, (s.x - e.x) / d, (s.y - e.y) / d, k.spd * (e.slowT > 0 ? 1 - e.slowK : 1), dt, 6 * k.scale, 5 * k.scale);
+      return true;
+    }
+    if (!e.lying) {
+      e.lying = true;
+      this.burst(s.x, s.y - 6, 10, '#2a2a2a', 40, 0.8, 3, -30);
+    }
+    e.walk = 0;
+    e.smotherT = (e.smotherT ?? 0) + dt;
+    s.smother = Math.max(s.smother ?? 0, Math.min(1, e.smotherT / t));
+    if (e.smotherT >= t) {
+      this.putOut(s);
+      e.lying = false;
+      e.fire = undefined;
+      e.smotherT = 0;
+    }
+    return true;
+  }
+
+  /** An egg: a hero near wakes it, and when its time is up it hatches. */
+  private incubate(e: Enemy, dt: number, foes: Foe[]): void {
+    e.tele = false;
+    e.walk = 0;
+    const h = e.def.hatch;
+    if (!h) return;
+    if (e.hatchT === undefined) {
+      if (foes.some(f => !f.dead && Math.hypot(f.x - e.x, f.y - e.y) < e.def.aggro)) e.hatchT = h.t;
+      return;
+    }
+    e.hatchT -= dt;
+    if (e.hatchT > 0) return;
+    // it splits open: no kill, no reward, only what crawls out
+    e.hatchT = undefined;
+    e.alive = false;
+    e.dieT = 0.6;
+    e.respawnT = RESPAWN * (1 + this.game.rng.next() / 2);
+    this.cry(e, 'die');
+    this.burst(e.x, e.y - 6, 14, '#d8d0b0', 70, 0.6, 2, 120);
+    for (const o of this.heroes()) if (o.target === e) o.target = null;
+    const f = this.nearestFoe(e, foes, Infinity);
+    for (let i = 0; i < h.n; i++) {
+      const a = (i / h.n) * Math.PI * 2 + this.game.rng.next();
+      const x = e.x + Math.cos(a) * 14;
+      const y = e.y + Math.sin(a) * 14;
+      const s = this.spawnEnemy(h.into, this.map.blocked(x, y, 6, 5) ? e.x : x, this.map.blocked(x, y, 6, 5) ? e.y : y, true);
+      if (f) {
+        s.aggro = true;
+        s.foe = f.id;
+      }
+      this.enemies.push(s);
+    }
+    this.logAll(`${e.n} hatches!`, 'h');
+  }
+
+  /**
+   * A lure: it never fights. While someone is near it drifts away toward where it is going,
+   * always just ahead; left alone a long while, it drifts back to its post.
+   */
+  private drift(e: Enemy, dt: number, foes: Foe[]): void {
+    const k = e.def;
+    e.tele = false;
+    e.aggro = false;
+    e.blinkCd = Math.max(0, (e.blinkCd ?? 0) - dt);
+    const r = k.lure!.r;
+    const near = this.nearestFoe(e, foes, r);
+    const hw = 6 * k.scale;
+    const hh = 5 * k.scale;
+    const gx = near ? (e.lx ?? e.sx) : e.sx;
+    const gy = near ? (e.ly ?? e.sy) : e.sy;
+    const d = Math.hypot(gx - e.x, gy - e.y);
+    if (near && d > 12) this.moveEntity(e, (gx - e.x) / d, (gy - e.y) / d, k.spd, dt, hw, hh);
+    else if (!near && d > 12 && !this.nearestFoe(e, foes, r * 2)) this.moveEntity(e, (gx - e.x) / d, (gy - e.y) / d, k.spd * 0.4, dt, hw, hh);
+    else e.walk += dt * 2;
+  }
+
+  /** The nearest foe up and about within `max`. */
+  private nearestFoe(e: { x: number; y: number }, foes: Foe[], max: number): Foe | undefined {
+    let best: Foe | undefined;
+    let bd = max;
+    for (const f of foes) {
+      if (f.dead || f.hiddenT > 0) continue;
+      const d = Math.hypot(f.x - e.x, f.y - e.y);
+      if (d < bd) {
+        bd = d;
+        best = f;
+      }
+    }
+    return best;
+  }
+
+  /** In the air on a leap (after the crouch): landing hits whoever is under it. */
+  private leaping(e: Enemy, dt: number, foes: Foe[]): void {
+    const L = e.leap!;
+    const k = e.def;
+    L.t += dt;
+    if (L.t < L.wind) {
+      e.tele = true;
+      e.walk = 0;
+      return;
+    }
+    e.tele = false;
+    const p = Math.min(1, (L.t - L.wind) / L.dur);
+    const nx = L.x0 + (L.x1 - L.x0) * p;
+    const ny = L.y0 + (L.y1 - L.y0) * p;
+    const blocked = this.map.blocked(nx, ny, 6 * k.scale, 5 * k.scale);
+    if (!blocked) {
+      e.x = nx;
+      e.y = ny;
+    }
+    e.z = 4 * 42 * p * (1 - p);
+    e.face = faceToward(L.x0, L.y0, L.x1, L.y1, e.face);
+    if (p < 1 && !blocked) return;
+    e.z = 0;
+    e.leap = undefined;
+    e.atkT = k.per * 0.5;
+    this.burst(e.x, e.y + 2, 14, '#8a7a5a', 80, 0.5, 3, -30);
+    this.events.emit('shake', { s: 0.2 });
+    for (const f of foes) if (!f.dead && !f.airborne && Math.hypot(f.x - e.x, f.y - e.y) < 30) f.hurt(k.leap!.dmg, `${e.n}'s leap`);
+  }
+
+  /** Whether a creature's spell has something to do right now (its foe `d` away). */
+  private castFits(e: Enemy, c: CastDef, d: number): boolean {
+    if (c.what === 'fireball') return d < c.range && d > 50;
+    if (c.what === 'web') return d < c.range;
+    if (c.what === 'heal')
+      return this.enemies.some(o => o.alive && o.def.dead && o.hp < o.hpMax * 0.8 && Math.hypot(o.x - e.x, o.y - e.y) < c.r);
+    const raised = this.enemies.filter(o => o.temp && o.alive && o.def.dead).length;
+    return raised < RAISED_MAX && this.fallen.some(f => Math.hypot(f.x - e.x, f.y - e.y) < c.r);
+  }
+
+  /** A spell completes (its foe `d` away): fire, healing, the dead getting up, web. */
+  private castLands(e: Enemy, c: CastDef, foe: Foe, d: number): void {
+    if (c.what === 'fireball') {
+      const far = d >= c.range + 50;
+      const tx = foe.x;
+      const ty = foe.y;
+      this.fx({ type: 'fireball', x0: e.x, y0: e.y - 12, x1: tx, y1: ty - 8, dur: 0.35 });
+      this.sound('fireball', e.x, e.y);
+      this.after(0.35, () => {
+        this.sound('fireballHit', tx, ty);
+        this.burst(tx, ty - 8, 12, '#a78bfa', 100, 0.4, 3, 60);
+        this.fx({ type: 'ring', x: tx, y: ty - 8, r0: 6, r1: 34, col: '#a78bfa', dur: 0.3 });
+        if (!far && foe.regionId === this.id) foe.hurt(c.dmg, 'the fireball');
+        else foe.log('The fireball misses.', 't');
+      });
+    } else if (c.what === 'heal') {
+      this.fx({ type: 'ring', x: e.x, y: e.y - 6, r0: 8, r1: c.r, col: '#b8c4d0', lw: 2, dur: 0.6 });
+      for (const o of this.enemies) {
+        if (!o.alive || !o.def.dead || o.hp >= o.hpMax || Math.hypot(o.x - e.x, o.y - e.y) > c.r) continue;
+        const v = Math.min(c.amt, o.hpMax - o.hp);
+        o.hp += v;
+        this.floater(o.x, o.y - 14 * o.def.scale, '+' + v, 'heal');
+      }
+    } else if (c.what === 'raise') {
+      this.fx({ type: 'ring', x: e.x, y: e.y - 6, r0: 8, r1: c.r, col: '#8fd8a0', lw: 2, dur: 0.8 });
+      let room = RAISED_MAX - this.enemies.filter(o => o.temp && o.alive && o.def.dead).length;
+      this.fallen = this.fallen.filter(f => {
+        if (room <= 0 || Math.hypot(f.x - e.x, f.y - e.y) > c.r) return true;
+        room--;
+        const s = this.spawnEnemy(f.kind, f.x, f.y, true);
+        s.riseT = RISE_DUR;
+        s.aggro = true;
+        s.foe = foe.id;
+        this.enemies.push(s);
+        this.cry(s, 'rise');
+        return false;
+      });
+      this.logAll('The fallen get up again.', 'h');
+    } else if (c.cone) {
+      // a spray: everyone in front of it, close enough
+      this.fx({ type: 'whirl', x: e.x, y: e.y - 6, r: c.range, col: '#e8e8f0', dur: 0.4 });
+      for (const f of this.foes())
+        if (!f.dead && Math.hypot(f.x - e.x, f.y - e.y) < c.range && this.inFront(e, f)) f.hold(c.hold, c.by);
+    } else {
+      // a gob of web (or a net) at where its foe stands: step aside and it misses
+      const tx = foe.x;
+      const ty = foe.y;
+      const t = Math.max(0.12, d / 380);
+      this.fx({ type: 'arrow', x0: e.x, y0: e.y - 8, x1: tx, y1: ty - 6, col: '#e8e8f0', dur: t });
+      this.after(t, () => {
+        this.burst(tx, ty - 6, 8, '#e8e8f0', 50, 0.5, 2, 60);
+        if (foe.regionId === this.id && !foe.dead && Math.hypot(foe.x - tx, foe.y - ty) < 26) foe.hold(c.hold, c.by);
+      });
+    }
+  }
+
+  /** A creature that shoots: a bolt flies to where its foe stands, and hits if they are still there. */
+  private shoot(e: Enemy, foe: Foe): void {
+    const m = e.def.missile!;
+    const tx = foe.x;
+    const ty = foe.y;
+    const t = Math.max(0.08, Math.hypot(tx - e.x, ty - e.y) / m.speed);
+    this.fx({ type: 'arrow', x0: e.x + e.face * 6, y0: e.y - 10, x1: tx, y1: ty - 6, col: m.col, dur: t });
+    this.after(t, () => {
+      if (foe.regionId !== this.id || foe.dead || Math.hypot(foe.x - tx, foe.y - ty) > 28) return;
+      foe.hurt(e.def.atk, `the ${e.n}'s ${m.slow ? 'bolt' : 'arrow'}`);
+      if (m.slow) foe.slow(m.slow.t, m.slow.k);
+    });
+  }
+
+  /** Lay a snare in the grass between a trapper and its foe (never right under their feet). */
+  private laySnare(e: Enemy, foe: Foe, d: number): void {
+    const sn = e.def.snares!;
+    if (this.snares.filter(s => s.by === e.id).length >= sn.max) return;
+    const k = Math.min(1, 50 / Math.max(1, d));
+    const x = foe.x + (e.x - foe.x) * k;
+    const y = foe.y + (e.y - foe.y) * k;
+    if (this.map.blocked(x, y, 4, 4)) return;
+    this.snares.push({ id: this.nextSnare++, x, y, hold: sn.hold, by: e.id, t: 40 });
+  }
+
+  /** Snares spring on whoever steps in them (jump them, or walk round). */
+  private updateSnares(dt: number): void {
+    if (!this.snares.length) return;
+    const foes = this.foes();
+    for (const s of this.snares) {
+      s.t -= dt;
+      const f = foes.find(o => !o.dead && !o.airborne && Math.hypot(o.x - s.x, o.y - s.y) < 11);
+      if (!f) continue;
+      s.t = 0;
+      f.hold(s.hold, 'snare');
+      this.sound('trapSnap', s.x, s.y);
+      this.burst(s.x, s.y - 4, 8, '#a8905a', 60, 0.4, 2, 80);
+    }
+    this.snares = this.snares.filter(s => s.t > 0);
+  }
+
+  /** Call up help: `n` more of its kind around it, up to the most it may have at once. */
+  private summonHelp(e: Enemy, foe: Foe): void {
+    const sm = e.def.summon!;
+    const alive = this.enemies.filter(o => o.temp && o.alive && o.kind === sm.kind).length;
+    const n = Math.min(sm.n, sm.max - alive);
+    for (let i = 0; i < n; i++) {
+      const a = this.game.rng.next() * Math.PI * 2;
+      const x = e.x + Math.cos(a) * 70;
+      const y = e.y + Math.sin(a) * 70;
+      if (this.map.blocked(x, y, 12, 10)) continue;
+      const s = this.spawnEnemy(sm.kind, x, y, true);
+      s.aggro = true;
+      s.foe = foe.id;
+      s.hid = false;
+      if (s.def.nightOnly || s.def.dead) {
+        s.riseT = RISE_DUR;
+        this.cry(s, 'rise');
+      } else this.burst(x, y + 2, 10, '#6b5a3a', 60, 0.5, 3, -20);
+      this.enemies.push(s);
+    }
+  }
+
+  private updateEnemy(e: Enemy, dt: number, foes: Foe[]): void {
     e.flash = Math.max(0, e.flash - dt);
     if (e.sunderT > 0) e.sunderT = Math.max(0, e.sunderT - dt);
     const k = e.def;
@@ -984,7 +1523,22 @@ export class Region {
     e.rootT = Math.max(0, e.rootT - dt);
     e.angerT = Math.max(0, e.angerT - dt);
     if (e.markT > 0) e.markT = Math.max(0, e.markT - dt);
-    const foe = this.foeOf(e, heroes);
+    // waiting unseen in the canopy until someone walks under it
+    if (e.hid) {
+      const f = k.ambush && this.nearestFoe(e, foes, k.ambush.r);
+      if (f) this.reveal(e, f);
+      return;
+    }
+    // dropping out of the canopy: it lands on whoever is under it
+    if ((e.z ?? 0) > 0 && !e.leap) {
+      e.z = Math.max(0, (e.z ?? 0) - DROP_SPEED * dt);
+      if (e.z === 0) {
+        this.burst(e.x, e.y + 2, 10, '#5a4a3a', 60, 0.4, 3, -20);
+        for (const f of foes) if (!f.dead && Math.hypot(f.x - e.x, f.y - e.y) < 26) f.hurt(k.atk, `the falling ${e.n.toLowerCase()}`);
+      }
+      return;
+    }
+    const foe = this.foeOf(e, foes);
     if (!foe) {
       e.aggro = false;
       e.foe = undefined;
@@ -999,8 +1553,10 @@ export class Region {
       this.goHome(e, dt);
       return;
     }
+    if (k.behavior === 'inert') return this.incubate(e, dt, foes);
+    if (k.lure) return this.drift(e, dt, foes);
     // out of the fight and far from home (its foe died, left or hid): back to the post
-    if (!e.aggro && k.behavior !== 'passive' && Math.hypot(e.x - e.sx, e.y - e.sy) > STRAY) {
+    if (!e.aggro && !e.lying && k.behavior !== 'passive' && Math.hypot(e.x - e.sx, e.y - e.sy) > STRAY) {
       this.sendHome(e);
       return;
     }
@@ -1009,8 +1565,12 @@ export class Region {
     const hh = 5 * k.scale;
     if (e.stunT > 0) {
       e.stunT -= dt;
-      return;
+      // a stun drops a raised shield, and breaks a crouch before it becomes a leap
+      e.shieldT = 0;
+      if (e.leap && e.leap.t < e.leap.wind) e.leap = undefined;
+      if (!e.leap) return;
     }
+    if (e.leap) return this.leaping(e, dt, foes);
     if (k.behavior === 'passive') {
       if (e.fleeT > 0 && foe) {
         e.fleeT -= dt;
@@ -1022,22 +1582,14 @@ export class Region {
       }
       return;
     }
+    // fires first: while one burns, people can wait
+    if (k.smother && this.smother(e, dt)) return;
     if (e.castT > 0) {
       e.castT -= dt;
-      if (e.castT <= 0 && foe) {
-        const far = d >= (k.castRange ?? 0) + 50;
-        const tx = foe.x;
-        const ty = foe.y;
-        this.fx({ type: 'fireball', x0: e.x, y0: e.y - 12, x1: tx, y1: ty - 8, dur: 0.35 });
-        this.sound('fireball', e.x, e.y);
-        this.after(0.35, () => {
-          this.sound('fireballHit', tx, ty);
-          this.burst(tx, ty - 8, 12, '#a78bfa', 100, 0.4, 3, 60);
-          this.fx({ type: 'ring', x: tx, y: ty - 8, r0: 6, r1: 34, col: '#a78bfa', dur: 0.3 });
-          if (!far && foe.regionId === this.id) foe.hurt(k.castDmg ?? 10, 'the fireball');
-          else foe.log('The fireball misses.', 't');
-        });
-        e.castCd = 7;
+      const c = k.casts?.[e.casting ?? 0];
+      if (e.castT <= 0 && c) {
+        if (foe) this.castLands(e, c, foe, d);
+        e.castCd = c.cd;
       }
       return;
     }
@@ -1045,6 +1597,7 @@ export class Region {
       e.aggro = true;
       e.foe = foe.id;
       this.cry(e, 'notice');
+      this.howl(e, foe);
     }
     if (e.kind === 'bellringer' && this.bellRinger(e, dt)) return;
     if (e.aggro && foe) {
@@ -1061,13 +1614,65 @@ export class Region {
         foe.log(e.n + ' loses interest.');
         return;
       }
+      // shields up now and then
+      if (k.shield) {
+        if ((e.shieldT ?? 0) > 0) e.shieldT = Math.max(0, (e.shieldT ?? 0) - dt);
+        else {
+          e.shieldCd = (e.shieldCd ?? k.shield.every) - dt;
+          if (e.shieldCd <= 0) {
+            e.shieldT = k.shield.up;
+            e.shieldCd = k.shield.every;
+          }
+        }
+      }
+      if (k.summon && e.phase >= (k.summon.from ?? 0)) {
+        e.summonCd = (e.summonCd ?? 2) - dt;
+        if (e.summonCd <= 0) {
+          e.summonCd = k.summon.every;
+          this.summonHelp(e, foe);
+        }
+      }
+      if (k.snares) {
+        e.snareCd = (e.snareCd ?? k.snares.every / 2) - dt;
+        if (e.snareCd <= 0 && d < 260) {
+          e.snareCd = k.snares.every;
+          this.laySnare(e, foe, d);
+        }
+      }
+      if (k.leap) {
+        e.leapCd = (e.leapCd ?? k.leap.every / 2) - dt;
+        if (e.leapCd <= 0) {
+          // at whoever is furthest away (but within reach)
+          let at: Foe | undefined;
+          let far = 60;
+          for (const f of foes) {
+            const fd = Math.hypot(f.x - e.x, f.y - e.y);
+            if (!f.dead && f.hiddenT <= 0 && fd > far && fd < k.leap.range) {
+              far = fd;
+              at = f;
+            }
+          }
+          if (at) {
+            e.leapCd = k.leap.every;
+            e.leap = { t: 0, wind: 0.55, dur: 0.45, x0: e.x, y0: e.y, x1: at.x, y1: at.y, at: at.id };
+            e.tele = true;
+            at.log(`${e.n} crouches to leap at you!`, 'h');
+            return;
+          }
+        }
+      }
       e.castCd -= dt;
-      if (k.cast && e.castCd <= 0 && d < (k.castRange ?? 0) && d > 50) {
-        e.castT = e.castTotal;
-        e.tele = false;
-        this.cry(e, 'cast');
-        foe.log(e.n + ' casts Fireball…', 'h');
-        return;
+      if (k.casts && e.castCd <= 0) {
+        const i = k.casts.findIndex(c => this.castFits(e, c, d));
+        if (i >= 0) {
+          const c = k.casts[i];
+          e.casting = i;
+          e.castT = e.castTotal = c.time;
+          e.tele = false;
+          this.cry(e, 'cast');
+          foe.log(`${e.n} ${CAST_SAY[c.what]}`, 'h');
+          return;
+        }
       }
       if (d > k.range) {
         e.tele = false;
@@ -1084,7 +1689,8 @@ export class Region {
         if (e.atkT <= 0.7) e.tele = true;
         if (e.atkT <= 0) {
           this.cry(e, 'attack');
-          if (Math.hypot(foe.x - e.x, foe.y - e.y) < k.range + 14)
+          if (k.missile) this.shoot(e, foe);
+          else if (Math.hypot(foe.x - e.x, foe.y - e.y) < k.range + 14)
             foe.hurt(k.atk, 'the ' + e.n + "'s hit");
           else foe.log(e.n + ' hits the air.', 't');
           e.atkT = k.per;
@@ -1144,13 +1750,26 @@ export class Region {
           : 'Dawn breaks. The dead return to the earth.',
         night ? 'h' : 't'
       );
+      if (!night) this.dawn();
     }
+    if (!this.scene) this.updateHold(dt);
     // during a scene the fighting waits
-    if (!this.scene) for (const e of this.enemies) this.updateEnemy(e, dt, here);
+    if (!this.scene) {
+      const foes = [...here, ...this.game.companionsIn(this.id)];
+      for (const c of this.game.companionsIn(this.id)) c.tick(dt);
+      // how far each fire is smothered is worked out afresh from whoever lies on it
+      for (const s of this.structures) s.smother = 0;
+      for (const e of this.enemies) this.updateEnemy(e, dt, foes);
+    }
     if (this.enemies.some(e => e.temp && !e.alive && e.dieT <= 0))
       this.enemies = this.enemies.filter(e => !(e.temp && !e.alive && e.dieT <= 0));
     if (!this.scene) this.updateHazards(dt);
     if (!this.scene) this.updateTraps(dt);
+    if (!this.scene) this.updateSnares(dt);
+    if (this.fallen.length) {
+      for (const f of this.fallen) f.t += dt;
+      this.fallen = this.fallen.filter(f => f.t < FALLEN_KEEP);
+    }
     this.updateWanderers(dt);
     this.updateStory(dt);
     if (this.pending.length) {

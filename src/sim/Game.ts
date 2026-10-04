@@ -19,6 +19,8 @@ import { DayCycle } from './daylight';
 import { Weather } from './weather';
 import type { WeatherKind } from './weather';
 import { Hero } from './Hero';
+import { Companion } from './Companion';
+import { COMPANION_IDS } from '../data/companions';
 import { Region } from './Region';
 import type { RegionMemory } from './Region';
 import type { RoomEvents, QuestProgress, QuestStatus, Structure } from './types';
@@ -46,6 +48,8 @@ export class Game {
   /** Rain and storms (the same for everyone in the room). */
   readonly weather = new Weather();
   heroes: Hero[] = [];
+  /** Who walks with the heroes for a while (Wren in the wood): where they are follows the story. */
+  companions: Companion[] = COMPANION_IDS.map(id => new Companion(this, id));
   /** The regions somebody is in, by id (built on arrival, put away when the last hero leaves). */
   readonly regions = new Map<string, Region>();
   /** What each region keeps while empty: what was built and dropped there. */
@@ -112,6 +116,55 @@ export class Game {
     this.regions.delete(id);
   }
 
+  /** The companions standing in a region. */
+  companionsIn(id: string): Companion[] {
+    return id ? this.companions.filter(c => c.regionId === id) : [];
+  }
+
+  /**
+   * Where each companion is: with the heroes while the story has them along and a hero is in
+   * one of the places they go (in that hero's region, at their side). Once the heroes leave
+   * those places she goes home and waits there until one of them comes back for her
+   * (Companion.waiting). Before and after her part of the story, nowhere at all.
+   */
+  private placeCompanions(): void {
+    const level = Math.max(1, ...this.heroes.map(h => h.level));
+    for (const c of this.companions) {
+      const def = c.def;
+      if (!this.check(def.when)) {
+        c.regionId = '';
+        c.waiting = false;
+        continue;
+      }
+      c.scale(level);
+      if (!c.waiting) {
+        // still with somebody where she stands
+        if (c.regionId && def.regions.includes(c.regionId) && this.heroes.some(h => h.regionId === c.regionId)) continue;
+        // a hero has gone on into another of her places (or she has just come along): she goes with them
+        const h = this.heroes.find(x => x.regionId && def.regions.includes(x.regionId));
+        if (h) {
+          c.regionId = h.regionId;
+          c.joinAt(h);
+          c.bark('join');
+          continue;
+        }
+      }
+      // nobody in the places she goes: home, to wait
+      const home = REGIONS[def.home.region];
+      if (!home) {
+        c.regionId = '';
+        continue;
+      }
+      if (c.waiting && c.regionId === def.home.region) continue;
+      c.waiting = true;
+      c.regionId = def.home.region;
+      const [col, row] = home.spots[def.home.spot] ?? home.spots.start;
+      c.placeAt(col * T + T / 2, row * T + T / 2);
+      c.hp = c.hpMax;
+      c.dead = 0;
+    }
+  }
+
   // ---------- the story ----------
   /** What a condition reads: the story, and a hero (their level, quests and bag) and place (the night). */
   private story(hero?: Hero, region?: Region): StoryState {
@@ -161,6 +214,13 @@ export class Game {
       h.hear('journal');
     }
     this.events.emit('journal', { doc: id });
+  }
+
+  /** What a trader sells today: their stock, and whatever the story has added to it. */
+  shopStock(npc: NpcId, hero?: Hero): ItemId[] {
+    const shop = NPCS[npc].shop;
+    if (!shop) return [];
+    return [...shop.sells, ...(shop.more ?? []).filter(m => this.check(m.when, hero)).flatMap(m => m.sells)];
   }
 
   // ---------- quests ----------
@@ -354,6 +414,7 @@ export class Game {
     const was = this.weather.kind;
     this.weather.advance(dt);
     if (this.weather.kind !== was) this.weatherChanged(was, this.weather.kind);
+    this.placeCompanions();
     for (const r of [...this.regions.values()]) if (this.regions.has(r.id)) r.tick(dt);
     this.watchQuests();
   }
@@ -370,7 +431,11 @@ export class Game {
   toSave(h: Hero): SaveData {
     const built: Record<string, Structure[]> = {};
     for (const [id, m] of this.regionMemory) if (m.structures.length) built[id] = m.structures;
-    for (const [id, r] of this.regions) if (r.structures.length) built[id] = r.structures;
+    for (const [id, r] of this.regions) {
+      // a region's own fires aren't built by anyone: they aren't kept
+      const mine = r.structures.filter(st => !st.fixed);
+      if (mine.length) built[id] = mine;
+    }
     return {
       v: SAVE_VERSION,
       at: Date.now(),
@@ -421,6 +486,7 @@ export class Game {
     this.regions.clear();
     this.regionMemory.clear();
     this.lastStatus.clear();
+    for (const c of this.companions) Object.assign(c, { regionId: '', waiting: false });
     h.resetHero();
     h.regionId = '';
     this.setHero(d, h);
@@ -510,6 +576,7 @@ export class Game {
     this.regions.clear();
     this.regionMemory.clear();
     this.lastStatus.clear();
+    for (const c of this.companions) Object.assign(c, { regionId: '', waiting: false });
     this.flags = {};
     this.quests = {};
     this.journal = [];

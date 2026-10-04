@@ -46,7 +46,7 @@ export const COMMANDS: Record<string, Command> = {
   pickFromWheel: (h, [b, k]) => isButton(b) && isWheelKey(k) && h.pickFromWheel(b, k),
   setTarget: (h, [id]) => {
     if (id === null) return h.setTarget(null);
-    const e = int(id, 0, 1e9) ? h.region.enemies.find(x => x.id === id && x.alive) : undefined;
+    const e = int(id, 0, 1e9) ? h.region.enemies.find(x => x.id === id && x.alive && !x.hid) : undefined;
     if (e) h.setTarget(e);
   },
   cycleTarget: h => h.cycleTarget(),

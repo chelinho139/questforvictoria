@@ -115,12 +115,11 @@ export class TradeWindow {
   private render(): void {
     const npc = this.npc;
     if (!npc) return;
-    const shop = NPCS[npc].shop!;
     const s = this.sim;
     this.goldEl.textContent = `${s.gold} gold`;
     this.buyList.replaceChildren(
       // only what your class can use (a smith sells swords to warriors, bows to archers)
-      ...shop.sells.filter(id => canWield(id, s.cls)).map(id => {
+      ...s.shopStock(npc).filter(id => canWield(id, s.cls)).map(id => {
         const p = ITEMS[id].price ?? 0;
         return this.row(id, ITEMS[id].name, p, 'Buy', s.gold >= p, () => s.buy(npc, id));
       })

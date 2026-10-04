@@ -2,7 +2,7 @@ import type { PropKind } from '../data/props';
 import type { ItemId } from '../data/items';
 import type { StructureKind } from '../data/crafting';
 import type { NpcId } from '../data/npcs';
-import type { EnemyDef, EnemyKind, CreatureSound } from '../data/enemies';
+import type { EnemyDef, EnemyKind, CreatureSound, HeldKind } from '../data/enemies';
 import type { SkillKey, ActionKey, Key, WheelKey } from '../data/skills';
 import type { ObjectKind } from '../data/regions/types';
 import type { SpellKey } from '../data/spells';
@@ -70,6 +70,75 @@ export interface Enemy {
   /** The Bell-Ringer: seconds to the next toll, and tolls so far. */
   tollT?: number;
   tollN?: number;
+  /** The spell under way while castT > 0 (an index into its def's `casts`). */
+  casting?: number;
+  /** Shields up: seconds left raised, and seconds until it raises it again. */
+  shieldT?: number;
+  shieldCd?: number;
+  /** An ambusher still waiting unseen in the canopy. */
+  hid?: boolean;
+  /** Height above the ground (dropping out of the canopy, in the air on a leap), px. */
+  z?: number;
+  /** A leap: seconds into it, the crouch and the flight, from where to where, and at whom. */
+  leap?: { t: number; wind: number; dur: number; x0: number; y0: number; x1: number; y1: number; at: string };
+  leapCd?: number;
+  snareCd?: number;
+  /** An egg hatching: seconds left (undefined while it sleeps). */
+  hatchT?: number;
+  summonCd?: number;
+  /** Where a lure drifts to (its spawn's `to`), and how soon it can blink again. */
+  lx?: number;
+  ly?: number;
+  blinkCd?: number;
+  /** A smotherer: the fire it is going for (a structure id), and how long it has lain on it. */
+  fire?: number;
+  smotherT?: number;
+  /** Lying down on a fire. */
+  lying?: boolean;
+}
+
+/**
+ * Someone a creature can fight: a hero, or a companion walking with them (sim/Companion.ts).
+ * `dead` is above 0 while they are down (a hero's death screen, a companion on one knee).
+ */
+export interface Foe {
+  readonly id: string;
+  x: number;
+  y: number;
+  regionId: string;
+  dead: number;
+  hiddenT: number;
+  /** Jumping clear of the ground (rings of force and snares pass under). */
+  readonly airborne: boolean;
+  hurt(v: number, src: string): void;
+  log(text: string, cls?: LogClass): void;
+  /** Held still (a web, a net, a snare, roots) for `t` seconds. */
+  hold(t: number, by: HeldKind): void;
+  /** Let go, if it is `by` that holds them. */
+  free(by: HeldKind): void;
+  /** Slowed by `k` (0.3 = 30% slower) for `t` seconds. */
+  slow(t: number, k: number): void;
+}
+
+/** A snare a goblin trapper laid in the grass: whoever steps in it is held `hold` seconds. */
+export interface Snare {
+  id: number;
+  x: number;
+  y: number;
+  hold: number;
+  /** The creature that laid it (an enemy id). */
+  by: number;
+  /** Seconds before it is gone unsprung. */
+  t: number;
+}
+
+/** One of the dead who fell lately (the Thane's song raises them where they fell). */
+export interface Fallen {
+  kind: EnemyKind;
+  x: number;
+  y: number;
+  /** Seconds since it fell. */
+  t: number;
 }
 
 /** A bear trap an archer set: the first creature to step on it is held `hold` seconds. */
@@ -197,6 +266,12 @@ export interface Structure {
   y: number;
   /** Seconds left before it is gone (a campfire burning down); Infinity for a forge. */
   t: number;
+  /** Placed by the region (a kiln, a camp's fire), not built: never saved, and back as it was when the region is. */
+  fixed?: boolean;
+  /** A fire that has been put out (a kiln smothered). */
+  out?: boolean;
+  /** How far a smotherer lying on it has got (0–1). */
+  smother?: number;
 }
 
 /** What a hero is busy with, for the progress bar over their head. */
@@ -308,7 +383,7 @@ export interface HeroEvents extends Record<string, unknown> {
  * the world's sounds and the creatures' (data/enemies.ts) too.
  */
 export type SoundId = SpellKey | FollowSound | WorldSound | CreatureSound | UiSound | VoiceSound | WeatherSound;
-/** Out in the world, heard nearby: the auto-attacks, a blow landing on a hero, felling a tree, breaking a rock, the shaman's fireball, the bell. */
+/** Out in the world, heard nearby: the auto-attacks, a blow landing on a hero, felling a tree, breaking a rock, the shaman's fireball, the bell, a fire smothered, a Warden's whistle. */
 export type WorldSound =
   | 'autoSwing'
   | 'autoShot'
@@ -319,7 +394,9 @@ export type WorldSound =
   | 'rockBreak'
   | 'fireball'
   | 'fireballHit'
-  | 'bellToll';
+  | 'bellToll'
+  | 'fireOut'
+  | 'wardenCall';
 /** Thunder after lightning: a strike close by, one out of sight, one far off (the screen plays it, delayed, for everyone). */
 export type WeatherSound = 'thunderNear' | 'thunder' | 'thunderFar';
 /** Someone talking, in a conversation or a scene: each a voice of their own. */
@@ -373,6 +450,8 @@ export interface RegionEvents extends Record<string, unknown> {
   shake: { s: number };
   /** A sound, from where it happened (it carries, fading with distance). */
   sound: { id: SoundId; x: number; y: number };
+  /** Someone says something out loud where they stand (a companion calling out what she sees). */
+  say: { who: string; text: string; x: number; y: number };
 }
 
 /** What the whole room shares: the story. */
@@ -420,6 +499,8 @@ export interface SimEvents extends Record<string, unknown> {
   bossPhase: { kind: EnemyKind; phase: number };
   /** A sound: from somewhere nearby (a spell, an arrow landing), or just for you (no place). */
   sound: { id: SoundId; x?: number; y?: number };
+  /** Someone says something out loud nearby (shown over them for a moment). */
+  say: { who: string; text: string; x: number; y: number };
 }
 
 export interface Loadout {

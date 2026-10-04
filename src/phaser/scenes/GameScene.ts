@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { STRUCTURES } from '../../data/crafting';
 import { SceneKeys } from '../SceneKeys';
 import { Sim } from '../../sim/Sim';
 import { isoX, isoY, T } from '../../sim/map';
@@ -114,7 +115,7 @@ export class GameScene extends Phaser.Scene {
     // coming from the loading screen: fade up from black
     if (this.registry.get('fadeIn')) this.cameras.main.fadeIn(500, 0, 0, 0);
     this.lighting = new Lighting(this, this.cameras.main, this.sim.day);
-    this.lighting.setRing(this.sim.regionDef.ring, !!this.sim.regionDef.indoor);
+    this.lighting.setRing(this.sim.regionDef.ring, !!this.sim.regionDef.indoor, !!this.sim.regionDef.dusk);
     this.placeStaticLights(built);
     // travel: fade out through an exit, swap the region, rebuild the world, fade back in
     this.sim.events.on('exit', ({ to, at }) => this.travel(to, at));
@@ -217,14 +218,16 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** Campfires and forges glow warm at night; a campfire's light shrinks as it burns out. */
+  /** Fires and forges glow warm at night; a campfire's light shrinks as it burns out, or is smothered. */
   private lightStructures(): void {
     const want = new Set<string>();
     for (const s of this.sim.structures) {
+      // a fire put out gives no light; one being smothered fades as it goes
+      if (s.out) continue;
       const id = 'build' + s.id;
       want.add(id);
-      const fire = s.kind === 'campfire';
-      const k = fire && s.t < 6 ? Math.max(0, s.t / 6) : 1;
+      const fire = !!STRUCTURES[s.kind].fire;
+      const k = (fire && s.t < 6 ? Math.max(0, s.t / 6) : 1) * (1 - 0.8 * (s.smother ?? 0));
       this.lighting.setLight({
         id,
         x: isoX(s.x, s.y),
@@ -427,7 +430,7 @@ export class GameScene extends Phaser.Scene {
     this.world.layer.setVisible(!this.view3d);
     this.view3d?.setRegion(this.world, built);
     this.placeStaticLights(built);
-    this.lighting.setRing(this.sim.regionDef.ring, !!this.sim.regionDef.indoor);
+    this.lighting.setRing(this.sim.regionDef.ring, !!this.sim.regionDef.indoor, !!this.sim.regionDef.dusk);
     this.clouds.relayout(this.sim.map.cols, this.sim.map.rows);
     this.sim.log(this.sim.regionDef.name + '.', 't');
   }

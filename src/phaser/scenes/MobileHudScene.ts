@@ -264,6 +264,18 @@ export class MobileHudScene extends Phaser.Scene {
         .setDepth(80);
       this.tweens.add({ targets: t, y: t.y - 54, alpha: 0, duration: style.dur, ease: 'Linear', onComplete: () => t.destroy() });
     });
+    // something said out loud (a companion calling out): over the speaker's head a moment, drifting up
+    on('say', p => {
+      const sp = this.worldToHud(p.x, p.y);
+      const t = this.txt(sp.x, sp.y - 58, p.text, 'display', 12, '#fce6b4')
+        .setOrigin(0.5, 1)
+        .setAlign('center')
+        .setWordWrapWidth(200)
+        .setShadow(0, 2, '#000', 0, false, true)
+        .setDepth(80);
+      this.tweens.add({ targets: t, y: t.y - 16, duration: 3200, ease: 'Sine.easeOut' });
+      this.tweens.add({ targets: t, alpha: 0, delay: 2600, duration: 600, onComplete: () => t.destroy() });
+    });
     on('castFlash', ({ btn, color }) => {
       this.flashUntil[btn] = this.time.now + 300;
       this.flashCol[btn] = color;
@@ -395,7 +407,8 @@ export class MobileHudScene extends Phaser.Scene {
     let hit: Enemy | null = null;
     let bd = 30;
     for (const e of this.sim.enemies) {
-      if (!e.alive) continue;
+      // an ambusher still up in the canopy can't be seen, so can't be clicked
+      if (!e.alive || e.hid) continue;
       const sp = this.worldToHud(e.x, e.y);
       const d = Math.hypot(sp.x - p.x, sp.y - 6 * e.def.scale - p.y);
       if (d < bd + 6 * e.def.scale) {

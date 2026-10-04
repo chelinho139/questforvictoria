@@ -1,4 +1,5 @@
 import type { ItemId } from './items';
+import type { Cond } from './story';
 
 /**
  * Crafting: recipes made by hand, at a campfire (cooking) or at a forge (smelting ore into
@@ -15,10 +16,12 @@ export interface StructureDef {
   burn: number;
   /** Solid structures block movement (a small circle, like a rock). */
   solid: boolean;
+  /** A fire: it lights the night, and the dead who smother fires go for it. */
+  fire?: boolean;
 }
 
 export const STRUCTURES: Record<StructureKind, StructureDef> = {
-  campfire: { name: 'Campfire', desc: 'Burns for three minutes and lights up the night. Cook raw food at it.', burn: 180, solid: false },
+  campfire: { name: 'Campfire', desc: 'Burns for three minutes and lights up the night. Cook raw food at it.', burn: 180, solid: false, fire: true },
   forge: { name: 'Forge', desc: 'A stone furnace and an anvil. Smelt ore into bars and smith gear here.', burn: Infinity, solid: true },
 };
 
@@ -38,6 +41,8 @@ export interface Recipe {
   needs: [ItemId, number][];
   /** Seconds it takes to make (standing still; the ingredients go when it's done). */
   time: number;
+  /** Known only once this holds (someone has taught it); until then it isn't shown. */
+  when?: Cond;
 }
 
 export const RECIPES: Recipe[] = [

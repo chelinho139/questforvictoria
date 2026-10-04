@@ -81,6 +81,8 @@ Everyone in this story loves something and hates something, and every one of the
 - **To the east** rise the bare, wind-bitten **Greyfang Hills**, where goblin and ogre clans keep their camps.
 - **To the north**, up the river Lisle, the land climbs through the willow-choked **Weepwood**, past the black **Barrow Fens** and the wizard's rotted farmlands, to a lonely hill the old maps call **the Hallow**. On it stands **Castle Thornhallow**, Lord Ambrose's seat and the queen's prison.
 
+The Weepwood was **the old King's forest**. His foresters kept it, he hunted its eastern half, **the King's Chase**, and anyone caught taking his deer was hanged from the Gallows Willow by the Ride. The charcoal-burners of **Kilnholt** made charcoal in its middle by royal licence, and the stretch of the Lisle north of them, **Heron Reach**, belonged to the Wardens. Since the Wardens were disbanded and the King fell ill, nobody has kept it at all.
+
 Every step north, the land gets darker. (See *The Blackthorn* below.)
 
 <figure class="plate"><img src="lore-art/map.svg" alt="A hand-drawn map of Corvalis: Lake Ellory in the middle, Ashford and Castle Corvane in the south, the Weepwood, Barrow Fens and Blightfields to the north, and Thornhallow at the top inside five darkening rings"><figcaption><b>Plate II.</b> Corvalis, the Heart-Valley, from the green south to the Hallow, with the rings of the Blackthorn.</figcaption></figure>
@@ -111,6 +113,8 @@ Morwen made the crown out of love, and it obeys the heart of whoever wears it. *
 
 An old order of rangers sworn to keep the roads, watch the barrows and guard the sleep of the dead. They wear grey-green cloaks, carry bone whistles, and swear one oath: ***"We keep the fire, so others may sleep."***
 
+Each reach of road and river had its Wardens and its waystation; on the Lisle it was **Heron Lodge**, with the names of the Wardens of the Lisle cut into the beam over its hearth. Where an old barrow lay near their road, they lit a fire at its door every night, *so they may sleep*. They marked their trails, and left each other messages, in **feathers**: they cut the feather's shape into the bark and pinned the feather in the cut, so that the mark outlasted the feather. A grey goose means *onward* on a trail (and *tomorrow* in a message), an owl *shelter* (or *tonight, at moonrise*), a heron *the crossing*, a jay *danger, go round*. The **bone whistle** is for the Warden call, which every Warden within earshot answers.
+
 Seven years ago King Osric disbanded them by decree. The official reason was cost. The real reason was that one of them, Marcian, had dared to love his daughter. On the first Hollow Night, the old Wardens rode out anyway to hold back the dead. Only **Aldric** rode back.
 
 ### The Hollow Night
@@ -129,7 +133,7 @@ Folk call it the **Blackthorn**, for the black thorns that are always the first 
 |---|---|---|---|---|
 | **0 · Untouched** | Lake Ellory and the Greenmarch | 1–3 | Green meadows, blue water, sunshine. The only darkness comes at night, when skeletons rise in the old barrows. | Slimes, cows, goblin raiders; skeletons at night |
 | **1 · Touched** | Millbrook and the river farms | 3–7 | Crops wilting in patches, grey circles in the grass, the first thin black thorn-shoots along fences and ditches, crows everywhere. | Skeletons, bone hounds, goblins |
-| **2 · Thorned** | The Weepwood | 7–11 | The willows' bark has gone black and their branches end in thorns; long spikes of pale bone grow up between the roots; the light comes down green and dim through grave-mist; the river runs dark. | Thornback wolves, giant spiders, wisps, mourners, the first Tower Guard |
+| **2 · Thorned** | The Weepwood, the King's Chase, Heron Reach | 7–11 | The willows' bark has gone black and their branches end in thorns; long spikes of pale bone grow up between the roots; the light comes down green and dim through grave-mist; the river runs dark. In the deep wood around the Weeping Bridge the mist keeps it dusk all day, and the dead walk by day. | Thornback wolves, giant spiders, wisps, mourners, Smotherers, the hanged, goblin outriders, the old dead of the Lisle Barrow, the first Tower Guard |
 | **3 · Blighted** | The Blightfields, the Barrow Fens, the Root Tower | 11–16 | The wizard's farmlands, rotted: black potato vines, fields of black spikes as tall as a man, bone fences, grey ash in the air, the dead walking even by day. | Tuberlings, screaming mandrakes, root golems, blightcaps, dustmoths, the Ones Who Are Not Him |
 | **4 · Spiked** | The Spiked March, the road to the castle | 16–21 | No living plant. The earth cracked open, every crack bristling with black spikes; walls of thorn and brick taller than trees; green grave-fire in the ditches; a sky stuck at dusk. | Tower Guard, Wed-Wraiths, the Unseeing, the Veiled |
 | **5 · Maximum** | Castle Thornhallow | 21–25 | Eternal night. Towers wrapped in giant black thorns, spikes on every battlement, bones in the mortar, green fire in the windows, the moat black as ink, and at the top of the tallest tower, one lit window. | Everything the dead have left |
@@ -168,9 +172,9 @@ Victoria does not want the crown. She does not want to rule. She wants every per
 
 *A miller's son from Millbrook who became the best tracker the Wardens ever had. Kind, quick to laugh, hopeless at singing. Dead at twenty-one.*
 
-Marcian is the story's still centre: the one person who never chose hate, not even at the end. He loved Victoria before he knew she was a princess, and kept loving her after he found out, knowing exactly what it would cost. He was going to ask her to leave with him; he had made her a ring of plain Warden iron, engraved on the inside with the oath, *keep the fire*.
+Marcian is the story's still centre: the one person who never chose hate, not even at the end. He loved Victoria before he knew she was a princess, and kept loving her after he found out, knowing exactly what it would cost. He was going to ask her to leave with him; he had made her a ring of plain Warden iron, engraved on the inside with the oath, *keep the fire*. He had asked Aldric whether a Warden may marry (*"a Warden may do as he likes, so long as the fire is kept"*), and on his last round of the Lisle he left his Warden badge and his logbook with the kiln-master at Kilnholt, *in case*. He had taught her the Wardens' feather-code and written it out for her, and the old Warden crossing of the Lisle, the Weeping Bridge, was *their bridge*.
 
-He received a letter in her handwriting asking him to meet her at the Weeping Bridge at moonrise. He went. She was not there. The King was, with his guards, and so was the wizard. The realm was told he had robbed the treasury and fled south. The King's men said they had sunk his body in the Barrow Fens. They hadn't.
+He received a letter in her handwriting asking him to meet her at the Weeping Bridge at moonrise. It did not come through the oak, which she had never once done; he wrote in his logbook that it was odd, and went anyway. She was not there. The King was, with his guards, and so was the wizard. When the roots held him he blew his Warden whistle, and nobody came. The realm was told he had robbed the treasury and fled south. The King's men said they had sunk his body in the Barrow Fens. They hadn't.
 
 <figure class="plate"><img src="lore-art/oak.svg" alt="A great oak by a still lake, a feather tucked into the dark hollow of its trunk, reeds along the shore"><figcaption><b>Plate VI.</b> The hollow oak on the shore of Lake Ellory, where the feathers were left.</figcaption></figure>
 
@@ -182,11 +186,13 @@ He received a letter in her handwriting asking him to meet her at the Weeping Br
 
 Osric loved his wife Elowen more than his kingdom, and when she died he decided that love was a weakness he would never suffer again. When the Greyfang War turned against him, he paid the wizard for victory with his daughter's hand, and did not think to ask her. When she said she would marry Marcian or no one, he said only, *"Then no one will have Marcian,"* and gave the order that night.
 
+The night his wife died was also his daughter's birthday, and the court called it **the Queen's Day**. Every year for twenty-five years he spent it hunting in the King's Chase with his hounds, Bellow, Grief, Old Tally and Bramble, *though the princess asked to come*, and his game book says the same thing every year: *The King does not speak.* His foresters hanged poachers from the Gallows Willow for taking his deer.
+
 He visited Thornhallow once, in the third year. Victoria pushed up her sleeves, showed him the bruises on her arms, and begged him on her knees to take her home. He looked at the wall above her head and said, *"You are where you belong."* She swore that she would never speak to him again, and she kept that oath to the end.
 
 Dying of a wasting sickness, Osric finally found the words he had never managed in twenty-six years, and wrote his daughter a letter asking her to come home and forgive him. The wizard read it first, and hid it. Victoria learned her father was dead from the sound of the bells.
 
-**In the game:** dead at the start. In Act III the heroes hear that his tomb in Castle Corvane has been broken open *from the inside*, and everyone assumes the wizard stole the body to mock the crown. In Act IV they find his letter hidden in the wizard's desk, and hate the wizard even more for it. In the final battle the Dead King fights at his daughter's side, raised so that he would finally have to face her, and silent, because the dead cannot say they are sorry.
+**In the game:** dead at the start. In Act II the heroes find his hunting lodge in the Chase, his empty kennels and his game book. In Act III they hear that his tomb in Castle Corvane has been broken open *from the inside*, and everyone assumes the wizard stole the body to mock the crown. In Act IV they find his letter hidden in the wizard's desk, and hate the wizard even more for it. In the final battle the Dead King fights at his daughter's side, raised so that he would finally have to face her, and silent, because the dead cannot say they are sorry.
 
 ### Lord Ambrose Pellow: "Lord Potatoe Face," the Hollow King
 
@@ -230,17 +236,17 @@ Aldric trained Marcian from a boy and loved him like a son. When Marcian vanishe
 
 He is certain the wizard is behind it all, and that rescuing the queen is the last thing he can do for Marcian.
 
-**In the game:** the mentor and first quest giver (already in the game). His old boots, his brother Edric's helm and Queen Elowen's amulet are the gifts he gives the heroes. He comes north with them for the assault on Thornhallow, and in the tower room, when the Widow-Queen's first blast of gravecraft comes for the heroes, Aldric steps in front of it. His last words are the Warden oath, and his death gives the heroes the Warden flame (a fitting home for the *Last Warden* talent).
+**In the game:** the mentor and first quest giver (already in the game). His old boots, his brother Edric's helm and Queen Elowen's amulet are the gifts he gives the heroes, and in Act II, when Wren comes for the truth he kept from her family, his own bone whistle. He comes north with them for the assault on Thornhallow, and in the tower room, when the Widow-Queen's first blast of gravecraft comes for the heroes, Aldric steps in front of it. His last words are the Warden oath, and his death gives the heroes the Warden flame (a fitting home for the *Last Warden* talent).
 
 ### Wren Ashdown: Marcian's Sister
 
 *Seventeen. A huntress from Millbrook with a short temper, a long bow, and her brother's laugh, which she hasn't used in years.*
 
-Wren was ten when her brother vanished, and she never believed he ran. She grew up certain that the wizard had something to do with it, and she was right. She joins the heroes in Act II, learns the Wardens' feather-code from the letters in the hollow oak, and wants one thing: an arrow in Lord Potatoe Face. For four acts her hate is righteous and easy to cheer.
+Wren was ten when her brother vanished, and she never believed he ran. She grew up certain that the wizard had something to do with it, and she was right. She has looked for him in the Weepwood ever since without knowing where to look, and poached the King's deer there since she was eleven. When she hears that Aldric found Marcian's cloak at the Weeping Bridge and kept it from her family for seven years, she comes home furious and makes the heroes help her follow her brother's trail. She learns the Wardens' feather-code from the letters in the hollow oak, reads his marks through the wood, and wants one thing: an arrow in Lord Potatoe Face. For four acts her hate is righteous and easy to cheer. *"Marcian let everything go,"* she says in the Weepwood. *"I'm not like him."*
 
 Then the Hollow King falls, and they open the tower door. Victoria was the person her brother loved most in the world, and Victoria is ending it. Wren has to decide what Marcian would have wanted, and whether she is willing to want it too.
 
-**In the game:** a companion NPC from Act II. At the very end it is Wren who chooses to blow her brother's whistle, so that he can come for Victoria as she dies.
+**In the game:** a companion from Act II, who walks and shoots beside the heroes in the wood. At the very end it is Wren who chooses to blow her brother's whistle, so that he can come for Victoria as she dies.
 
 ### Nan Merrow: Victoria's Nurse
 
@@ -258,7 +264,7 @@ Since the Hollow Night began, pages of a diary have been blowing south on the ni
 
 Since the King's death Isolde has held the realm together from Ashford with taxes, walls and bounties. She is the one who put out the call: *ten thousand crowns to whoever rescues the queen*. She is not a monster. She is a careful woman who did one terrible thing because her king asked her to, seven years ago: she wrote the letter that lured Marcian to the bridge, in a perfect copy of Victoria's handwriting. And forty days ago, when the wizard demanded the Crown of Dawn for the queen by law, she sent it north, because the law said so and she did not want to look at why.
 
-**In the game:** the quest giver for the main bounty. As the story goes on, the heroes find proof she forged the letter, and her real motive becomes clear: she wants the queen *found*, not necessarily *alive*. A late political questline lets the heroes expose her.
+**In the game:** the quest giver for the main bounty. In Act II her dispatch to Sergeant Pike turns up in a goblin's saddlebag: if the queen is found, she is to be brought to Ashford by night, *and spoken to by no one*. As the story goes on, the heroes find proof she forged the letter, and her real motive becomes clear: she wants the queen *found*, not necessarily *alive*. A late political questline lets the heroes expose her.
 
 ### Old Tull: the Gravedigger
 
@@ -276,6 +282,9 @@ The King's men brought Marcian's body to Tull with orders to sink it in the Barr
 - **Edric:** Aldric's younger brother, a Warden lost on the first Hollow Night. His iron helm is the one Aldric gives the heroes.
 - **Queen Elowen:** Victoria's mother, dead twenty-six years. Remembered as gentle and brave. Her amulet is the one Aldric gives the heroes (*"it was the queen's"*), and her white veil is the one Victoria wore to her wedding. Her spirit is not at rest (see *The White Lady*).
 - **Morwen:** the grave-witch of the founding, five hundred years dead. She never appears; only her book does.
+- **The people of Kilnholt:** **Hesketh Coll**, the kiln-master, who kept Marcian's badge and logbook for seven years; his daughter **Ada**, a woodcutter; **Grandad Pell**, an old poacher whose brother Tam was hanged at the Gallows Willow; and **Mother Dunn**, who fed Marcian at her table every week. The burners have kept themselves alive since the bells inside a ring of kilns they keep burning all night. Their own dead come back every night to lie down on the kilns and put them out.
+- **Bess Tanner:** a Millbrook widow whose son Davy drowned in the Lisle the spring before the bells. She follows the Mourning Lights into the Weepwood at night, sure one of them is his lantern. *"I only wanted to see him once more."*
+- **The Thane under the Hill:** a chieftain of the valley from before there was a Corvalis, asleep in the Lisle Barrow since the founding song, and woken by the crown with everyone else. He remembers who sang: *"She sang. Not him."*
 
 ---
 
@@ -319,7 +328,7 @@ The Grey Moth is not one of them. He never belonged to her; she was only ever hi
 
 **The first year: duty, and the first blow.** Thornhallow is cold and grey and far from the lake. Her days are not her own. She is to sit at the wizard's side at his feasts and smile at his guests, wear the gowns he chooses, receive the lords of the march, sign the letters he writes in her name, and be seen. The ladies of the court call her *Lady Potatoe* behind their fans. The first time she will not smile, he strikes her at the table, in front of everyone, and a few of them laugh. That night he weeps outside her door and sends up a new gown. Before winter is out, he sends Nan away. Victoria writes home every week. The steward burns every letter.
 
-**The second year: the lock.** One spring night she climbs out of her window and runs south for the lake. Sir Garrick catches her on the road at dawn and carries her back. The wizard leaves her three days without food or a candle, and the mason bricks her window up to a slit. From then on her door is locked from the outside, and she leaves her room only when she is needed downstairs. She stops singing, because the only person left to hear her is the man who keeps the key.
+**The second year: the lock.** One spring night she climbs out of her window and runs south for the lake. Crane, the steward, sends the guards down the Weepwood road after her (*"She is to be back in her room before my lord wakes, or it will go worse for her"*), and Sir Garrick catches her on the road at dawn and carries her back. The wizard leaves her three days without food or a candle, and the mason bricks her window up to a slit. From then on her door is locked from the outside, and she leaves her room only when she is needed downstairs. She stops singing, because the only person left to hear her is the man who keeps the key.
 
 **The third year: the visit.** Her father comes to Thornhallow, once. She pushes up her sleeves to show him the bruises, goes down on her knees and begs him to take her home. He looks at the wall above her head and says, *"You are where you belong,"* and leaves the next morning without saying goodbye. She swears she will never speak to him again. That winter a big grey moth starts coming to the slit of her window every night, drawn to her candle. She is glad of the company. One night something heavier than a moth lands on the sill: a book bound in grey cloth, and a note in a spidery hand. *For when you have had enough.*
 
@@ -352,7 +361,7 @@ The Grey Moth is not one of them. He never belonged to her; she was only ever hi
 | 16 years ago | Ambrose, 30, poisons Venn and takes the Root Tower. Venn does not stay dead: he rises as the Grey Moth. |
 | 11 years ago | Victoria (15) falls through the ice of Lake Ellory. Marcian (17) pulls her out. The notes and feathers in the hollow oak begin. |
 | 8 years ago | The Greyfang War. Ambrose offers his root-golems for the princess's hand; Osric agrees without asking her. The war is won at the Field of Roots. Ambrose is given the northern march and Thornhallow. |
-| 7 years ago | Victoria refuses: Marcian or no one. *"Then no one will have Marcian."* Isolde forges the letter. At the Weeping Bridge, Ambrose's roots hold Marcian and Garrick's sword kills him while the King watches. Tull secretly buries him under the willow. The Wardens are disbanded. |
+| 7 years ago | Victoria refuses: Marcian or no one. *"Then no one will have Marcian."* Marcian leaves his Warden badge and logbook at Kilnholt, *in case*. Isolde forges the letter. At the Weeping Bridge, Ambrose's roots hold Marcian and Garrick's sword kills him while the King watches. Tull secretly buries him under the willow. The Wardens are disbanded. |
 | 7 years ago, a month later | The wedding. Victoria is carried north to Thornhallow. *The wizard took the princess.* The Grey Moth follows. |
 | Years 1–3 | Duty, his blows, the lock, her father's visit. The Grey Moth watches her window. |
 | The third winter | The Grey Moth drops the Black Psalter through her window slit: *For when you have had enough.* |
@@ -377,6 +386,13 @@ The Grey Moth is not one of them. He never belonged to her; she was only ever hi
 | I–III | **The Unsent's letters**, left on doorsteps (see below) | Proof of how cruelly she was kept: seven years of letters he burned | The letters slowly change: from begging, to grief, to something else |
 | II | Garrick's last words: *"Tell her I'm sorry. I should have let her run. And the grey thing at her window, every night, the year before the thorns. I should have shot it."* | An apology to the prisoner he guarded; the wizard's spy tormenting her | An apology to the mistress who raised him; the Grey Moth bringing her the book |
 | II | A **fresh black crow feather** in the hollow oak. In the Wardens' feather-code, Wren reads it as *"I'm coming"* | Someone still visits the oak. Maybe Marcian's ghost? | Victoria sends her crows to the oak. It is a message to Marcian. |
+| II | Her last note in the oak: *"If you're dead, I'll find you."* | A heartbroken girl (Wren: *"She loved him. She really did."*) | She raised the whole fen looking for him |
+| II | The King's **game book**: a hunt every Queen's Day, the hounds named, *"though the princess asked to come"* | A cold father (Nan); and the wizard raised the old King's hounds to mock the crown (Pike) | She raised exactly the dogs that took her father away on every birthday |
+| II | **The King's bridge**, a proclamation on the bridge post: the wizard's signature wanders, hers is pressed so hard it tore the paper | Wren: *"His hand shakes. Maybe the rot's getting into him. And look how hard she pressed. She hated signing it."* | He has no heart left to steady his hand. She holds the pen. |
+| II | **Tower Guard** still searching the Weepwood road: *"She can't have got far"*, with orders signed by Crane | The wizard's dead men, still hunting the queen who ran from him (Wren) | She made her jailers repeat their jailing forever |
+| II | **Mourners** keening at unmarked graves | Father Odo: the King forbade keening for traitors and thieves; *"some folk were never let mourn at all"* | All the mourning she was forbidden: a thief's lover may not wear black |
+| II | **The Thane under the Hill:** *"Someone wears her crown with a cold heart. She sang. Not him."* | The wizard has twisted the crown (Wren); barrow-talk (Aldric: *"The songs say Corvan sang the dead to sleep"*) | The crown obeys its wearer's heart, and the founding songs lie |
+| II | The **roots** under the Weeping Bridge are black and cold; the wizard's were brown and warm (Garrick) | His magic has gone rotten, like everyone says | They aren't his |
 | III | The Ones Who Are Not Him, murmuring *"not him"* | The wizard is digging up an army and can't find what he wants | She was searching for Marcian's body |
 | III | The Kitchen Girl's tray: cold supper, a feather from the lakeshore, a note reading *"for my lady"* | A cursed servant still trying to feed the captive queen | Her friend, brought back wrong, and kept because she could not bear to let her go |
 | III | The King's **and** the Queen's tombs broken open from the inside | The wizard desecrates the royal line to break the realm's spirit | She called her parents to her |
@@ -434,16 +450,21 @@ Something is ringing the Millbrook chapel bell backwards every night and raising
 
 ### Act II: The Weeping Bridge (levels 7–11, ring 2)
 
-**Where:** the Weepwood and the river Lisle.
+**Where:** the Weepwood: its south with Kilnholt, the King's Chase, Heron Reach, and the deep wood around the Weeping Bridge.
 **What the players believe:** the wizard is a murderer too, and the queen is his victim twice over.
 
-**Wren Ashdown** finds the heroes and makes them help her follow her brother's old trail north. The road leads into the Weepwood, and the forest has turned. The willows are black and thorned, spikes of bone stand between the roots like a second forest, and the light comes down green through the mist. Thornback wolves hunt in packs; wisps lure travellers off the path to unmarked graves; once, a lantern moves between the trees, and is gone. On the lakeshore at the forest's edge the heroes find the hollow oak, still full of Victoria and Marcian's notes and feathers, and one feather that is new. Deep in the wood, a knight in rusted royal armour guards the Weeping Bridge and lets no one pass.
+When Maud learns that Aldric found Marcian's cloak at the Weeping Bridge, her daughter **Wren Ashdown** comes home furious and makes the heroes take her to the old Warden. He sends her to the hollow oak on the west shore of the lake, still full of Victoria and Marcian's notes and feathers, with Marcian's feather-code written out for *V.*, and one feather that is new. Then Wren leads the heroes up the Lisle under the thorn wall into the Weepwood, and the forest has turned. The willows are black and thorned, spikes of bone stand between the roots like a second forest, and the light comes down green through the mist. Thornback wolves hunt in packs; wisps lure travellers off the path to unmarked graves; once, a lantern moves between the trees, and is gone.
+
+In the middle of the wood the charcoal-burners of **Kilnholt** are still alive, inside a ring of kilns they keep burning all night against the dead, their own dead among them. When the heroes help them hold it through a night, the kiln-master gives Wren what Marcian left with him on his last round: his Warden badge and his logbook, whose last entry is about a letter that came in her hand but not through the oak. With it the heroes follow the marks Marcian cut into the trees: through the old King's hunting Chase, with its empty kennels, its game book and its Gallows Willow, past a camp of goblin outriders who fled their own hills, to **Heron Lodge**, the Wardens' waystation on the Lisle, and the **Lisle Barrow** they used to watch, which has woken. Below the lodge, dead guards in Thornhallow livery hold the ford, still searching the road for a girl who ran away seven years ago. Marcian's last mark points into the grave-mist. Deep in the wood beyond it, where it is dusk all day, a knight in rusted royal armour guards the Weeping Bridge and lets no one pass.
 
 <figure class="plate"><img src="lore-art/bridge.svg" alt="A stone bridge over a dark river between two black weeping willows, an armoured knight standing on it with his hands on his sword"><figcaption><b>Plate X.</b> The Weeping Bridge, and the knight who will not leave it.</figcaption></figure>
 
-**Enemies:** thornback wolves, giant spiders, Mourning Lights (wisps), mourners, the first Tower Guard.
-**Boss:** **Sir Garrick Thorne, the Queen's Jailer**, guarding the scene of his crime.
-**Closing beat:** freed, Garrick's ghost confesses everything: the forged letter, the wizard's roots, his own sword, the King on his horse watching, and seven years outside a locked door, listening to what the wizard did behind it. He tells them about the grey thing at her window. He gives the heroes Marcian's bone whistle, and asks them to tell her he is sorry. Wren now knows who killed her brother: the King and the wizard. The players have never hated Lord Potatoe Face more, or pitied the queen more.
+**Enemies:** wolves and thornback wolves, boar, Weepwood spiders and spiderlings, Mourning Lights (wisps), mourners, Smotherers, the hanged poachers, Sleepers, goblin trappers and wolf-riders, the first Tower Guard and their crossbowmen.
+**Optional bosses:** the Brood Mother (the spider dell), Bonespine (the old thornback Marcian once let out of a snare), the Thane under the Hill (the Lisle Barrow).
+**Boss:** **Sir Garrick Thorne, the Queen's Jailer**, guarding the scene of his crime. The Warden call stops him dead: the boy he killed blew it, and nobody came.
+**Closing beat:** freed, Garrick's ghost confesses everything: the forged letter (he never knew whose pen), the wizard's roots, his own sword, the King on his horse watching, the body sent to the gravedigger at the fens, and seven years outside a locked door, listening to what the wizard did behind it. He tells them about the grey thing at her window. He gives the heroes Marcian's bone whistle, asks them to tell her he is sorry, and stays on the bridge. Wren shoots an arrow through him (*"You're already dead. You don't even get to die."*) and goes home to tell her mother, and Maud turns her lamp up instead of putting it out: *"It's for you now."* Wren knows who killed her brother: the King and the wizard. The players have never hated Lord Potatoe Face more, or pitied the queen more.
+
+*The build spec, with every quest, creature and scene, is docs/act2.md.*
 
 ### Act III: Roots and Ruin (levels 11–16, ring 3)
 
@@ -539,8 +560,12 @@ The Crown of Dawn is gone: white-gold splinters on the barrow floor, and nobody 
 | **Castle Corvane** | 0 | The white royal castle in the south, half empty | The royal crypt; two tombs broken open from inside |
 | **Millbrook** | 1 | The mill village on the Lisle | Nan Merrow, Maud Ashdown, the backwards bell, the Unsent's first letters |
 | **The Greyfang Hills** | 1–2 | Bare, windy highlands to the east | Goblin and ogre clans, Gorrum, Mother Skrit, the Field of Roots |
-| **The Weepwood** | 2 | A willow forest gone black, thorned and full of bone spikes | Thornback wolves, spiders, wisps, the Weeping Bridge |
-| **The Weeping Bridge** | 2 | An old stone bridge over the Lisle | Where Marcian was murdered; the Queen's Jailer |
+| **The Weepwood** | 2 | The old King's willow forest, gone black, thorned and full of bone spikes | Wren's camp, the spider dell, the Keening Hollow, thornback wolves, wisps |
+| **Kilnholt** | 2 | The charcoal-burners' hamlet in the middle of the Weepwood | Hesketh Coll and his people, alive inside a ring of kilns; Marcian's badge and logbook |
+| **The King's Chase** | 2 | The Weepwood's eastern half, the old King's hunting forest | His roofless hunting lodge and empty kennels, the Gallows Willow, goblin outriders |
+| **Heron Reach** | 2 | The Wardens' stretch of the Lisle | Heron Lodge and its roll of names, the ford, the Warden caches |
+| **The Lisle Barrow** | 2 | An old burial mound the Wardens watched, older than Corvalis | The Thane under the Hill and his Sleepers |
+| **The Weeping Bridge** | 2 | An old stone bridge over the Lisle, the Wardens' crossing, deep in the wood where it is dusk all day | Where Marcian was murdered; the Queen's Jailer, and then his ghost |
 | **The Barrow Fens** | 3 | Black bog full of old burial mounds | The Ones Who Are Not Him, Old Tull's hut |
 | **The Blightfields** | 3 | The wizard's farmlands, rotted to spikes and ash | Tuberlings, mandrakes, the Kitchen Girl on the road |
 | **The Root Tower ("the Spud Spire")** | 3 | Ambrose's old tower, overgrown, screaming and full of moths | The Mandrake Mother, Ambrose's journal, the Grey Moth and his notebook |
@@ -562,10 +587,17 @@ Creatures marked *thorned* come back in darker rings with spikes, more health an
 - **Mourner:** a weeping ghost that heals the dead around it with its wail: all the mourning she was forbidden, because a thief's lover may not wear black. Interrupt it.
 - **The Ones Who Are Not Him (the Drowned):** bloated dead from the Barrow Fens, raised one by one while she searched for Marcian. Slow, heavy; they grab and pull, and look into your face.
 - **Wed-Wraith:** the veiled ghost of a Corvane bride married off against her will. They were her first friends in the dark. Their shriek silences spells.
-- **Tower Guard:** the guards who stood outside her door for seven years, still standing guard in rusted livery, disciplined even in death. Shields up.
+- **Tower Guard:** the guards who stood outside her door for seven years, still standing guard in rusted livery, disciplined even in death. Shields up. Some carry crossbows. In the Weepwood they are still searching the road for her, the night she ran.
+- **Smotherer:** a dead charcoal-burner of Kilnholt, black with soot, who goes for fires before people and lies down on them to put them out. The Blackthorn can't grow in a fire's light, so its dead hate fire.
+- **Hanged poacher:** the poachers her father hanged from the Gallows Willow for his deer, dropping from their ropes at dusk with their bows still in their hands.
 - **The Unseeing:** the lords and ladies who dined at Thornhallow, saw how she was kept, and looked away. Now grown through with black thorns, their eyes sewn shut. They guard the Spiked March; they hurt to hit.
 - **The Veiled:** not dead at all. Living men and women of Corvalis with broken hearts (jilted lovers, widows, the wronged) who heard the queen's call and came north to serve her. They fight with knives and despair, and they can be talked down.
 - **The Mourning Court:** her captains (see *The Mourning Court* above).
+
+### The old dead
+
+- **Sleeper:** the valley's dead from before there was a Corvalis, in green bronze and rotten furs, sung to sleep at the founding and woken by the crown with everyone else. Slow and heavy. Not hers in the way her captains are.
+- **The Thane under the Hill:** the old chieftain of the Lisle Barrow, who remembers who really sang them to sleep.
 
 ### The Grey Moth's own
 
@@ -586,12 +618,15 @@ These are the wizard's own work, and the main reason everyone believes the Black
 
 - **Goblin** and **Goblin Shaman:** raiders from the hills, quick and nasty. Shamans cast and must be interrupted. *(In the game now.)*
 - **Ogre:** huge, slow, and furious about a broken treaty. *(In the game now.)*
+- **Goblin trapper** and **goblin wolf-rider:** the outriders of clans that fled west into the King's Chase when the Blackthorn reached their hills. Trappers snare the grass; riders ride thornback wolves, and fight on foot when the wolf dies.
 
 ### The Wilds
 
 - **Slime:** eats clover, boots and anything else that holds still. *(In the game now.)*
 - **Cow:** not an enemy. A good source of meat. *(In the game now.)*
-- **Wolf**, **Boar**, **Weepwood Spider:** the ordinary dangers of a land with no Wardens left. Wolves become **Thornback Wolves** in the Weepwood, with bone spikes along their spines.
+- **Wolf**, **Boar**, **Weepwood Spider:** the ordinary dangers of a land with no Wardens left. Wolves become **Thornback Wolves** in the Weepwood, with bone spikes along their spines. Spiders hatch **spiderlings** from egg sacs, and the spider dell has its **Brood Mother**, a spider the size of a cart.
+- **Bonespine:** the oldest thornback in the Chase, as big as a pony. Marcian found him in a snare as a cub and let him go.
+- **Deer:** not an enemy. Wren has been poaching them since she was eleven.
 - **Mourning Light:** a will-o'-wisp that lures travellers off the road to unmarked graves.
 
 ### Bosses at a glance
@@ -600,7 +635,10 @@ These are the wizard's own work, and the main reason everyone believes the Black
 |---|---|---|---|
 | I | The Bell-Ringer | Millbrook bell tower | Rings the bell to raise waves of skeletons: break the bell |
 | I–III | The Unsent | The roads at night | Appears and vanishes; storms of paper; finally cornered in Act III |
-| II | Sir Garrick, the Queen's Jailer | The Weeping Bridge | A disciplined swordsman; his guilt freezes him when he sees the whistle |
+| II (optional) | The Brood Mother | The spider dell | Drops from the roof, sprays web, lays egg sacs that hatch unless burned |
+| II (optional) | Bonespine | The King's Chase | Howls up his pack; leaps at whoever is furthest |
+| II (optional) | The Thane under the Hill | The Lisle Barrow | A great bronze axe; sings his Sleepers back up unless interrupted |
+| II | Sir Garrick, the Queen's Jailer | The Weeping Bridge | A disciplined swordsman; roots hold one hero while he lunges; the Warden call freezes him with guilt |
 | III | The Mandrake Mother (mid-boss) | The Root Tower cellars | Area screams to interrupt; surfaces and burrows; spike fields |
 | III (optional) | Gorrum Ninefingers | Greyfang Hills | Fight him, or prove the crown that wronged him is gone |
 | III | The Grey Moth (Archmagus Venn) | The top of the Root Tower | Snuffs out the lights; comes apart into moths when struck; fought by lantern and campfire |
@@ -626,6 +664,13 @@ These are the wizard's own work, and the main reason everyone believes the Black
 - **The King's last letter:** Osric's apology to his daughter, sealed and never opened, hidden in the wizard's desk. The last thing she reads.
 - **The wizard's key ring:** the keys to every door in Thornhallow, including the one at the top of the tower.
 - **Marcian's bone whistle:** the Warden call. Garrick carried it out of guilt; Wren blows it at the end.
+- **Aldric's bone whistle:** given to the heroes in Act II. Its call stops Sir Garrick dead.
+- **Marcian's feather key** and **the notes in the oak:** the Wardens' feather-code written out for *V.*, a note about bread and stars, and her last: *"If you're dead, I'll find you."*
+- **Marcian's badge and logbook:** left with Hesketh at Kilnholt *in case*. His round of the Lisle, his question about whether a Warden may marry, and the letter that didn't come through the oak.
+- **The King's game book:** twenty-five Queen's Days of hunting, *"though the princess asked to come"*.
+- **The Steward's dispatch:** Isolde's orders to Pike: the queen to be brought to Ashford by night, *and spoken to by no one*.
+- **The search party's orders:** signed by Crane, the night she ran.
+- **The King's bridge:** the proclamation on the bridge post, his signature wandering and hers torn through the paper.
 - **Marcian's ring:** plain Warden iron, *keep the fire* engraved inside. Buried with him under the willow, and put in her hand as she dies.
 - **The forged letter:** Victoria's handwriting, Isolde's pen, the King's seal. Proof of the murder.
 - **Victoria's diary:** pages blowing south on the night wind since the Hollow Night began; Nan collects them. The last pages are on the bed in the tower room.
@@ -705,8 +750,9 @@ These are the wizard's own work, and the main reason everyone believes the Black
 - **Return to Sender** (Acts I–III): track the Unsent along the night roads, collecting his letters, until he can be cornered.
 - **The Grey Stranger** (Acts I–III): follow the lantern on the north road, from rumour to the Root Tower.
 - **Thorns in the Fences** (Act I): burn the first black thorns around Millbrook before they spread.
-- **Wren's Arrow** (Act II): follow Marcian's trail with Wren.
+- **Wren's Arrow** (Act II): follow Marcian's trail with Wren. (Built as *The Warden's Trail* and *The Ford*.)
 - **What the Knight Carried** (Act II main): free the Queen's Jailer.
+- Act II has 26 quests in all (Kilnholt, the King's Chase, Heron Reach, the Lisle Barrow): see docs/act2.md.
 - **Not Him** (Act III): find out what the dead in the fens are looking for. (The answer only makes sense later.)
 - **Supper for My Lady** (Act III): follow the Kitchen Girl to see where she is going.
 - **Two Empty Tombs** (Act III): investigate the broken tombs in Castle Corvane.
@@ -739,3 +785,4 @@ These are the wizard's own work, and the main reason everyone believes the Black
 - **Lord Potatoe Face** is hated, despised and ugly from his first mention to his last. Never comic.
 - **The world does not heal** until Victoria is defeated; then the whole Blackthorn withers at once.
 - **The Crown of Dawn shatters** when she dies. Nobody wears it again.
+- **Act II** (3 October 2026; spec in docs/act2.md): about twice Act I's length, because levels 7–11 take nearly twice the experience of levels 1–7. Wren walks and fights beside the heroes; *The Lamp in the Window* is the way in; the night at Kilnholt is on the main story; the Thane hints at the true founding without naming Morwen; Garrick's ghost stays on the bridge until the end; Garrick's greaves are the first plate.

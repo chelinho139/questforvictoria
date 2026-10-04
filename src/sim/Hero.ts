@@ -24,6 +24,7 @@ import type { SpellKey } from '../data/spells';
 import { BAR_KEYS } from '../data/actionBar';
 import { ITEMS, BAG_SLOTS, CHOP, MINE, STARTER, SLOTS, NO_STATS, canWield, sellValue } from '../data/items';
 import type { ItemId, Slot, Stats } from '../data/items';
+import type { HeldKind } from '../data/enemies';
 import { Emitter } from './Emitter';
 import { findPath } from './pathfind';
 import type { Pt } from './pathfind';
@@ -43,9 +44,13 @@ import type {
   SoundId,
   UiSound,
   Work,
+  Foe,
 } from './types';
 import type { Game } from './Game';
 import type { Region } from './Region';
+
+/** What a hero sees over their head when something holds them still. */
+const HELD_SAY: Record<HeldKind, string> = { web: 'WEBBED', net: 'NETTED', snare: 'SNARED', roots: 'ROOTED' };
 
 export const GCD = 1.2;
 /** Perfect-timing window (seconds after the GCD arc restarts). */
@@ -82,7 +87,7 @@ export interface KeyInfo {
  * everything a player can do. A hero belongs to a Game (the room) and stands in one of its
  * Regions; it hears its own messages through `events`.
  */
-export class Hero {
+export class Hero implements Foe {
   readonly events = new Emitter<HeroEvents>();
   /** Last few log lines, so a HUD created after the first messages can show them. */
   readonly logHistory: { text: string; cls: LogClass }[] = [];
@@ -158,6 +163,14 @@ export class Hero {
   predatorT = 0;
   /** Camouflage: creatures lose track of you, and your next shot is a critical hit. */
   hiddenT = 0;
+  /** Held still (a web, a net, a snare, roots): seconds left, and what holds you. */
+  heldT = 0;
+  heldBy: HeldKind | '' = '';
+  /** Slowed (a crossbow bolt): seconds left, and by how much (0.3 = 30% slower). */
+  slowT = 0;
+  slowK = 0;
+  /** Seconds before each usable keepsake (by item id) can be used again. */
+  itemCd: Partial<Record<ItemId, number>> = {};
   rev = false;
   revAuto = false;
   /** Rev (the skill sequencer) is an advanced option: off until the player turns it on. */
@@ -317,6 +330,11 @@ export class Hero {
       aimT: 0,
       predatorT: 0,
       hiddenT: 0,
+      heldT: 0,
+      heldBy: '',
+      slowT: 0,
+      slowK: 0,
+      itemCd: {},
     });
     this.questLog.clear();
     this.bar = new Array<SpellKey | null>(BAR_KEYS.length).fill(null);
@@ -438,7 +456,7 @@ export class Hero {
     let best: Enemy | null = null;
     let bd = max;
     for (const e of this.region.enemies) {
-      if (!e.alive || e === excl) continue;
+      if (!e.alive || e.hid || e === excl) continue;
       const d = this.dist(this, e);
       if (d < bd) {
         bd = d;
@@ -1350,8 +1368,11 @@ export class Hero {
     if (e.sunderT > 0) v = Math.round(v * 1.2);
     if (cls !== 'dot' && this.tal.lifeOnHit && !this.dead)
       this.hp = Math.min(this.hpMax, this.hp + this.tal.lifeOnHit);
-    if (!this.region.hurtEnemy(e, v, cls, this)) return;
-    // the kill: gold, XP and the talents that feed on kills
+    if (this.region.hurtEnemy(e, v, cls, this)) this.killed(e);
+  }
+
+  /** A creature this hero (or a companion walking with them) killed: gold, XP and the talents that feed on kills. */
+  killed(e: Enemy): void {
     this.kills++;
     const [lo, hi] = e.def.gold;
     const coins = hi > lo ? lo + Math.floor(this.game.rng.next() * (hi - lo + 1)) : lo;
@@ -1442,6 +1463,38 @@ export class Hero {
     }
   }
 
+  /** Something holds this hero still (a web, a net, a snare, roots): no walking, jumping or dodging till it lets go. */
+  hold(t: number, by: HeldKind): void {
+    if (this.dead) return;
+    if (this.cheats.god || this.invT > 0) {
+      this.floater(this.x, this.y - 20, this.invT > 0 ? 'DODGED' : 'IMMUNE', 'heal');
+      return;
+    }
+    this.heldT = Math.max(this.heldT, t);
+    this.heldBy = by;
+    this.stopMoving();
+    this.mountT = 0;
+    if (this.mounted) this.dismount('Pulled off your mount.');
+    this.floater(this.x, this.y - 30, HELD_SAY[by], 'name', '#e8e4d8');
+    this.log(`You are ${HELD_SAY[by].toLowerCase()}!`, 'h');
+  }
+
+  /** Let go, if it is `by` that holds this hero (the roots going slack). */
+  free(by: HeldKind): void {
+    if (this.heldBy !== by || this.heldT <= 0) return;
+    this.heldT = 0;
+    this.heldBy = '';
+    this.log("You're free.", 't');
+  }
+
+  /** Slowed (a crossbow bolt): walking `k` slower for `t` seconds. */
+  slow(t: number, k: number): void {
+    if (this.dead || this.cheats.god) return;
+    this.slowT = Math.max(this.slowT, t);
+    this.slowK = Math.max(this.slowT > t ? this.slowK : 0, k);
+    this.floater(this.x + 12, this.y - 30, 'SLOWED', 'name', '#93a0b8');
+  }
+
   // ---------- mount / jump ----------
   mountToggle(): void {
     if (this.dead) return;
@@ -1501,6 +1554,7 @@ export class Hero {
   jump(): void {
     if (this.inScene) return;
     if (this.dead || this.airborne) return;
+    if (this.heldT > 0) return this.log("You're held fast!", 'h');
     if (this.mountT > 0) {
       this.mountT = 0;
       this.log('Mount cancelled.');
@@ -1515,7 +1569,8 @@ export class Hero {
   /** Screen pixels per second, including mount and the dev speed multiplier. */
   get playerSpeed(): number {
     const ride = this.mounted ? 215 : 118;
-    return ride * this.cheats.moveSpeed * (1 + this.gear.speed) * (1 + this.tal.moveSpeed);
+    const slow = this.slowT > 0 ? 1 - this.slowK : 1;
+    return ride * this.cheats.moveSpeed * (1 + this.gear.speed) * (1 + this.tal.moveSpeed) * slow;
   }
 
   healFull(): void {
@@ -1652,6 +1707,7 @@ export class Hero {
       this.equipFromBag(i);
       return;
     }
+    if (def.use) return this.useKeepsake(s.id);
     if (!def.heal) {
       this.log(`${def.name}: ${def.desc}`);
       return;
@@ -1670,6 +1726,23 @@ export class Hero {
     this.burst(this.x, this.y - 14, 6, '#f49088', 40, 0.5, 2, -30);
     this.log(`You eat the ${def.name.toLowerCase()}. +${h} health.`, 't');
     this.hear('eat');
+    this.events.emit('bag', {});
+  }
+
+  /** Use a keepsake from the bag (Aldric's whistle): it has its own wait between uses. */
+  private useKeepsake(id: ItemId): void {
+    const u = ITEMS[id].use!;
+    if (this.inScene) return;
+    const left = this.itemCd[id] ?? 0;
+    if (left > 0) {
+      this.log(`${ITEMS[id].name}: ready again in ${Math.ceil(left)} s.`, 'h');
+      this.hear('error');
+      return;
+    }
+    this.itemCd[id] = u.cd;
+    this.sound(u.sound);
+    this.log(u.say, 't');
+    if (!this.region.call(u.call, this)) this.log(u.quiet, 't');
     this.events.emit('bag', {});
   }
 
@@ -1694,9 +1767,8 @@ export class Hero {
 
   /** Buy one of an item from a trader you are standing next to. */
   buy(npc: NpcId, id: ItemId): boolean {
-    const shop = NPCS[npc].shop;
     const price = ITEMS[id].price ?? 0;
-    if (!shop?.sells.includes(id) || !this.nearNpc(npc) || this.dead) return false;
+    if (!this.game.shopStock(npc, this).includes(id) || !this.nearNpc(npc) || this.dead) return false;
     if (!canWield(id, this.cls)) {
       this.log(`That's for ${ITEMS[id].cls === 'archer' ? 'archers' : 'warriors'}.`, 'h');
       return false;
@@ -1759,6 +1831,7 @@ export class Hero {
   /** Why a recipe can't be made right now, or null if it can. */
   craftProblem(r: Recipe): string | null {
     if (this.dead) return 'You are dead.';
+    if (!this.game.check(r.when, this)) return "You don't know how to make that yet.";
     if (r.station !== 'hand' && !this.nearStation(r.station))
       return `Stand at a ${STATION_NAMES[r.station].toLowerCase()}.`;
     for (const [id, n] of r.needs) {
@@ -2472,6 +2545,7 @@ export class Hero {
 
   dodge(): void {
     if (this.dodgeCd > 0 || this.dead) return;
+    if (this.heldT > 0) return this.log("You're held fast!", 'h');
     this.stopMoving();
     const m = this.lastMove ?? { x: this.face, y: -this.face };
     const l = Math.hypot(m.x, m.y) || 1;
@@ -2500,8 +2574,9 @@ export class Hero {
   tickMove(dt: number): boolean {
     let mx = 0;
     let my = 0;
-    // an archer drawing a bow holds still (the keys can stay down; the feet don't move)
-    const drawing = this.aimT > 0;
+    // an archer drawing a bow holds still (the keys can stay down; the feet don't move); so does
+    // anyone caught in a web, a net, a snare or roots
+    const drawing = this.aimT > 0 || this.heldT > 0;
     const keyboard =
       !drawing &&
       !this.exiting &&
@@ -2568,7 +2643,7 @@ export class Hero {
   ): boolean {
     if (this.dead || this.inScene || this.exiting) return false;
     const d = Math.hypot(x - this.x, y - this.y);
-    const max = this.playerSpeed * 1.6 * Math.max(dt, 0.05) + 24;
+    const max = this.heldT > 0 ? 1 : this.playerSpeed * 1.6 * Math.max(dt, 0.05) + 24;
     if (d > max || this.map.blocked(x, y, 9, 8)) {
       this.tp++;
       return false;
@@ -2598,6 +2673,16 @@ export class Hero {
     this.predatorT = Math.max(0, this.predatorT - dt);
     this.hiddenT = Math.max(0, this.hiddenT - dt);
     this.aimT = Math.max(0, this.aimT - dt);
+    this.slowT = Math.max(0, this.slowT - dt);
+    if (this.heldT > 0) {
+      this.heldT = Math.max(0, this.heldT - dt);
+      if (this.heldT === 0) this.heldBy = '';
+    }
+    for (const k of Object.keys(this.itemCd) as ItemId[]) {
+      const left = (this.itemCd[k] ?? 0) - dt;
+      if (left > 0) this.itemCd[k] = left;
+      else delete this.itemCd[k];
+    }
     this.lastStandT = Math.max(0, this.lastStandT - dt);
     for (const k of Object.keys(this.acd) as ActionKey[])
       this.acd[k] = Math.max(0, (this.acd[k] ?? 0) - dt);
@@ -2626,12 +2711,17 @@ export class Hero {
         this.dead = 0;
         this.hp = this.hpMax;
         this.mp = 60;
-        this.placeAt(this.region.def.spots.start);
+        this.heldT = this.slowT = 0;
+        this.heldBy = '';
         this.target = null;
         this.stopMoving();
+        // by a safe fire, if the region has one that's lit; otherwise back on the road
+        const wake = (this.region.def.wake ?? []).find(w => this.game.check(w.when, this));
+        if (wake?.region && wake.region !== this.regionId) this.game.moveHero(this, wake.region, wake.spot);
+        else this.placeAt(wake ? (this.region.def.spots[wake.spot] ?? this.region.def.spots.start) : this.region.def.spots.start);
         this.events.emit('respawned', {});
         this.hear('respawn');
-        this.log('You respawn on the road.');
+        this.log(wake?.say ?? 'You respawn on the road.');
       }
     }
 
