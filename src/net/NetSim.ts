@@ -16,10 +16,15 @@ import type { SaveData } from '../sim/save';
 import type { WeatherKind } from '../sim/weather';
 import type { Enemy, ButtonId, Stack, QuestProgress, SceneLine } from '../sim/types';
 import type { Connection } from './Connection';
-import type { Tick, RoomInfo, EnemySnap, HeroSnap } from './protocol';
+import type { Tick, RoomInfo, EnemySnap, HeroSnap, CompanionSnap } from './protocol';
+import type { HeldKind } from '../data/enemies';
+import type { Companion } from '../sim/Companion';
 import { TICK_HZ } from './protocol';
 import { isShot } from '../data/skills';
 import { AIM_HOLD } from '../data/classes';
+
+/** A structure in a snapshot: id, kind, tile, seconds left (-1: for good), put out, how far smothered. */
+type StructureSnap = [number, StructureKind, number, number, number, number, number];
 
 /** Something drawn where the server last put it, gliding there between snapshots. */
 interface Glide {
@@ -158,6 +163,12 @@ export class NetSim extends Sim {
       acd: me.acd,
       predatorT: me.predatorT,
       hiddenT: me.hiddenT,
+      // held still and slowed: the feet here obey them too (the server refuses steps meanwhile)
+      heldT: me.heldT,
+      heldBy: me.heldBy as HeldKind | '',
+      slowT: me.slowT,
+      slowK: me.slowK,
+      itemCd: me.itemCd,
     });
     // holding still to shoot: what the server says, or what this browser started itself
     h.aimT = Math.max(h.aimT, me.aimT);
@@ -169,6 +180,7 @@ export class NetSim extends Sim {
     this.syncEnemies(R, t.en);
     h.target = me.target ? (R.enemies.find(e => e.id === me.target && e.alive) ?? null) : null;
     this.syncHeroes(R, t.hs);
+    this.syncCompanions(R, t.cp ?? []);
     if (t.wd)
       for (const [id, x, y, alpha, face] of t.wd) {
         const w = R.wanderers.find(o => o.id === id) as (typeof R.wanderers)[number] & Glide;
@@ -181,10 +193,11 @@ export class NetSim extends Sim {
     if (t.dr) this.syncDrops(R, t.dr);
     if (t.tr) this.syncTrees(R, t.tr);
     if (t.rk) this.syncRocks(R, t.rk);
-    if (t.st) this.syncStructures(R, t.st as [number, StructureKind, number, number, number][]);
+    if (t.st) this.syncStructures(R, t.st as StructureSnap[]);
     if (t.ob) this.syncObjects(R, t.ob as string[]);
     if (t.np) this.syncNpcs(R, t.np);
     if (t.tz) R.traps = t.tz.map(([x, y], i) => ({ id: i, x, y, owner: '', t: 60, hold: 0 }));
+    if (t.sn) R.snares = t.sn.map(([x, y], i) => ({ id: i, x, y, hold: 0, by: 0, t: 40 }));
     if (t.hz)
       R.hazards = (t.hz as [number, number, number, number, number][]).map(
         ([x, y, r, speed, max]) => ({ x, y, r, speed, max, dmg: 0, hit: true, what: '' })
@@ -267,6 +280,7 @@ export class NetSim extends Sim {
       stunT,
       phase,
       sunderT,
+      z,
     ] of list) {
       let e = by.get(id);
       if (!e) {
@@ -332,11 +346,17 @@ export class NetSim extends Sim {
         stunT,
         phase,
         sunderT,
-        // slowed, held by a trap, marked by me: shown, not simulated
+        // slowed, held by a trap, marked by me, shield up, hidden, hatching, lying on a fire:
+        // shown, not simulated
         slowT: flags & 32 ? 1 : 0,
         rootT: flags & 64 ? 1 : 0,
         markT: flags & 128 ? 1 : 0,
         markBy: flags & 128 ? this.hero.id : '',
+        shieldT: flags & 256 ? 1 : 0,
+        hid: !!(flags & 512),
+        hatchT: flags & 1024 ? 1 : undefined,
+        lying: !!(flags & 2048),
+        z,
       });
       if (flags & 16) e.flash = Math.max(e.flash, 0.08);
       next.push(e);
@@ -365,6 +385,7 @@ export class NetSim extends Sim {
       equip,
       level,
       cls,
+      heldBy,
     ] of list) {
       let o = by.get(id);
       if (!o) {
@@ -396,12 +417,42 @@ export class NetSim extends Sim {
         level,
         cls,
         hiddenT: flags & 8 ? 1 : 0,
+        heldBy: heldBy as HeldKind | '',
+        heldT: heldBy ? 1 : 0,
       });
       if (atkAnimT > o.atkAnimT + 0.06) o.atkAnimT = atkAnimT;
       if (flags & 4) o.flash = Math.max(o.flash, 0.08);
       keep.push(o);
     }
     g.heroes = keep;
+  }
+
+  /** The companions here (Wren): where the server last saw them, gliding there. */
+  private syncCompanions(R: Region, list: CompanionSnap[]): void {
+    const here = new Set(list.map(c => c[0]));
+    for (const c of this.game.companions) if (!here.has(c.cid)) c.regionId = '';
+    for (const [id, x, y, face, walk, hp, hpMax, dead, atkAnimT, flags, heldBy, target] of list) {
+      const c = this.game.companions.find(o => o.cid === id) as (Companion & Glide) | undefined;
+      if (!c) continue;
+      if (c.regionId !== R.id) {
+        c.regionId = R.id;
+        c._tx = undefined;
+      }
+      this.glide(c, x, y);
+      Object.assign(c, {
+        face: face as 1 | -1,
+        walk,
+        hp,
+        hpMax,
+        dead,
+        slowT: flags & 2 ? 1 : 0,
+        heldBy: heldBy as HeldKind | '',
+        heldT: heldBy ? 1 : 0,
+        target: target ? (R.enemies.find(e => e.id === target) ?? null) : null,
+      });
+      if (atkAnimT > c.atkAnimT + 0.06) c.atkAnimT = atkAnimT;
+      if (flags & 1) c.flash = Math.max(c.flash, 0.08);
+    }
   }
 
   private syncDrops(R: Region, list: NonNullable<Tick['dr']>): void {
@@ -446,12 +497,14 @@ export class NetSim extends Sim {
     });
   }
 
-  private syncStructures(R: Region, list: [number, StructureKind, number, number, number][]): void {
+  private syncStructures(R: Region, list: StructureSnap[]): void {
     const by = new Map(R.structures.map(s => [s.id, s]));
     for (const s of R.structures) if (STRUCTURES[s.kind].solid) R.map.setBlocker(s.c, s.r, null);
-    R.structures = list.map(([id, kind, c, r, t]) => {
-      const s = by.get(id) ?? { id, kind, c, r, x: c * T + T / 2, y: r * T + T / 2, t };
+    R.structures = list.map(([id, kind, c, r, t, out, smother]) => {
+      const s = by.get(id) ?? { id, kind, c, r, x: c * T + T / 2, y: r * T + T / 2, t, fixed: id < 0 };
       s.t = t < 0 ? Infinity : t;
+      s.out = !!out;
+      s.smother = smother;
       if (STRUCTURES[kind].solid) R.map.setBlocker(c, r, { x: s.x, y: s.y, r: 10 });
       return s;
     });
@@ -523,6 +576,11 @@ export class NetSim extends Sim {
       o.flash = Math.max(0, o.flash - dt);
     }
     for (const w of R.wanderers) glide(w as (typeof R.wanderers)[number] & Glide);
+    for (const c of this.game.companionsIn(R.id)) {
+      glide(c as Companion & Glide);
+      c.atkAnimT = Math.max(0, c.atkAnimT - dt);
+      c.flash = Math.max(0, c.flash - dt);
+    }
     for (const e of R.enemies) if (e.dieT > 0 && !e.alive) e.dieT = Math.max(0, e.dieT - dt);
     this.game.day.advance(dt);
     this.game.weather.advance(dt);

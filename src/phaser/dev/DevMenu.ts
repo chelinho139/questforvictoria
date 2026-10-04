@@ -35,6 +35,7 @@ import { CLASS_IDS, CLASSES } from '../../data/classes';
 const DOC_LINKS: [string, string][] = [
   ['The Lore', '/lore.html'],
   ['Prologue & Act I', '/act1.html'],
+  ['Act II', '/act2.html'],
   ['Online co-op plan', '/online.html'],
   ['The archer', '/archer.html'],
   ['Credits', '/credits.html'],
@@ -142,6 +143,8 @@ const WORLD_SOUNDS: Record<WorldSound, string> = {
   fireball: 'Fireball',
   fireballHit: 'Fireball · lands',
   bellToll: 'The bell tolls',
+  fireOut: 'A fire is smothered',
+  wardenCall: "A Warden's whistle",
 };
 
 /** The sound board's names for thunder. */

@@ -31,7 +31,7 @@ import type { ClassId } from '../data/classes';
 import type { Work } from '../sim/types';
 
 /** Bump when a message changes shape: the server turns away a browser that speaks another. */
-export const PROTOCOL = 4;
+export const PROTOCOL = 5;
 
 /** Players a room takes. */
 export const ROOM_MAX = 8;
@@ -111,8 +111,8 @@ export type S2C =
 export type NetEvent = [aud: 'h' | 'r' | 'g', name: string, payload: unknown];
 
 /**
- * One snapshot. `me`, `en` (creatures), `hs` (the other heroes here) and `wd` (wanderers)
- * come every tick; every other part only when it changed (absent = as before).
+ * One snapshot. `me`, `en` (creatures), `hs` (the other heroes here), `cp` (companions) and
+ * `wd` (wanderers) come every tick; every other part only when it changed (absent = as before).
  */
 export interface Tick {
   /** The hero's region (a change rebuilds the world). */
@@ -123,6 +123,10 @@ export interface Tick {
   mf?: MeFull;
   en: EnemySnap[];
   hs: HeroSnap[];
+  /** Companions walking with the heroes here (every tick while there are any). */
+  cp?: CompanionSnap[];
+  /** Snares in the grass: [x, y]. */
+  sn?: [number, number][];
   wd?: [id: string, x: number, y: number, alpha: number, face: number][];
   dr?: DropSnap[];
   /** Trees and rocks that are not as they grew: [index, hp, stumpT/brokenT, shakeT]. */
@@ -153,6 +157,13 @@ export interface MeSnap {
   aimT: number;
   predatorT: number;
   hiddenT: number;
+  /** Held still (and by what), and slowed. */
+  heldT: number;
+  heldBy: string;
+  slowT: number;
+  slowK: number;
+  /** Keepsakes waiting before they can be used again (by item id). */
+  itemCd: Record<string, number>;
   hp: number;
   hpMax: number;
   mp: number;
@@ -220,6 +231,26 @@ export type EnemySnap = [
   stunT: number,
   phase: number,
   sunderT: number,
+  /** Up in the air: dropping from the canopy, or on a leap. */
+  z: number,
+];
+
+export type CompanionSnap = [
+  id: string,
+  x: number,
+  y: number,
+  face: number,
+  walk: number,
+  hp: number,
+  hpMax: number,
+  /** Seconds left on one knee. */
+  dead: number,
+  atkAnimT: number,
+  /** 1 flashing (just hit), 2 slowed. */
+  flags: number,
+  heldBy: string,
+  /** What she is shooting at (an enemy id, 0 for nothing). */
+  target: number,
 ];
 
 export type HeroSnap = [
@@ -239,6 +270,8 @@ export type HeroSnap = [
   equip: string,
   level: number,
   cls: ClassId,
+  /** What holds them still ('' while nothing does). */
+  heldBy: string,
 ];
 
 export type DropSnap = [

@@ -223,7 +223,19 @@ export class InventoryWindow {
       const worn = this.sim.equip[d.slot];
       compare = worn ? `<p class="inv-cmp">Replaces ${ITEMS[worn].name}${statLines(ITEMS[worn].stats).length ? ' (' + statLines(ITEMS[worn].stats).join(', ') + ')' : ''}</p>` : '';
     }
-    const hint = where === 'worn' ? 'Click to take off' : d.slot ? 'Click to equip' : d.heal ? 'Click to eat' : '';
+    const wait = Math.ceil(this.sim.hero.itemCd[id] ?? 0);
+    const hint =
+      where === 'worn'
+        ? 'Click to take off'
+        : d.slot
+          ? 'Click to equip'
+          : d.use
+            ? wait > 0
+              ? `Ready again in ${wait} s`
+              : 'Click to use'
+            : d.heal
+              ? 'Click to eat'
+              : '';
     this.tip.innerHTML =
       `<b class="${d.fine ? 'fine' : ''}">${d.name}</b>` +
       (d.slot ? `<small>${SLOT_NAMES[d.slot]}${d.unique ? ' · Unique' : ''}</small>` : '') +

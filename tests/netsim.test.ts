@@ -98,15 +98,19 @@ test('online, the browser has the same rain and the same lightning as the server
   assert.equal(sim.weather.kind, 'storm');
   assert.ok(Math.abs(sim.weather.rain - game.weather.rain) < 0.01);
   assert.equal(sim.weather.seed, game.weather.seed);
-  // from here on, strike for strike (the browser runs the same schedule between snapshots)
+  // from here on, strike for strike (the browser runs the same schedule between snapshots). The
+  // browser is a frame ahead of the server, so a strike it has just made may still be to come
+  // on the server: what counts as old is what the server has had already, not the browser.
+  const key = (s: (typeof game.weather.strikes)[number]) => `${s.dist} ${s.u.toFixed(4)} ${s.v.toFixed(4)}`;
+  const old = new Set(game.weather.strikes.map(key));
   const seen = (w: typeof game.weather, out: string[], last: { id: number }) => {
-    for (const s of w.strikes) if (s.id > last.id) out.push(`${s.dist} ${s.u.toFixed(4)} ${s.v.toFixed(4)}`);
+    for (const s of w.strikes) if (s.id > last.id && !old.has(key(s))) out.push(key(s));
     last.id = w.strikes.at(-1)?.id ?? last.id;
   };
   const a: string[] = [];
   const b: string[] = [];
-  const la = { id: game.weather.strikes.at(-1)?.id ?? 0 };
-  const lb = { id: sim.weather.strikes.at(-1)?.id ?? 0 };
+  const la = { id: 0 };
+  const lb = { id: 0 };
   for (let i = 0; i < 60; i++) {
     run(1);
     seen(game.weather, a, la);

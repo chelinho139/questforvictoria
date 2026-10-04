@@ -8,8 +8,28 @@ export type EnemyKind = 'goblin' | 'shaman' | 'ogre' | 'skeleton' | 'cow' | 'sli
  * neutral: minds its own business until hit, then fights back; gives up once you are
  *          more than `aggro` away.
  * passive: never attacks; runs away when hit.
+ * inert:   never moves or attacks (an egg sac): it only waits to be burned, or to hatch.
  */
-export type Behavior = 'hostile' | 'neutral' | 'passive';
+export type Behavior = 'hostile' | 'neutral' | 'passive' | 'inert';
+
+/** What holds a hero still: a spider's web, a goblin's net or snare, roots out of the ground. */
+export type HeldKind = 'web' | 'net' | 'snare' | 'roots';
+
+/**
+ * A spell a creature casts: a cast bar you can interrupt (Interrupt, Silence, Shield Bash or
+ * any stun), then what it does when the cast completes.
+ *   fireball: a ball of fire at its foe for `dmg` (only from more than 50 away).
+ *   heal:     every one of the dead within `r` (its own kind too) gets `amt` health back.
+ *   raise:    every one of the dead that fell within `r` lately climbs back up.
+ *   web:      a gob of web (or a net) at its foe that holds them `hold` seconds; with
+ *             `cone`, everyone in front of it within `range` is held.
+ */
+export type CastDef = { time: number; cd: number; range: number } & (
+  | { what: 'fireball'; dmg: number }
+  | { what: 'heal'; amt: number; r: number }
+  | { what: 'raise'; r: number }
+  | { what: 'web'; hold: number; by: HeldKind; cone?: boolean }
+);
 
 /** A creature's sounds (the recipes are in src/phaser/audio/sounds.ts). */
 export type CreatureSound =
@@ -69,12 +89,54 @@ export interface EnemyDef {
   per: number; // seconds between attacks
   spd: number;
   range: number;
-  /** hostile: notice range. neutral: give-up distance. passive: unused. */
+  /** hostile: notice range. neutral: give-up distance. passive: unused. inert: how near a hero wakes it. */
   aggro: number;
-  cast?: boolean;
-  castRange?: number;
-  /** What its spell does when it lands. */
-  castDmg?: number;
+  /** Its spells, tried in order whenever it is ready to cast (one cooldown between casts). */
+  casts?: CastDef[];
+  /** Seconds after noticing you before its first cast (default 3). */
+  firstCast?: number;
+  /** Shoots instead of striking: a bolt or arrow that flies at `speed` px/s (and slows whoever it hits). */
+  missile?: { col: string; speed: number; slow?: { t: number; k: number } };
+  /**
+   * Shields up: every `every` seconds it raises its shield for `up` seconds, and blows from in
+   * front of it do only `cut` of their damage. Any stun drops the shield.
+   */
+  shield?: { every: number; up: number; cut: number };
+  /** Waits unseen (up in the canopy) until a hero comes within `r`, then drops on them. */
+  ambush?: { r: number };
+  /**
+   * Lays snares in the grass between itself and its foe: one every `every` seconds (at most
+   * `max` out at once); whoever steps in one is held `hold` seconds.
+   */
+  snares?: { every: number; hold: number; max: number };
+  /** Rides a mount: when the mount falls, the rider fights on, on foot, as this kind. */
+  rider?: EnemyKind;
+  /** An egg: once a hero comes within `aggro` it starts to hatch, and `t` seconds later it is `n` of `into`. */
+  hatch?: { into: EnemyKind; n: number; t: number };
+  /** Howls when it notices a foe, and every creature that howls within `r` comes running. */
+  howl?: { r: number };
+  /**
+   * Calls up help while it fights: `n` of `kind` every `every` seconds (never more than `max`
+   * of them at once), from boss phase `from` on (default the first).
+   */
+  summon?: { kind: EnemyKind; n: number; every: number; max: number; from?: number };
+  /** Leaps at the hero furthest from it within `range` (after a crouch you can see), every `every` seconds, for `dmg`. */
+  leap?: { every: number; range: number; dmg: number };
+  /**
+   * A lure: it never fights. When a hero comes within `r` it drifts away toward its spawn's
+   * `to`, always just ahead, and when struck it blinks further along.
+   */
+  lure?: { r: number };
+  /** Goes for fires before people: walks to the nearest one burning and lies on it until, after `t` seconds, it is out. */
+  smother?: { t: number };
+  /** One of the dead: a mourner's wail heals it, and a song can raise it again. */
+  dead?: boolean;
+  /**
+   * Answers a call made from the bag (Aldric's whistle: `call` 'warden'): it is stunned for
+   * `stun` seconds (by boss phase: the last entry covers the phases after it), says `say`, and
+   * whoever is held by `free` is let go.
+   */
+  answers?: { call: string; stun: number[]; say?: string; free?: HeldKind };
   scale: number;
   /** Texture key (built in phaser/render/textures.ts). */
   tex: string;
@@ -146,9 +208,7 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
     spd: 58,
     range: 40,
     aggro: 150,
-    cast: true,
-    castRange: 150,
-    castDmg: 35,
+    casts: [{ what: 'fireball', time: 2.2, cd: 7, range: 150, dmg: 35 }],
     scale: 2,
     tex: 'goblin1',
     behavior: 'hostile',
@@ -196,6 +256,7 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
     scale: 2,
     tex: 'skeleton',
     behavior: 'hostile',
+    dead: true,
     nightOnly: true,
     gold: [1, 3],
     xp: 24,
@@ -285,6 +346,7 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
     scale: 1.8,
     tex: 'bonehound',
     behavior: 'hostile',
+    dead: true,
     nightOnly: true,
     gold: [0, 1],
     xp: 16,
@@ -303,6 +365,7 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
     scale: 2.4,
     tex: 'bellringer',
     behavior: 'hostile',
+    dead: true,
     gold: [30, 30],
     xp: 150,
     boss: { title: 'Old Hamm, sexton of Millbrook', flag: 'bellringer_down', phases: [0.66, 0.33], onDeath: { scene: 'bellringer_down' } },

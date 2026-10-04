@@ -95,9 +95,16 @@ export interface ItemDef {
   unique?: boolean;
   /** Only this class can wield it (weapons and off-hands; armour is for everyone). */
   cls?: ClassId;
+  /**
+   * A keepsake you can use from the bag (Aldric's whistle): it makes `sound`, says `say`, and
+   * calls `call` (whatever answers to it does; EnemyDef.answers), or says `quiet` when nothing
+   * does. Then `cd` seconds before it can be used again.
+   */
+  use?: { cd: number; call: string; sound: SoundId; say: string; quiet: string };
 }
 
 import type { ClassId } from './classes';
+import type { SoundId } from '../sim/types';
 
 const GEAR_COL = '#e8dcc0';
 const FINE_COL = '#7ae0a0';

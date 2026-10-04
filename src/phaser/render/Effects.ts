@@ -111,6 +111,22 @@ export class Effects {
       g.fillRect(tr.x - 1, tr.y - 1, 2, 2);
     }
 
+    // snares: a loop of cord in the grass, its peg and knot
+    for (const sn of this.sim.snares) {
+      g.lineStyle(1, hex('#8a7448'), 0.85);
+      g.strokeCircle(sn.x, sn.y, 6);
+      g.fillStyle(hex('#5a4630'), 1);
+      g.fillRect(sn.x + 5, sn.y - 1, 2, 2);
+      g.lineBetween(sn.x + 6, sn.y, sn.x + 10, sn.y - 3);
+    }
+
+    // whoever is held still: what holds them, round their feet and across them
+    const held: { x: number; y: number; by: string }[] = [];
+    if (this.sim.hero.heldT > 0) held.push({ x: this.sim.x, y: this.sim.y, by: this.sim.hero.heldBy });
+    for (const o of this.sim.others) if (o.heldT > 0) held.push({ x: o.x, y: o.y, by: o.heldBy });
+    for (const c of this.sim.companions) if (c.heldT > 0) held.push({ x: c.x, y: c.y, by: c.heldBy });
+    for (const h of held) this.holding(g, b, at, h.x, h.y, h.by);
+
     const live = new Set<Fx>();
     for (const f of this.sim.fx) {
       const p = f.t / f.dur;
@@ -266,6 +282,59 @@ export class Effects {
         this.ghosts.delete(f);
       }
     }
+  }
+
+  /**
+   * What holds someone still, at their feet (on the ground, `g`) and across them (in the air,
+   * `b`): a web's strands, a net's mesh, a snare's cord, black roots coiling up.
+   */
+  private holding(g: Gfx, b: Gfx, at: At, x: number, y: number, by: string): void {
+    const t = this.scene.time.now / 1000;
+    if (by === 'roots') {
+      g.lineStyle(2, hex('#2a2020'), 0.95);
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 + 0.4;
+        g.lineBetween(x + Math.cos(a) * 12, y + Math.sin(a) * 12, x + Math.cos(a + 0.5) * 4, y + Math.sin(a + 0.5) * 4);
+      }
+      for (let i = 0; i < 3; i++) {
+        const lo = at(x + (i - 1) * 4, y, 2);
+        const hi = at(x + (i - 1) * 3, y, 12 + i * 3 + Math.sin(t * 3 + i) * 1.5);
+        b.lineStyle(2 * lo.k, hex('#2a2020'), 0.95);
+        b.lineBetween(lo.x, lo.y, hi.x, hi.y);
+      }
+      return;
+    }
+    if (by === 'snare') {
+      g.lineStyle(1.5, hex('#8a7448'), 1);
+      g.strokeCircle(x, y, 5);
+      const lo = at(x, y, 1);
+      const hi = at(x + 10, y - 6, 5);
+      b.lineStyle(1.5 * lo.k, hex('#8a7448'), 1);
+      b.lineBetween(lo.x, lo.y, hi.x, hi.y);
+      return;
+    }
+    // a web or a net: strands on the ground, and across the body
+    const col = hex(by === 'net' ? '#b8a878' : '#e8e8f0');
+    g.lineStyle(1, col, 0.8);
+    g.strokeCircle(x, y, 9);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      g.lineBetween(x, y, x + Math.cos(a) * 12, y + Math.sin(a) * 12);
+    }
+    const foot = at(x, y, 0);
+    b.lineStyle(1 * foot.k, col, 0.85);
+    for (let i = 0; i < 4; i++) {
+      const h0 = 3 + i * 5;
+      const p0 = at(x - 8, y, h0);
+      const p1 = at(x + 8, y, h0 + (by === 'net' ? 0 : 4));
+      b.lineBetween(p0.x, p0.y, p1.x, p1.y);
+    }
+    if (by === 'net')
+      for (let i = 0; i < 4; i++) {
+        const p0 = at(x - 6 + i * 4, y, 2);
+        const p1 = at(x - 6 + i * 4, y, 20);
+        b.lineBetween(p0.x, p0.y, p1.x, p1.y);
+      }
   }
 
   private arc(g: Gfx, x: number, y: number, r: number, a0: number, a1: number, w: number, col: number, alpha: number): void {

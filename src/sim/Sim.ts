@@ -17,7 +17,8 @@ import { Game } from './Game';
 import { Hero } from './Hero';
 import type { KeyInfo } from './Hero';
 import type { Region } from './Region';
-import type { Enemy, Fx, Particle, ButtonId, SimEvents, Stack, Drop, TreeState, RockState, Structure, NpcState, QuestProgress, QuestStatus, ObjectState, PropState, Hazard, WandererState, LogClass, Trap, Work } from './types';
+import type { Enemy, Fx, Particle, ButtonId, SimEvents, Stack, Drop, TreeState, RockState, Structure, NpcState, QuestProgress, QuestStatus, ObjectState, PropState, Hazard, WandererState, LogClass, Trap, Work, Snare } from './types';
+import type { Companion } from './Companion';
 
 export { GCD, WIN, AA_RANGE, JUMP_DUR, JUMP_HEIGHT, FLIP_DUR, FLIP_HEIGHT, FLIP_CHANCE, ATK_ANIM, AA_PERIOD, TALK_REACH } from './Hero';
 export type { KeyInfo } from './Hero';
@@ -89,6 +90,7 @@ export class Sim {
       on.on('sceneFade', p => this.events.emit('sceneFade', p)),
       on.on('bossPhase', p => this.events.emit('bossPhase', p)),
       on.on('sound', p => this.events.emit('sound', p)),
+      on.on('say', p => this.events.emit('say', p)),
       on.on('fx', f => this.fx.push({ t: 0, ...f })),
       on.on('burst', b => this.burst(b.x, b.y, b.n, b.col, b.spd, b.life, b.size, b.g)),
       on.on('shake', p => (this.hero.shake = Math.max(this.hero.shake, p.s)))
@@ -207,6 +209,14 @@ export class Sim {
     return this.game.heroes.filter(o => o !== this.hero && o.regionId === this.hero.regionId);
   }
   /** Bear traps set in the hero's region. */
+  /** Who walks with the heroes here (Wren in the wood). */
+  get companions(): Companion[] {
+    return this.game.companionsIn(this.hero.regionId);
+  }
+  /** Snares goblin trappers have laid here. */
+  get snares(): Snare[] {
+    return this.R.snares;
+  }
   get traps(): Trap[] {
     return this.R.traps;
   }
@@ -271,6 +281,10 @@ export class Sim {
   }
   turnInOf(id: string): NpcId {
     return this.game.turnInOf(id);
+  }
+  /** What a trader sells today (their stock grows with the story). */
+  shopStock(npc: NpcId): ItemId[] {
+    return this.game.shopStock(npc, this.hero);
   }
   questsOf(npc: NpcId): { id: string; status: QuestStatus }[] {
     return this.game.questsOf(npc, this.hero);

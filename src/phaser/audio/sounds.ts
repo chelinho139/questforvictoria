@@ -1288,6 +1288,29 @@ export const SOUNDS: Record<SoundId, Recipe> = {
       s.reverb(0.12);
     },
   },
+  fireOut: {
+    len: 1.6,
+    loud: 0.5,
+    make: s => {
+      // embers crushed under a weight: the crackle chokes off into a long, falling hiss
+      crackle(s, 0, 0.5, 0.5, 90, 2500, 900);
+      s.noise({ v: 0.55, a: 0.08, d: 1.2, filter: 'bandpass', f: 3200, f1: 900, q: 0.7 });
+      thump(s, 0, 70, 0.25, 0.2);
+      s.reverb(0.15);
+    },
+  },
+  wardenCall: {
+    len: 1.8,
+    loud: 0.7,
+    make: s => {
+      // a bone whistle: two breathy notes, the second held and falling away, over the trees
+      s.tone({ f: hz(19), v: 0.35, a: 0.02, d: 0.22, wave: 'sine', vib: [6, 0.006] });
+      s.noise({ v: 0.12, a: 0.02, d: 0.22, filter: 'bandpass', f: hz(19), q: 6 });
+      s.tone({ at: 0.26, f: hz(24), f1: hz(21), slide: 0.9, v: 0.4, a: 0.03, d: 0.95, wave: 'sine', vib: [5, 0.008] });
+      s.noise({ at: 0.26, v: 0.14, a: 0.03, d: 0.95, filter: 'bandpass', f: hz(24), f1: hz(21), q: 6 });
+      s.reverb(0.45);
+    },
+  },
   fireball: {
     len: 0.6,
     loud: 0.6,
