@@ -211,7 +211,7 @@ export const SCENES: Record<string, SceneDef> = {
   // 9. a lantern in the trees, the first night in the wood
   lantern: {
     steps: [
-      { look: [43, 30] },
+      { look: [43, 36] },
       { say: 'Far off between the willows, a lantern, swinging like someone walking. Going north.', who: 'Narrator' },
       { say: "That's no wisp. Wisps don't swing.", who: 'wren', voice: true },
       { say: 'It stops, as if whoever carries it has turned to look at you. Then it goes out.', who: 'Narrator' },

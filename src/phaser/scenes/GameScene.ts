@@ -269,11 +269,11 @@ export class GameScene extends Phaser.Scene {
         y: isoY(w.x, w.y) - 14,
         wx: w.x,
         wy: w.y,
-        radius: 72,
+        radius: 104,
         r: 0.05,
         g: 0.08,
         b: 0.2,
-        intensity: w.alpha,
+        intensity: Math.min(1, w.alpha * 1.2),
         flickerHz: 5,
         flickerAmount: 0.1,
       });
