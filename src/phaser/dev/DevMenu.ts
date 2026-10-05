@@ -16,6 +16,9 @@ import { PC_KEYS } from '../../data/actionBar';
 import { xpToNext } from '../../data/talents';
 import { REGIONS } from '../../data/regions';
 import type { Sfx } from '../audio/Sfx';
+import type { Music } from '../audio/Music';
+import { TRACKS, TRACK_IDS, MOOD_NAMES } from '../../data/music';
+import type { TrackId } from '../../data/music';
 import type { SoundId, FollowSound, UiSound, WorldSound, WeatherSound } from '../../sim/types';
 import { WEATHER_KINDS, WEATHER_NAMES } from '../../sim/weather';
 import type { WeatherKind } from '../../sim/weather';
@@ -35,6 +38,7 @@ const DOC_LINKS: [string, string][] = [
   ['Act II', '/act2.html'],
   ['Online co-op plan', '/online.html'],
   ['The archer', '/archer.html'],
+  ['Credits', '/credits.html'],
 ];
 
 interface DevSettings {
@@ -59,6 +63,8 @@ interface DevSettings {
   artReview: boolean;
   /** Sound effects, 0 (off) to 1. */
   volume: number;
+  /** Music, 0 (off) to 1. */
+  music: number;
 }
 
 const DEFAULTS: DevSettings = {
@@ -78,6 +84,7 @@ const DEFAULTS: DevSettings = {
   showPath: false,
   fps: false,
   volume: 0.7,
+  music: 0.55,
 };
 
 /** The sound board's names for what follows a cast (the casts go by their spell's name). */
@@ -219,6 +226,7 @@ export class DevMenu {
   private readonly fpsEl: HTMLDivElement;
   private readonly clockLabel: HTMLSpanElement;
   private readonly weatherLabel: HTMLParagraphElement;
+  private readonly musicLabel: HTMLParagraphElement;
   private readonly weatherBtns: HTMLButtonElement[] = [];
   private readonly clockSlider: HTMLInputElement;
   private readonly speedBtns: HTMLButtonElement[] = [];
@@ -240,7 +248,8 @@ export class DevMenu {
     private readonly lighting: Lighting,
     private readonly clouds: Clouds,
     private readonly effects: Effects,
-    private readonly sfx: Sfx
+    private readonly sfx: Sfx,
+    private readonly music: Music
   ) {
     this.root = el('div', 'dev');
     this.root.hidden = true;
@@ -406,9 +415,24 @@ export class DevMenu {
     look.append(this.slider('Darkness', 'strength', 0, 1, 0.05, v => Math.round(v * 100) + '%'));
     look.append(this.switchRow('Clouds', 'clouds'));
 
-    // ---- sound: the volume, and every spell's sounds to listen to
+    // ---- sound: the volumes, the music playing, and every spell's sounds to listen to
     const sound = this.section('Sound');
-    sound.append(this.slider('Volume', 'volume', 0, 1, 0.05, v => (v ? Math.round(v * 100) + '%' : 'Off')));
+    const pct = (v: number) => (v ? Math.round(v * 100) + '%' : 'Off');
+    sound.append(this.slider('Music', 'music', 0, 1, 0.05, pct));
+    sound.append(this.slider('Effects', 'volume', 0, 1, 0.05, pct));
+    this.musicLabel = el('p', 'dev-note');
+    sound.append(this.musicLabel);
+    const tune = el('div', 'dev-row');
+    const track = el('select');
+    track.setAttribute('aria-label', 'A track to hear');
+    for (const id of TRACK_IDS) {
+      const o = el('option', '', `${TRACKS[id].title} · ${TRACKS[id].artist}`);
+      o.value = id;
+      track.append(o);
+    }
+    track.addEventListener('change', () => track.blur());
+    tune.append(track, this.button('Play', () => this.music.play(track.value as TrackId)));
+    sound.append(tune);
     const board = el('div', 'dev-row');
     const pick = el('select');
     pick.setAttribute('aria-label', 'A sound to hear');
@@ -584,7 +608,7 @@ export class DevMenu {
     return row;
   }
 
-  private slider(label: string, key: 'strength' | 'moveSpeed' | 'volume', min: number, max: number, step: number, fmt: (v: number) => string): HTMLElement {
+  private slider(label: string, key: 'strength' | 'moveSpeed' | 'volume' | 'music', min: number, max: number, step: number, fmt: (v: number) => string): HTMLElement {
     const wrap = el('div', 'dev-col');
     const row = el('div', 'dev-row');
     row.append(el('span', 'dev-k', label));
@@ -609,7 +633,7 @@ export class DevMenu {
     return wrap;
   }
 
-  private readonly formatters: Partial<Record<'strength' | 'moveSpeed' | 'volume', (v: number) => string>> = {};
+  private readonly formatters: Partial<Record<'strength' | 'moveSpeed' | 'volume' | 'music', (v: number) => string>> = {};
 
   // ---------- state ----------
   /** Push settings into the game and refresh every control. */
@@ -628,6 +652,7 @@ export class DevMenu {
     });
     this.effects.showPath = s.showPath;
     this.sfx.setVolume(s.volume);
+    this.music.setVolume(s.music);
     this.sim.setRevEnabled(s.rev);
     this.fpsEl.hidden = !s.fps;
     if (this.reviewEl) this.reviewEl.hidden = !s.artReview;
@@ -643,10 +668,23 @@ export class DevMenu {
       sw.setAttribute('aria-checked', String(Boolean(s[k])));
     });
     this.root.querySelectorAll<HTMLSpanElement>('[data-value-for]').forEach(v => {
-      const k = v.dataset.valueFor as 'strength' | 'moveSpeed' | 'volume';
+      const k = v.dataset.valueFor as 'strength' | 'moveSpeed' | 'volume' | 'music';
       v.textContent = this.formatters[k]?.(s[k]) ?? String(s[k]);
     });
     save(s);
+  }
+
+  /** What the music is doing: the track playing, or how long the quiet lasts. */
+  private syncMusic(): void {
+    const d = this.music.director;
+    const where = d.mood ? MOOD_NAMES[d.mood] : MOOD_NAMES[this.music.mood];
+    const quiet = Math.max(0, Math.ceil(d.wait));
+    const text = d.track
+      ? `Now: ${TRACKS[d.track].title} · ${where}`
+      : d.mood
+        ? `Quiet for ${Math.floor(quiet / 60)}:${String(quiet % 60).padStart(2, '0')} · ${where}`
+        : `Starts with your first click or key · ${where}`;
+    if (this.musicLabel.textContent !== text) this.musicLabel.textContent = text;
   }
 
   /** Keep the clock readout (and slider, unless being dragged) in step with the game. */
@@ -703,6 +741,7 @@ export class DevMenu {
   update(): void {
     if (this.isOpen) {
       this.syncClock();
+      this.syncMusic();
       // U changes the view outside the menu
       this.syncViewButtons();
     }

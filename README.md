@@ -252,3 +252,5 @@ The plan, its decisions and where it stands are in `docs/online.md` (in the game
 ## License
 
 Quest for Victoria (the code, the art and the story) is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE.md). You may play, read, modify and share it for any noncommercial purpose (personal use, study, research, hobby projects, non-profits). You may not use it, or anything made from it, to make money. For any other use, ask the author.
+
+The music in `public/music` is by other artists and keeps its own licences (CC BY 4.0 and CC0), listed with the required credits in [docs/credits.md](docs/credits.md).
