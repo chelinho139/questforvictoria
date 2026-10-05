@@ -10,6 +10,8 @@ export const weepingbridge: RegionDef = {
   name: 'The Weeping Bridge',
   ring: 2,
   dusk: true,
+  // the deep wood, through the mist
+  music: 'deep',
   layout: [
     'YYYYYYYYYYYYYYYYYYYYYYYYYYYYYrrrYYYYYYYYYYYYYYYYYYYYYYYYYYYY',
     'YYYYYYYYYYYYYYYYYYYYYYYYYYYYYrrrYYYYYYYYYYYYYYYYYYYYYYYYYYYY',

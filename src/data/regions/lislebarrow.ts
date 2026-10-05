@@ -9,6 +9,8 @@ export const lislebarrow: RegionDef = {
   name: 'The Lisle Barrow',
   ring: 2,
   indoor: true,
+  // the valley's oldest dead, under the hill
+  music: 'deep',
   layout: [
     '&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&',
     '&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&',

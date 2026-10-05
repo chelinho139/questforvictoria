@@ -9,6 +9,8 @@ export const heronlodge: RegionDef = {
   name: 'Heron Lodge',
   ring: 2,
   indoor: true,
+  // the Wardens' old waystation: a refuge, not a haunted place
+  music: 'indoors',
   layout: [
     '&&&&&&&&&&&&&&&&',
     '&##############&',
