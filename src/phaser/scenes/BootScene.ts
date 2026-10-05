@@ -11,6 +11,7 @@ import { playAs } from '../player';
 import { buildUiKit } from '../render/uiKit';
 import { buildLogo, Splash } from '../render/splash';
 import { devSkipIntro, devArtReview } from '../dev/DevMenu';
+import { directorWanted } from '../dev/Director';
 import { lastLocalChar, createLocalChar, localCharInfos } from '../saveStore';
 import type { CharInfo } from '../../net/protocol';
 import { soundJobs } from '../audio/sounds';
@@ -47,6 +48,12 @@ export class BootScene extends Phaser.Scene {
     setSpriteStyle(devArtReview() ? readSpriteStyle() : 'hdsil');
     buildUiKit(this);
     this.jobs = [...textureJobs(this), ...soundJobs(), ...loopJobs()];
+    // filming a trailer: straight in, on a game of its own (no character, nothing saved)
+    if (directorWanted()) {
+      for (const j of this.jobs) j.run();
+      this.finish();
+      return;
+    }
     if (devSkipIntro()) {
       // straight in: the single-player character played last (or a first one)
       const ch = lastLocalChar() ?? this.firstLocalChar();

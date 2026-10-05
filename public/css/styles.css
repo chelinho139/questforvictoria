@@ -561,3 +561,9 @@ body.hud-menu-open .quests { visibility: hidden; }
 .boss-head span { display: block; font: 13px 'Pixelify Sans', monospace; color: #e8cf98; text-shadow: 0 1px 0 #000; margin-bottom: 4px; }
 .boss-track { height: 14px; background: #2a1406; border: 2px solid #f2c14e; box-shadow: 0 0 0 2px #3b1f0e; }
 .boss-fill { height: 100%; width: 100%; background: linear-gradient(180deg, #f0685a, #a82424); transition: width 0.15s; }
+
+/* Filming a trailer with the interface hidden (src/phaser/dev/Director.ts): only the game's canvases show. */
+body.director-clean > :not(#game),
+body.director-clean #game > :not(canvas) {
+  display: none !important;
+}
