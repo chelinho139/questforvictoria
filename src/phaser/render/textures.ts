@@ -12,9 +12,9 @@ import { registerArt, frameKey, animKey, spriteStyle, setStyleFit, hdHeroId, her
 import { HD_HEROES, hdHeroFrames } from './hdHeroes';
 import type { HdHeroId } from './hdHeroes';
 import { itemIcon, itemDrop, backpackIcon, hammerIcon } from './itemArt';
-import { campfireFrames, forgeFrames } from './structureArt';
-import { npcFrames } from './npcArt';
-import { creatureFrames } from './creatureArt';
+import { campfireFrames, forgeFrames, kilnFrames } from './structureArt';
+import { npcFrames, wrenFrames } from './npcArt';
+import { creatureFrames, DRAWN_CREATURES } from './creatureArt';
 import { scrollIcon, cogIcon, bookIcon, eyeIcon, flameIcon, heartIcon, starIcon, spellbookIcon, view_isoIcon, view_3dIcon, view_povIcon } from './uiIcons';
 import { SKILL_ICONS } from './skillIcons';
 import type { NpcId } from '../../data/npcs';
@@ -31,6 +31,7 @@ import { OBJECT_FRAMES } from './objectArt';
 import { PROP_ART } from './propArt';
 import { groundTiles } from './groundArt';
 import { hollowOak, willow } from './storyTrees';
+import { WOOD_TREES, WOOD_STUMPS } from './woodTrees';
 import type { RegradeOpts } from './regrade';
 
 export const Tex = {
@@ -43,6 +44,9 @@ export const Tex = {
   rock: 'rock',
   stump: 'tree-stump',
   rubble: 'rock-rubble',
+  /** The Weepwood's trees (data/trees.ts) and their stumps. */
+  treeKind: (kind: string) => 'tree:' + kind,
+  stumpKind: (kind: string) => 'tree-stump:' + kind,
   /** An item lying on the ground (style art) and its bag icon (shared). */
   drop: (id: string) => 'drop:' + id,
   structure: (kind: StructureKind) => 'build:' + kind,
@@ -246,11 +250,27 @@ function shadowCanvas(): HTMLCanvasElement {
   return cv;
 }
 
+const darkened = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
+
+/** A water tile gone dark and still, as the Lisle runs from ring 2 on. */
+export function darkWater(tl: HTMLCanvasElement): HTMLCanvasElement {
+  let d = darkened.get(tl);
+  if (!d) {
+    const [cv, c] = canvas(tl.width, tl.height);
+    c.drawImage(tl, 0, 0);
+    c.globalCompositeOperation = 'source-atop';
+    c.fillStyle = 'rgba(14,18,24,.55)';
+    c.fillRect(0, 0, tl.width, tl.height);
+    darkened.set(tl, (d = cv));
+  }
+  return d;
+}
+
 /**
  * Pre-render the current region's isometric ground (sim/map.ts MAP), sliced into chunk
  * textures, and collect the standing objects. Call on arrival in a region.
  */
-export function buildRegionGround(scene: Phaser.Scene, map: RegionMap): BuiltWorld {
+export function buildRegionGround(scene: Phaser.Scene, map: RegionMap, ring = 0): BuiltWorld {
   const { grid: MAP, cols: COLS, rows: ROWS } = map;
   const tiles = styleTiles;
   if (!tiles) throw new Error('buildRegionGround: style textures not built yet');
@@ -260,6 +280,15 @@ export function buildRegionGround(scene: Phaser.Scene, map: RegionMap): BuiltWor
   const [cv, c] = canvas(W, H);
   const objects: WorldObject[] = [];
   const water: [number, number][] = [];
+  const mossy = (r: number, col: number) =>
+    [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+      [1, 1],
+      [-1, -1],
+    ].filter(([dc, dr]) => MAP[r + dr]?.[col + dc] === Tile.Moss).length >= 2;
   for (let r = 0; r < ROWS; r++)
     for (let col = 0; col < COLS; col++) {
       const t = MAP[r][col];
@@ -273,14 +302,20 @@ export function buildRegionGround(scene: Phaser.Scene, map: RegionMap): BuiltWor
       else if (t === Tile.Water) {
         tl = tiles.water[0];
         water.push([wx, wy]);
+        // from ring 2 the rivers run dark
+        if (ring >= 2) tl = darkWater(tl);
       } else if (t === Tile.Flower) tl = tiles.flower;
       else if (t === Tile.Floor) tl = tiles.floor[(r + col) % 2];
       else if (t === Tile.Gate) tl = tiles.gate;
       else if (t === Tile.Wall || t === Tile.Tower) tl = groundTiles().flags[0];
       else if (t >= Tile.Bridge) {
         const g = groundTiles();
-        const set = t === Tile.Bridge ? g.deck : t === Tile.Field ? g.field : t === Tile.Wilted ? g.wilted : t === Tile.Blight ? g.blight : t === Tile.Cobble ? g.cobble : g.flags;
+        const set = t === Tile.Bridge ? g.deck : t === Tile.Field ? g.field : t === Tile.Wilted ? g.wilted : t === Tile.Blight ? g.blight : t === Tile.Cobble ? g.cobble : t === Tile.Moss ? g.moss : t === Tile.OldRoad ? g.oldRoad : t === Tile.Ford ? g.ford : g.flags;
         tl = set[Math.floor(((Math.imul(r * 73856093 ^ col * 19349663, 2654435761) >>> 0) / 4294967296) * set.length)];
+      } else if ((t === Tile.Tree || t === Tile.Rock) && mossy(r, col)) {
+        // a tree or a stone in the moss of the Weepwood stands in moss
+        const g = groundTiles().moss;
+        tl = g[(r * 5 + col * 3) % g.length];
       } else tl = tiles.grass[(r * 7 + col * 3) % 3];
       c.drawImage(tl, x, y);
       if (t === Tile.Tree || t === Tile.Rock || t === Tile.Wall || t === Tile.Tower) objects.push({ kind: t, wx, wy });
@@ -328,11 +363,17 @@ function hdArt(): StyleArt {
       skeleton: { frames: HD.skeleton(), scale: 1 },
       cow: { frames: hdCow(), scale: 1 },
       slime: { frames: HD.slime(), scale: 1 },
+      // every hand-drawn creature (Act I's hound and Bell-Ringer, Act II's wood)
+      ...Object.fromEntries(DRAWN_CREATURES.map(k => [k, { frames: creatureFrames(k), scale: 1 }])),
       bonehound: { frames: creatureFrames('bonehound'), scale: 1 },
       bellringer: { frames: creatureFrames('bellringer'), scale: 1 },
     }),
     forest: () => ({ tree: one(HD.oak()), pine: one(HD.pine()), rock: one(HD.rock()), stump: one(HD.stump()), rubble: one(HD.rubble()) }),
-    structures: () => ({ campfire: { frames: campfireFrames(), scale: 1 }, forge: { frames: forgeFrames(), scale: 1 } }),
+    structures: () => ({
+      campfire: { frames: campfireFrames(), scale: 1 },
+      forge: { frames: forgeFrames(), scale: 1 },
+      kiln: { frames: kilnFrames(), scale: 1 },
+    }),
     npcs: () => Object.fromEntries(NPC_IDS.map(id => [id, { frames: npcFrames(id), scale: 1 }])) as Record<NpcId, Frames>,
     // every item lies on the ground as itself, so you know what it is before picking it up
     items: () => Object.fromEntries(ITEM_IDS.map(id => [id, one(itemDrop(id))])) as Record<ItemId, Frames>,
@@ -375,7 +416,7 @@ function hdSilhouetteArt(): StyleArt {
     },
     structures: () => {
       const s = hd.structures();
-      return { campfire: re(s.campfire), forge: re(s.forge) };
+      return { campfire: re(s.campfire), forge: re(s.forge), kiln: re(s.kiln) };
     },
     items: () => {
       return Object.fromEntries(Object.entries(hd.items()).map(([id, f]) => [id, re(f)])) as Record<ItemId, Frames>;
@@ -478,6 +519,7 @@ function styleJobs(scene: Phaser.Scene, style: SpriteStyle): TextureJob[] {
         for (const [kind, frames] of Object.entries(OBJECT_FRAMES)) putFrames(Tex.object(kind), { frames: frames().map(re), scale: 1 });
         // wanderers (the grey postman): HD art in every style, recoloured for HD · Silhouette
         putFrames(Tex.wanderer('postman'), { frames: npcFrames('postman').map(re), scale: 1 });
+        putFrames(Tex.wanderer('lantern'), { frames: npcFrames('lantern').map(re), scale: 1 });
         // buildings are drawn straight in the Silhouette palette (no recolour), lit windows separate
         for (const [kind, a] of Object.entries(PROP_ART)) {
           put(Tex.prop(kind), paintRows(a.rows, a.pal));
@@ -488,6 +530,9 @@ function styleJobs(scene: Phaser.Scene, style: SpriteStyle): TextureJob[] {
         const tree = (cv: HTMLCanvasElement) => propCanvas(style === 'hdsil' ? regrade(cv) : cv, 3, 3);
         put(Tex.prop('hollow_oak'), tree(hollowOak()));
         put(Tex.prop('willow'), tree(willow()));
+        // the Weepwood's trees and their stumps: HD art in every style, recoloured with the forest
+        for (const [kind, make] of Object.entries(WOOD_TREES)) put(Tex.treeKind(kind), re(make()));
+        for (const [kind, make] of Object.entries(WOOD_STUMPS)) put(Tex.stumpKind(kind), re(make()));
       },
     },
     {
@@ -604,6 +649,23 @@ export function heroLookTexture(scene: Phaser.Scene, look: string, equip: Partia
   putFramesOf(scene, key, {
     frames: f.walk.map(re),
     anims: Object.fromEntries(Object.entries(f.anims).map(([k, list]) => [k, list.map(re)])),
+    scale: 1,
+  });
+  return key;
+}
+
+/**
+ * A companion with frames of her own (Wren): the walk as its frames, and idle, shoot and kneel
+ * as animations, made once.
+ */
+export function companionTexture(scene: Phaser.Scene, art: 'wren'): string {
+  const key = `companion:${art}`;
+  if (scene.textures.exists(frameKey(key, 0))) return key;
+  const f = wrenFrames();
+  const re = spriteStyle() === 'hdsil' ? (cv: HTMLCanvasElement) => regrade(cv) : (cv: HTMLCanvasElement) => cv;
+  putFramesOf(scene, key, {
+    frames: f.walk.map(re),
+    anims: { idle: f.idle.map(re), shoot: f.shoot.map(re), kneel: f.kneel.map(re) },
     scale: 1,
   });
   return key;

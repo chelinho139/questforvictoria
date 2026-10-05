@@ -4,7 +4,7 @@ import { goalTarget } from '../../sim/Sim';
 import { NPCS } from '../../data/npcs';
 import type { NpcId } from '../../data/npcs';
 import { QUESTS } from '../../data/quests';
-import { ITEMS } from '../../data/items';
+import { ITEMS, lootFor } from '../../data/items';
 import type { ItemId } from '../../data/items';
 import { itemIcon } from '../render/itemArt';
 import { Tex } from '../render/textures';
@@ -178,7 +178,8 @@ export class DialogWindow {
   }
 
   private rewards(gold: number, items: ItemId[], xp = 0): string {
-    const parts = items.map(i => `<span class="reward"><canvas data-item="${i}" width="22" height="22"></canvas>${ITEMS[i].name}</span>`);
+    // what this hero's class would get (a Warden's blade is a longbow for an archer)
+    const parts = items.map(it => lootFor(it, this.sim.cls)).map(i => `<span class="reward"><canvas data-item="${i}" width="22" height="22"></canvas>${ITEMS[i].name}</span>`);
     if (gold) parts.unshift(`<span class="reward gold">${gold} gold</span>`);
     if (xp) parts.unshift(`<span class="reward xp">${xp} XP</span>`);
     return `<div class="talk-rewards"><em>Reward:</em> ${parts.join('')}</div>`;

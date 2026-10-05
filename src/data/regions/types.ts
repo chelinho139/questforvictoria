@@ -38,7 +38,43 @@ export interface RegionExit {
 }
 
 /** What an object looks like (each has a sprite in the HD art). */
-export type ObjectKind = 'page' | 'board' | 'chest' | 'thorn' | 'letter';
+export type ObjectKind =
+  | 'page'
+  | 'board'
+  | 'chest'
+  | 'thorn'
+  | 'letter'
+  // Act II: the oak's hollow, Marcian's feather marks, pages on thorns, Warden caches, the
+  // gallows ropes, cold fires to light, the grey dust, a cocoon, the roll beam, a weapon rack,
+  // the King's game book, the King's post, the kennels
+  | 'hollow'
+  | 'mark_goose'
+  | 'mark_jay'
+  | 'mark_owl'
+  | 'mark_heron'
+  | 'mark_crossing'
+  | 'thorn_page'
+  | 'cache'
+  | 'rope'
+  | 'firepit'
+  | 'hearth'
+  | 'firering'
+  | 'dust'
+  | 'cocoon'
+  | 'beam'
+  | 'rack'
+  | 'book'
+  | 'post'
+  | 'kennels';
+
+/**
+ * Objects that lie flat or hang (a page, a drift of dust, a rope): you can walk over or past
+ * them, and they sort just in front of the ground. Everything else stands, and is solid.
+ */
+export const FLAT_OBJECTS: ReadonlySet<ObjectKind> = new Set<ObjectKind>(['page', 'letter', 'thorn', 'thorn_page', 'dust', 'firepit', 'firering', 'rope', 'beam']);
+
+/** Objects that glint now and then, so they can be spotted. */
+export const GLINTING_OBJECTS: ReadonlySet<ObjectKind> = new Set<ObjectKind>(['page', 'letter', 'thorn_page']);
 
 /**
  * Something you can click (or use with the gather key) in the world: a page in the grass,
@@ -74,10 +110,15 @@ export interface RegionTrigger {
  * render/npcArt.ts, fading as you come near, saying `say` when you try.
  */
 export interface RegionWanderer {
-  id: 'postman';
+  id: 'postman' | 'lantern';
   route: At[];
   when?: Cond;
   say: string;
+  /**
+   * It goes out for good when a hero comes within `r` px (the grey lantern): sets `flag` and
+   * plays `scene`, if any.
+   */
+  out?: { r: number; flag: string; scene?: string };
 }
 
 /**
@@ -152,6 +193,8 @@ export interface RegionDef {
   music?: Mood;
   /** Scenes to play here (each once): on arrival, or as soon as `when` holds while you're here. */
   onEnter?: { scene: string; when?: Cond }[];
+  /** Crows perched about (a tile each): they watch, and fly off when a hero comes near. */
+  crows?: At[];
   /** Dev-only regions are reachable from the settings panel, never from play. */
   dev?: boolean;
 }

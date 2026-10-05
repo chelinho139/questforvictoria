@@ -11,7 +11,8 @@ import type {
   CompanionSnap,
 } from '../net/protocol';
 import type { Companion } from '../sim/Companion';
-import { CHOP, MINE } from '../data/items';
+import { MINE } from '../data/items';
+import { treeHits } from '../data/trees';
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -328,7 +329,7 @@ function dropSnap(d: import('../sim/types').Drop): DropSnap {
 function changedTrees(R: Region): [number, number, number, number][] {
   const out: [number, number, number, number][] = [];
   R.trees.forEach((t, i) => {
-    if (t.stumpT > 0 || t.shakeT > 0 || t.hp < CHOP.hits)
+    if (t.stumpT > 0 || t.shakeT > 0 || t.hp < treeHits(t))
       out.push([i, t.hp, Math.ceil(t.stumpT), r2(t.shakeT)]);
   });
   return out;

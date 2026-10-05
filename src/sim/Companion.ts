@@ -371,7 +371,8 @@ export class Companion implements Foe {
       const key = 'o' + o.id;
       if (this.seen.has(key) || Math.hypot(o.x - this.x, o.y - this.y) > 2.2 * T) continue;
       this.seen.add(key);
-      this.bark(`near:${o.kind}`);
+      // the feather marks (mark_goose, mark_jay…) all go by 'near:mark'
+      this.bark(`near:${o.kind.startsWith('mark_') ? 'mark' : o.kind}`);
     }
   }
 }

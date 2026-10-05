@@ -24,6 +24,7 @@ import type { SpellKey } from '../data/spells';
 import { BAR_KEYS } from '../data/actionBar';
 import { ITEMS, BAG_SLOTS, CHOP, MINE, STARTER, SLOTS, NO_STATS, canWield, sellValue } from '../data/items';
 import type { ItemId, Slot, Stats } from '../data/items';
+import { TREE_KINDS, treeHits } from '../data/trees';
 import type { HeldKind } from '../data/enemies';
 import { Emitter } from './Emitter';
 import { findPath } from './pathfind';
@@ -2100,10 +2101,18 @@ export class Hero implements Foe {
   }
 
   // ---------- people ----------
+  /**
+   * Where someone you can talk to stands here: a person in the region, or a companion who is
+   * that person (Wren, walking with you in the wood).
+   */
+  person(id: NpcId): { x: number; y: number } | null {
+    return this.region.npcs.find(x => x.id === id) ?? this.game.companionsIn(this.regionId).find(c => c.def.npc === id && c.dead <= 0) ?? null;
+  }
+
   /** Walk up to an NPC and talk (the game opens the dialog on the 'talk' event). */
   talkTo(id: NpcId): void {
     if (this.dead) return;
-    const n = this.region.npcs.find(x => x.id === id);
+    const n = this.person(id);
     if (!n) return;
     this.chopTree = null;
     this.mineRock = null;
@@ -2117,7 +2126,7 @@ export class Hero implements Foe {
 
   /** Close enough to keep a conversation going. */
   nearNpc(id: NpcId): boolean {
-    const n = this.region.npcs.find(x => x.id === id);
+    const n = this.person(id);
     return !!n && !this.dead && Math.hypot(n.x - this.x, n.y - this.y) <= TALK_REACH + 24;
   }
 
@@ -2125,7 +2134,7 @@ export class Hero implements Foe {
     const id = this.talkTarget;
     if (!id || this.path) return;
     this.talkTarget = null;
-    const n = this.region.npcs.find(x => x.id === id);
+    const n = this.person(id);
     if (!n || Math.hypot(n.x - this.x, n.y - this.y) > TALK_REACH + 4) return;
     this.face = faceToward(this.x, this.y, n.x, n.y, this.face);
     if (this.driven === 'replica') this.net?.('talkTo', [id]);
@@ -2332,20 +2341,21 @@ export class Hero implements Foe {
     this.sound('chop', tr.x, tr.y);
     this.burst(tr.x, tr.y - 10, 6, '#c8a070', 70, 0.45, 2, 160);
     if (tr.hp > 0) return;
-    // timber: the tree becomes a stump and drops its logs
+    // timber: the tree becomes a stump and drops its logs (a black willow, its hard black wood)
     this.sound('treeFall', tr.x, tr.y);
     const rng = this.game.rng;
+    const kind = TREE_KINDS[tr.kind ?? 'oak'];
     tr.stumpT = CHOP.regrow;
-    tr.hp = CHOP.hits;
+    tr.hp = treeHits(tr);
     this.chopTree = null;
     this.shake = 0.12;
     this.burst(tr.x, tr.y - 24, 16, '#62ae3e', 90, 0.7, 3, 120);
     const [lo, hi] = CHOP.logs;
     const n = lo + Math.floor(rng.next() * (hi - lo + 1));
-    for (let k = 0; k < n; k++) this.region.spawnDrop(tr.x, tr.y - 4, 'log', this.id);
-    if (rng.next() < this.tal.prospect) this.region.spawnDrop(tr.x, tr.y - 4, 'log', this.id);
+    for (let k = 0; k < n; k++) this.region.spawnDrop(tr.x, tr.y - 4, kind.gives, this.id);
+    if (rng.next() < this.tal.prospect) this.region.spawnDrop(tr.x, tr.y - 4, kind.gives, this.id);
     this.gainXp(XP_FOR.tree, tr.x, tr.y - 10);
-    this.log('Timber! The tree falls.', 'c');
+    this.log(tr.kind ? `Timber! The ${kind.name} comes down.` : 'Timber! The tree falls.', 'c');
   }
 
   // ---------- mining ----------
@@ -2432,7 +2442,7 @@ export class Hero implements Foe {
     const tr = this.chopTree;
     const rk = this.mineRock;
     if (m) this.work = { kind: 'make', recipe: m.r.id, p: 1 - m.t / m.r.time };
-    else if (tr && !this.path) this.work = { kind: 'chop', p: (CHOP.hits - tr.hp + swing) / CHOP.hits };
+    else if (tr && !this.path) this.work = { kind: 'chop', p: (treeHits(tr) - tr.hp + swing) / treeHits(tr) };
     else if (rk && !this.path) this.work = { kind: 'mine', p: (MINE.hits - rk.hp + swing) / MINE.hits };
     else this.work = null;
   }

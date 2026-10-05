@@ -6,6 +6,7 @@ import type { EnemyDef, EnemyKind, CreatureSound, HeldKind } from '../data/enemi
 import type { SkillKey, ActionKey, Key, WheelKey } from '../data/skills';
 import type { ObjectKind } from '../data/regions/types';
 import type { SpellKey } from '../data/spells';
+import type { TreeKind } from '../data/trees';
 
 export interface Enemy {
   /** Unique in its region (the network names creatures by it). */
@@ -95,6 +96,12 @@ export interface Enemy {
   smotherT?: number;
   /** Lying down on a fire. */
   lying?: boolean;
+  /** Sir Garrick: cuts since his last lunge; a lunge under way (the step back, then the thrust); his shield gone in the river. */
+  cuts?: number;
+  lunge?: { t: number; wind: number; dur: number; dx: number; dy: number; hit: boolean };
+  shieldGone?: boolean;
+  /** A lure that has led someone to its place, and the graves there have opened. */
+  opened?: boolean;
 }
 
 /**
@@ -167,7 +174,7 @@ export interface Hazard {
 
 /** A wanderer in the world (the grey postman). */
 export interface WandererState {
-  id: 'postman';
+  id: 'postman' | 'lantern';
   x: number;
   y: number;
   /** Index of the route point it walks to. */
@@ -349,6 +356,8 @@ export interface TreeState {
   stumpT: number;
   /** Shake left after a chop. */
   shakeT: number;
+  /** What kind of tree (data/trees.ts; an oak when absent). */
+  kind?: TreeKind;
 }
 
 export type LogClass = '' | 'c' | 'h' | 't';
@@ -400,7 +409,7 @@ export type WorldSound =
 /** Thunder after lightning: a strike close by, one out of sight, one far off (the screen plays it, delayed, for everyone). */
 export type WeatherSound = 'thunderNear' | 'thunder' | 'thunderFar';
 /** Someone talking, in a conversation or a scene: each a voice of their own. */
-export type VoiceSound = `${NpcId | 'bellringer'}Voice`;
+export type VoiceSound = `${NpcId | 'bellringer' | 'thane'}Voice`;
 export type FollowSound =
   | 'mounted'
   | 'dismount'

@@ -257,6 +257,8 @@ test('every creature cries out when hit and when it dies, but not at a bleed', (
   for (const kind of Object.keys(KINDS) as EnemyKind[]) {
     const { h, heard, spawn } = meadow();
     const e = spawn(kind, 30);
+    // an ambusher out of the canopy already (knocked down, it would notice you first)
+    e.hid = false;
     h.dmgEnemy(e, 1, 'dot');
     h.dmgEnemy(e, 1, '');
     h.dmgEnemy(e, 99999, '');
@@ -347,7 +349,7 @@ test('a voice is a word or two, and a scene says aloud only the lines that matte
       let last = 0;
       for (let i = 0; i < d.length; i++) if (Math.abs(d[i]) > top * 0.05) last = i;
       // the Bell-Ringer echoes round his belfry
-      const most = who === 'bellringer' ? 1.3 : 0.85;
+      const most = who === 'bellringer' || who === 'garrick' ? 1.3 : 0.85;
       assert.ok(last / RATE < most, `${who}Voice take ${k}: ${(last / RATE).toFixed(2)}s`);
     }
   // the opening scene: only Aldric's first words are heard

@@ -367,7 +367,7 @@ function babble(s: Track, o: Speaker): void {
 }
 
 /** Each speaker's voice: the people of the Greenmarch and Millbrook, and one who was. */
-const SPEAKERS: Record<NpcId | 'bellringer', Speaker> = {
+const SPEAKERS: Record<NpcId | 'bellringer' | 'thane', Speaker> = {
   // Warden Aldric: old, gravelly, unhurried
   aldric: { f: 98, mouth: 1, syl: 0.12, lilt: 0.07, rough: 0.25, breath: 0.35 },
   // Nan Merrow, the queen's old nurse: high, and trembling
@@ -382,6 +382,22 @@ const SPEAKERS: Record<NpcId | 'bellringer', Speaker> = {
   tobin: { f: 165, mouth: 1.05, syl: 0.068, lilt: 0.2, breath: 0.18 },
   // Bram the smith: big, deep, few words
   bram: { f: 84, mouth: 0.94, syl: 0.1, lilt: 0.05, rough: 0.35, breath: 0.25, drive: 1.5 },
+  // Wren Ashdown: young, quick, clipped, a temper under it
+  wren: { f: 232, mouth: 1.17, syl: 0.075, lilt: 0.1, breath: 0.22, fall: 0.16 },
+  // Hesketh Coll: slow, low, as if every word costs charcoal
+  hesketh: { f: 92, mouth: 0.97, syl: 0.125, lilt: 0.04, rough: 0.3, breath: 0.35, fall: 0.15 },
+  // Ada Coll: brisk and flat, no patience
+  ada: { f: 190, mouth: 1.12, syl: 0.07, lilt: 0.06, rough: 0.08, breath: 0.18 },
+  // Grandad Pell: very old, cracked and wavering
+  pell: { f: 128, mouth: 1, syl: 0.13, lilt: 0.12, rough: 0.3, breath: 0.45, vib: 0.06 },
+  // Mother Dunn: warm, round, bustling
+  dunn: { f: 205, mouth: 1.1, syl: 0.09, lilt: 0.14, breath: 0.2 },
+  // Bess Tanner: thin and far away
+  bess: { f: 215, mouth: 1.15, syl: 0.13, lilt: 0.05, breath: 0.5, vib: 0.03, fall: 0.2 },
+  // Sir Garrick: flat and tired, inside a helm
+  garrick: { f: 88, mouth: 0.95, syl: 0.14, lilt: 0.03, rough: 0.25, breath: 0.35, fall: 0.18, room: 0.3 },
+  // the Thane under the Hill: a voice like stones moving
+  thane: { f: 56, mouth: 0.86, syl: 0.2, lilt: 0.05, rough: 0.5, breath: 0.5, fall: 0.15, drive: 1.3, room: 0.5 },
   // the Bell-Ringer: hollow, slow, not quite alive
   bellringer: {
     f: 68,
@@ -1959,6 +1975,188 @@ export const SOUNDS: Record<SoundId, Recipe> = {
         s.tone({ at: 0.3, f: hz(-19) * r, v, a: 0.01, d: 2, vib: [3, 0.006] });
       s.noise({ at: 0.3, v: 0.2, d: 1.2, filter: 'bandpass', f: 600, q: 4, am: [17, 0.8] });
       s.reverb(0.4, 1.3);
+    },
+  },
+  // ------------------------------------------------------------ Act II: the wood's creatures
+  wolfHowl: {
+    len: 1.9,
+    loud: 0.6,
+    make: s => {
+      // a long howl rising and falling away under the trees
+      voice(s, { at: 0, d: 1.4, f: 300, peak: 520, f1: 330, mouth: OH, v: 1.2, rough: 0.12, breath: 0.35, a: 0.15, vib: 0.02 });
+      s.reverb(0.35, 1.4);
+    },
+  },
+  wolfSnarl: {
+    len: 0.45,
+    loud: 0.5,
+    make: s => {
+      // a snarl and the jaws snapping
+      voice(s, { at: 0, d: 0.18, f: 140, peak: 160, f1: 120, mouth: UH, v: 1.2, rough: 0.7, roughHz: 50, breath: 0.5, a: 0.01 });
+      for (const at of [0.1, 0.17]) {
+        s.noise({ at, v: 0.6, d: 0.008, filter: 'highpass', f: 2500 });
+        s.tone({ at, f: 1100, v: 0.3, a: 0.001, d: 0.02 });
+      }
+    },
+  },
+  wolfYelp: {
+    len: 0.35,
+    loud: 0.5,
+    gap: 0.3,
+    make: s => {
+      voice(s, { at: 0, d: 0.16, f: 600, peak: 820, f1: 480, mouth: EE, v: 1, rough: 0.15, breath: 0.3, a: 0.006 });
+    },
+  },
+  wolfDie: {
+    len: 1,
+    loud: 0.55,
+    make: s => {
+      // a whine falling away, and the body hitting the ground
+      voice(s, { at: 0, d: 0.6, f: 640, peak: 680, f1: 240, mouth: EE, v: 1, rough: 0.2, breath: 0.35, a: 0.01 });
+      thump(s, 0.5, 90, 0.4, 0.15);
+    },
+  },
+  boarGrunt: {
+    len: 0.5,
+    loud: 0.5,
+    takes: 2,
+    make: s => {
+      // two short grunts from deep in the chest
+      for (const at of [0, 0.18])
+        voice(s, { at, d: 0.12, f: 95, peak: 110, f1: 85, mouth: UH, v: 1.2, rough: 0.6, roughHz: 35, breath: 0.4, a: 0.01 });
+      s.drive(1.6);
+    },
+  },
+  boarSqueal: {
+    len: 0.6,
+    loud: 0.55,
+    gap: 0.3,
+    make: s => {
+      voice(s, { at: 0, d: 0.42, f: 700, peak: 1050, f1: 600, mouth: EE, v: 1.1, rough: 0.45, roughHz: 60, breath: 0.4, a: 0.01 });
+      s.drive(1.4);
+    },
+  },
+  deerBleat: {
+    len: 0.55,
+    loud: 0.45,
+    gap: 0.4,
+    make: s => {
+      // a thin bark of alarm
+      voice(s, { at: 0, d: 0.3, f: 520, peak: 640, f1: 430, mouth: EH, v: 1, rough: 0.3, roughHz: 45, breath: 0.45, a: 0.008 });
+    },
+  },
+  spiderHiss: {
+    len: 0.55,
+    loud: 0.45,
+    takes: 2,
+    make: s => {
+      // a dry hiss and the click of mandibles
+      s.noise({ v: 0.8, a: 0.04, d: 0.36, filter: 'highpass', f: 3800, am: [28, 0.4] });
+      rattle(s, 0.02, 0.3, 0.5, 6);
+    },
+  },
+  spiderHurt: {
+    len: 0.3,
+    loud: 0.45,
+    gap: 0.25,
+    make: s => {
+      crunch(s, 0, 0.6, 0.06, 2000);
+      s.noise({ at: 0.02, v: 0.5, a: 0.005, d: 0.16, filter: 'highpass', f: 4500 });
+    },
+  },
+  spiderDie: {
+    len: 0.9,
+    loud: 0.55,
+    make: s => {
+      // a long hiss, legs drumming and curling up
+      s.noise({ v: 0.7, a: 0.02, d: 0.6, filter: 'bandpass', f: 5000, f1: 1800, q: 1.4 });
+      rattle(s, 0.1, 0.6, 0.6, 14);
+      crunch(s, 0.05, 0.5, 0.08, 1400);
+    },
+  },
+  eggBurst: {
+    len: 0.5,
+    loud: 0.45,
+    make: s => {
+      // a wet pop and the hiss of burning silk
+      bubble(s, 0, 300, 120, 0.8, 0.08);
+      s.noise({ at: 0.02, v: 0.6, a: 0.01, d: 0.35, filter: 'bandpass', f: 3000, f1: 900, q: 1.2, am: [60, 0.5] });
+    },
+  },
+  ghostWail: {
+    len: 2.2,
+    loud: 0.6,
+    make: s => {
+      // a keening wail, rising and breaking: it heals the dead who hear it
+      voice(s, { at: 0, d: 1.5, f: 420, peak: 720, f1: 380, mouth: EE, v: 1.1, breath: 0.6, a: 0.25, vib: 0.05 });
+      s.reverb(0.5, 1.5);
+    },
+  },
+  ghostMoan: {
+    len: 1.3,
+    loud: 0.5,
+    takes: 2,
+    gap: 0.4,
+    make: s => {
+      voice(s, { at: 0, d: 0.8, f: 210, peak: 250, f1: 170, mouth: OH, v: 1, breath: 0.7, a: 0.15, vib: 0.04 });
+      s.reverb(0.4, 1.2);
+    },
+  },
+  ghostDie: {
+    len: 1.4,
+    loud: 0.5,
+    make: s => {
+      // a sigh blowing away like smoke
+      voice(s, { at: 0, d: 0.9, f: 330, peak: 360, f1: 140, mouth: AH, v: 0.9, breath: 0.85, a: 0.05, vib: 0.03 });
+      s.noise({ at: 0.1, v: 0.3, a: 0.2, d: 0.8, filter: 'bandpass', f: 1200, f1: 400, q: 0.8 });
+      s.reverb(0.4, 1.2);
+    },
+  },
+  wispChime: {
+    len: 1.2,
+    loud: 0.4,
+    gap: 0.5,
+    make: s => {
+      // a glassy chime, high and sad
+      chime(s, 0, [hz(28), hz(24), hz(21)], 0.11, 0.35, 0.6);
+      s.reverb(0.5, 1.4);
+    },
+  },
+  guardShout: {
+    len: 1,
+    loud: 0.55,
+    takes: 2,
+    make: s => {
+      // a dead man's hoarse call down the road: "Search the road!"
+      for (const [at, f] of [
+        [0, 120],
+        [0.16, 132],
+        [0.3, 110],
+      ])
+        voice(s, { at, d: 0.14, f, peak: f * 1.1, f1: f * 0.9, mouth: AH, v: 1.2, rough: 0.5, roughHz: 30, breath: 0.6, a: 0.01 });
+      s.drive(1.6);
+      s.reverb(0.3, 1);
+    },
+  },
+  barrowGroan: {
+    len: 2,
+    loud: 0.6,
+    make: s => {
+      // a voice like stones moving, out of the old dark
+      voice(s, { at: 0, d: 1.3, f: 58, peak: 64, f1: 50, mouth: OH, v: 1.4, rough: 0.5, roughHz: 22, breath: 0.6, a: 0.2, vib: 0.02 });
+      s.noise({ at: 0.1, v: 0.25, a: 0.3, d: 1.1, filter: 'lowpass', f: 300 });
+      s.drive(1.4);
+      s.reverb(0.5, 1.6);
+    },
+  },
+  knightHalt: {
+    len: 1.6,
+    loud: 0.7,
+    make: s => {
+      // "Halt." From inside a helm, flat and hollow, and the armour shifting
+      voice(s, { at: 0, d: 0.45, f: 96, peak: 104, f1: 82, mouth: AH, v: 1.4, rough: 0.35, roughHz: 28, breath: 0.4, a: 0.02 });
+      for (let i = 0; i < 5; i++) clack(s, 0.5 + i * 0.05, 0.3, 700 + 300 * s.random());
+      s.reverb(0.45, 1.4);
     },
   },
   // ------------------------------------------------------------ the weather

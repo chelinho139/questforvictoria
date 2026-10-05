@@ -8,7 +8,8 @@ import type { Pal } from './silhouetteRound';
 import type { StyleArt, Frames, IsoTiles } from '../styleArt';
 import { WALL_H, TOWER_H, TOWER_TOP } from '../styleArt';
 import { ITEM_IDS } from '../../../data/items';
-import { FLAT_CAMPFIRE, FLAT_FORGE, FLAT_PAL } from '../structureArt';
+import { FLAT_CAMPFIRE, FLAT_FORGE, FLAT_PAL, kilnFrames } from '../structureArt';
+import { creatureFrames, DRAWN_CREATURES } from '../creatureArt';
 import { FLAT_NPCS, FLAT_NPC_PAL } from '../npcArt';
 import type { ItemId } from '../../../data/items';
 
@@ -325,6 +326,8 @@ export function silhouetteArt(family: 'sil' | 'ink' | 'rich', hooded = false): S
       horse: frames(HORSE4, HORSE4_LEGS, P.horse, S),
     }),
     creatures: () => ({
+      // Act II's creatures come in their HD drawings in every style
+      ...Object.fromEntries(DRAWN_CREATURES.map(k => [k, { frames: creatureFrames(k), scale: 1 }])),
       goblin0: frames(GOBLIN4, GOBLIN4_LEGS, P.goblin, S),
       goblin1: frames(SHAMAN4, SHAMAN4_LEGS, P.shaman, S),
       goblin2: frames(OGRE4, OGRE4_LEGS, P.ogre, S),
@@ -341,6 +344,7 @@ export function silhouetteArt(family: 'sil' | 'ink' | 'rich', hooded = false): S
     structures: () => ({
       campfire: { frames: FLAT_CAMPFIRE.map(f => still(f, FLAT_PAL, S).frames[0]), scale: S },
       forge: { frames: FLAT_FORGE.map(f => still(f, FLAT_PAL, S).frames[0]), scale: S },
+      kiln: { frames: kilnFrames(), scale: 1 },
     }),
     // food and wood have their own chunky sprites; gear stays a sack at this resolution
     items: () => {

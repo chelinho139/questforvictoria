@@ -15,6 +15,14 @@ write are generated: change the art here, then regenerate.
 - `craftart.py` — cooked meat, iron and gold bars, the crafting hammer, and the campfire and forge world sprites (`gen_itemart.py` also writes `src/phaser/render/structureArt.ts` from it).
 - `gear.py`, `items.py`, `ores.py`, `backpack.py` — item icons (20×20), ground sprites and the inventory button's backpack; `gen_itemart.py` writes
   `src/phaser/render/itemArt.ts`.
+- Act II's art (each file's `__main__` writes a magnified review sheet: `python3 creatures2.py out.png`):
+  `villagers2.py` (Wren, Kilnholt's people, Bess, Garrick's ghost, the grey lantern, and Wren's
+  companion frames `WREN_ART`) → `npcArt.ts`; `creatures2.py` (the wood's 21 creatures and the crows)
+  → `creatureArt.ts`; `items3.py` (28 item icons, food drops) → `itemArt.ts`; `objects2.py` (the
+  oak's hollow, the feather marks, caches, ropes, cold fires…) → `objectArt.ts`; `kilnart.py`
+  (Kilnholt's kiln, smouldering and cold) → `structureArt.ts`. All through `gen_itemart.py`. The
+  Act II gear on the heroes (steel, the Warden set, the jerkin, the leggings, the mantle, the greaves,
+  the recurve) is in `cast2.py`'s tables.
 - `gearpreview.py [hero…]` / `gearpreview.py anim [hero…]` — magnified preview sheets of every item
   (or walk/attack/jump with full kits) for review.
 - `tool.py` — the shared grid, render (HD auto outline) and sheet helpers.

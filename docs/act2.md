@@ -2,7 +2,7 @@
 
 *The Weeping Bridge. What the second slice of the campaign contains. Everything here comes from the lore (docs/lore.md); what this spec added to the lore is listed under* New to the lore *at the end, and is now in the lore too.*
 
-> **Decided (3 October 2026). Being built:** the systems it needs are in the game (creature behaviours, being held still, Wren as a companion, the whistle, a night held round the fires, a region's own fires, waking by a safe fire, traders and recipes that grow with the story, the all-day dusk under the mist); the places, people, creatures and quests come next. It picks up where Act I ends (Nan turning the black lace over in her hands) and follows the lore's Act II: Wren, the hollow oak, the Weepwood, the Weeping Bridge and Sir Garrick. Levels 7 to 11 take nearly twice the experience that levels 1 to 7 did, so this act is about twice as long as Act I: twice the quests, about twice the creatures, and four forest regions instead of one. The choices made before building are under *Decided*.
+> **Decided (3 October 2026). Built (5 October 2026):** the whole act is in the game: the systems it needs (creature behaviours, being held still, Wren as a companion, the whistle, a night held round the fires, a region's own fires, waking by a safe fire, traders and recipes that grow with the story, the all-day dusk under the mist), the six new places, the people, the 26 quests, the documents, the scenes, the creatures and bosses, and their art. What the build settled that this spec left open is under *Built* at the end. It picks up where Act I ends (Nan turning the black lace over in her hands) and follows the lore's Act II: Wren, the hollow oak, the Weepwood, the Weeping Bridge and Sir Garrick. Levels 7 to 11 take nearly twice the experience that levels 1 to 7 did, so this act is about twice as long as Act I: twice the quests, about twice the creatures, and four forest regions instead of one. The choices made before building are under *Decided*.
 
 ---
 
@@ -676,3 +676,48 @@ Decided on 3 October 2026 (the user left these choices to Claude; each was the r
 5. **Garrick's ghost stays** on the bridge until the end of the game, so that the ending's *"the bridge is empty"* means something.
 6. **The first plate arrives here:** Garrick's royal guard greaves.
 7. **The act is about twice Act I's length** (three to four hours, 26 quests, about twice the creatures), because levels 7 to 11 take nearly twice the experience of levels 1 to 7.
+
+---
+
+## Built
+
+Built on 5 October 2026. Where the build had to choose, it chose this (each can be changed in play-testing):
+
+**Places**
+
+- **The maps** are composed in `tools/world/maps.py` (`weepwood`, `kingschase`, `heronreach`, `heronlodge`, `lislebarrow`, `weepingbridge`) and laid out as the sketches above. The hill path to the Greyfang Hills leaves the King's Chase to the north-east (a wall drawn east–west closes a road running north–south), not due east.
+- **Millbrook's river path** runs up the east bank of the Lisle to where it goes under the thorn wall (north-west of the village), and opens when Wren leads the way (*"Lead the way under the thorns"*, in *Through the Thorns*). The old north road stays closed for good: *"The Lisle runs under them, off to the west."*
+- **Wren's fire** takes two logs; **Heron Lodge's hearth** and **the Wardens' fire at the barrow** take three. A lit hearth is a fire of the region's own (it burns for good), and Heron Lodge is where you wake in Heron Reach, the barrow and the bridge once it is lit (Kilnholt, once the ring has held, otherwise).
+- **The fallen willow** and **the grave-mist** are props that leave live when their condition stops holding (`Region.syncProps`): the willow when Ada saws it, the mist when the last mark is read. The mist is solid; walking up to it says why.
+- **The grave-mist's light** is dim and green (`MIST` in `src/sim/daylight.ts`), and the dead walk there by day. From ring 2 the rivers run dark.
+- **Trees:** the black willow (6 chops, gives black willow), the half-green willow at the edge of the wood (logs) and the black oaks of the Chase (5 chops, logs), painted in code like the oak (`src/phaser/render/woodTrees.ts`).
+
+**People and the story**
+
+- **Wren** stands on the mill step when Act II opens, at Aldric's camp during *Seven Years Silent*, at the hollow oak until *Through the Thorns*, by the river at the thorn wall until she leads the way, then walks with you (talk to her as she walks: her quests are hers); back on the mill step once *The Lamp Burns On* is taken.
+- **Feathers in the Oak:** showing Wren the feather is handing the quest in to her (the scene plays then), not a separate goal.
+- **The grey lantern** walks the old road above Wren's camp at night, once Wren is with you, and goes out when you come within about seven tiles. The grey dust lies on the road where it was.
+- **The Gallows Willow:** Tam Pell's rope is the fifth rope; cutting it down buries him.
+- **Pike's courier** is a body by the King's Ride; the dispatch bag is the outriders' chief's loot (it can't be sold).
+- **Kilnholt's dead** come only on the night of *The Ring of Kilns* (from dusk, one every nine seconds, never more than three at once); five kilns of eight must burn at dawn. A lost night can be tried again the next.
+- **Bess** is at her cottage in Millbrook, and in the Keening Hollow only at night while *The Light in the Willows* is on; four Mourning Lights round her are the ones to put out.
+- **The Lisle Barrow's Sleepers** stay asleep once the Wardens' fire burns at the door.
+- **Mourning Lights**, followed all the way to their place, open the graves there (two of the dead climb out, once per light).
+- **Extra lines:** two arrival scenes not in *Scenes* (the King's Chase, Heron Reach); the Tower Guard and crossbowmen call out when they see you (*"Search the road. She can't have got far."*), Garrick says his *"Halt"*; Wren has a line for each new kind of creature and for Marcian's marks.
+
+**Creatures and balance**
+
+- **First-pass numbers** were tuned with the fight simulator (`tests/fight.ts`, now with a tier 3 kit of steel and Warden gear) against Act I at the same levels: a pack of four thornbacks costs a level-8 warrior in iron most of their health; the bosses are about as dangerous as the Bell-Ringer was for Act I (the bot doesn't eat or interrupt, so they beat it; players with food and Wren beside them should not lose). Smotherers give 8 XP, not 14, so the night at Kilnholt doesn't outweigh the quests.
+- **The Brood Mother** climbs back into the dark at half health (`climbs`) and lays an egg sac every 16 seconds; egg sacs hatch two spiderlings.
+- **Garrick's fight** (`Region.garrick`): every third blow is a lunge (a step back, then a long thrust for twice his hit); his roots are the second phase's spell (`from: 1`), burst up under one hero, and he goes for whoever they hold; below a third he throws the shield in the river, strikes faster, and Tower Guard and crossbowmen march onto the bridge from both ends (summons with `at`). The whistle stops him for 4, 4 and 2 seconds and frees whoever the roots hold.
+- **The outriders' chief** has a boss's health bar but fights on his wolf throughout (no rider-on-foot for him); he calls goblins to him.
+- **The search party's sergeant** is a bigger Tower Guard with a boss's health bar; his orders are added to the journal when he falls.
+
+**Items**
+
+- **The silk-strung recurve** is made at a campfire (it's bowyer's work), not a forge.
+- **Rewards follow the class:** a quest that gives a weapon gives an archer the archer's twin (the Warden's longbow for the blade); the steel shield drops as a hunter's quiver for archers (there is no steel quiver).
+- **Pell's hunting horn** adds `anger`: creatures you hit stay angry at you longer.
+- **Trinkets** (the fang necklace, the horn, the torc) aren't drawn on the heroes; the other Act II gear is, on all eight.
+- **The dispatch bag** is drawn like the backpack.
+

@@ -105,16 +105,32 @@ GEAR_PAL = {
     '^': '#ffe6cc', '[': '#e8dcc4', ']': '#bcae92', '{': '#8a7c64',
     # faces for the knights under a cap or open helm: skin, shade, dark, eye, eye white, hair
     '/': '#ffd8b4', ':': '#f2b88c', ',': '#d08c64', ';': '#2a2a3a', '?': '#ffffff', '<': '#f0c870', '>': '#c8984a',
+    # ---- Act II
+    # the Wardens' grey-green wool (cloak, hood, boots, the longbow's stain) and the silver badge
+    'ρ': '#b4c4a2', 'σ': '#869a78', 'τ': '#5c7056', 'υ': '#3c4c3c', 'φ': '#eef2f6',
+    # steel: brighter and bluer than iron
+    'Γ': '#ffffff', 'Δ': '#dde8f6', 'Θ': '#a6b8d2', 'Λ': '#6c7e9e', 'Ξ': '#404c6a',
+    # the steel kite shield's dark green field
+    'Π': '#4a8a5a', 'Σ': '#2e6040',
+    # thornback hide (the jerkin, the old wolf's mantle) and pale bone
+    'Φ': '#b8b2a8', 'Ψ': '#8c867e', 'Ω': '#625e58', 'ς': '#403c3a', 'χ': '#f2ecdc', 'ω': '#c8c0aa',
+    # broodsilk: pale grey, with a sheen
+    'ά': '#f6f6f2', 'έ': '#d8dad6', 'ή': '#b2b6b4', 'ί': '#8a9090',
+    # rusted royal plate (the greaves): the rust tones a, e, f and a deeper one
+    'ψ': '#4a2c1a',
+    # the silk-strung recurve: black willow limbs, a cold blue tip
+    'ό': '#5e5868', 'ύ': '#302c38', 'ώ': '#a8b6c8',
 }
 
 # ------------------------------------------------------------ items
 ITEMS_BY_SLOT = {
-    'weapon': ['rusty_sword', 'iron_sword', 'woodcutter_axe', 'pickaxe', 'worn_shortbow', 'hunting_bow', 'yew_longbow'],
-    'offhand': ['wooden_shield', 'iron_shield', 'leather_quiver', 'hunters_quiver'],
-    'head': ['leather_cap', 'iron_helm'],
-    'body': ['leather_tunic', 'chainmail'],
-    'legs': ['cloth_trousers', 'leather_trousers', 'iron_greaves'],
-    'feet': ['leather_boots', 'swift_boots'],
+    'weapon': ['rusty_sword', 'iron_sword', 'woodcutter_axe', 'pickaxe', 'worn_shortbow', 'hunting_bow', 'yew_longbow',
+               'warden_blade', 'steel_sword', 'warden_longbow', 'silk_recurve'],
+    'offhand': ['wooden_shield', 'iron_shield', 'leather_quiver', 'hunters_quiver', 'steel_shield'],
+    'head': ['leather_cap', 'iron_helm', 'warden_hood', 'steel_helm', 'bonespine_mantle'],
+    'body': ['leather_tunic', 'chainmail', 'warden_cloak', 'thornback_jerkin'],
+    'legs': ['cloth_trousers', 'leather_trousers', 'iron_greaves', 'broodsilk_leggings', 'royal_greaves'],
+    'feet': ['leather_boots', 'swift_boots', 'warden_boots'],
     'trinket': ['vigour_amulet'],
 }
 SLOT_OF = {it: s for s, its in ITEMS_BY_SLOT.items() for it in its}
@@ -125,20 +141,28 @@ APPLY_ORDER = ['legs', 'feet', 'body', 'head', 'trinket', 'offhand', 'weapon']
 BODY_MAT = {
     'leather_tunic': dict(tones='AFIJ', strap='_', buckle='Y', mail=False),
     'chainmail': dict(tones='NOUV', strap='I', buckle='Y', mail=True),
+    # Act II: the Warden's cloak (grey-green wool, the silver badge at the belt) and the thornback jerkin
+    'warden_cloak': dict(tones='ρστυ', strap='υ', buckle='φ', mail=False),
+    'thornback_jerkin': dict(tones='ΦΨΩς', strap='_', buckle='χ', mail=False),
 }
 LEGS_MAT = {
     'cloth_trousers': dict(cols=('~', '&'), knee=None, tones='&&~@', plates=False),
     'leather_trousers': dict(cols=('I', 'F'), knee=None, tones='AFIJ', plates=False),
     'iron_greaves': dict(cols=('V', 'O'), knee=('U', 'N'), dark=('X', 'U'), tones='NOUV', plates=True),
+    'broodsilk_leggings': dict(cols=('έ', 'ά'), knee=None, tones='άέήί', plates=False),
+    # the first plate: rusted, with tarnished gold at the knee
+    'royal_greaves': dict(cols=('e', 'a'), knee=('Z', 'Y'), dark=('ψ', 'f'), tones='aefψ', plates=True),
 }
 FEET_MAT = {
     'leather_boots': dict(boot=('F', 'J'), cuff='A', wing=False),
     'swift_boots': dict(boot=('(', '*'), cuff=')', wing=True),
+    'warden_boots': dict(boot=('σ', 'υ'), cuff='ρ', wing=False),
 }
 
 ROUND_SHIELD = ['..OOU..', '.O767V.', 'O67676V', 'O67Y76V', 'U67676V', '.V767X.', '..VXX..']
 KITE_SHIELD = ['NOOOOUV', 'O!!Y##V', 'O!!Y##V', 'OYYYYYV', 'O!!Y##V', '.O!Y#V.', '.O!Y#V.', '..OYV..', '...V...']
-SHIELDS = {'wooden_shield': ROUND_SHIELD, 'iron_shield': KITE_SHIELD}
+STEEL_KITE = [r.translate(str.maketrans({'N': 'Γ', 'O': 'Δ', 'U': 'Θ', 'V': 'Λ', '!': 'Π', '#': 'Σ', 'Y': 'φ'})) for r in KITE_SHIELD]
+SHIELDS = {'wooden_shield': ROUND_SHIELD, 'iron_shield': KITE_SHIELD, 'steel_shield': STEEL_KITE}
 
 # ------------------------------------------------------------ poses
 WALK = [
@@ -353,6 +377,8 @@ FLOAT = {
     'sig': dict(blade='CBb', guard='gGGg', g2='gg', g3='gGg', g5='gGGGg', fwd='CBb'),
     'rusty_sword': dict(blade='Oef', guard='VUUV', g2='VV', g3='VUV', g5='VUUUV', fwd='Oef'),
     'iron_sword': dict(blade='NOU', guard='ZYYZ', g2='ZZ', g3='ZYZ', g5='ZYYYZ', fwd='NOU'),
+    'warden_blade': dict(blade='NOU', guard='VUUV', g2='ττ', g3='VUV', g5='VUUUV', fwd='NOU'),
+    'steel_sword': dict(blade='ΓΔΘ', guard='ZYYZ', g2='ZZ', g3='ZYZ', g5='ZYYYZ', fwd='ΓΔΘ'),
 }
 
 
@@ -361,6 +387,8 @@ BOWS = {
     'worn_shortbow': dict(lit='i', dark='o', grip='t', tip='o', wrap='T', size=-1),
     'hunting_bow': dict(lit='α', dark='β', grip='γ', tip='δ', size=0),
     'yew_longbow': dict(lit='ε', dark='ζ', grip='η', tip='θ', size=1),
+    'warden_longbow': dict(lit='σ', dark='τ', grip='υ', tip='φ', size=1),
+    'silk_recurve': dict(lit='ό', dark='ύ', grip='ά', tip='ώ', wrap='ά', size=1),
 }
 
 
@@ -524,9 +552,27 @@ def bare_torso(sig_rows, tone, skin_ys, belt_y, hips_ys):
     return out
 
 
+def tint(rows, table):
+    """The same rows in other colours (a letter-for-letter swap)."""
+    t = str.maketrans(table)
+    return [(x, y, s.translate(t)) for x, y, s in rows]
+
+
 def caps(spans, brim, extra=()):
-    """A leather cap and an iron helm (plus cheek guards / nasal) over a head."""
-    return {'leather_cap': dome(spans, brim, 'leather'), 'iron_helm': dome(spans, brim, 'iron') + list(extra)}
+    """A leather cap and an iron helm (plus cheek guards / nasal) over a head; and from Act II the
+    Warden's hood (the cap's shape in grey-green wool), the steel helm (the iron helm in bright
+    steel) and Bonespine's mantle (the old wolf's grey hide with a crest of bone spines)."""
+    leather = dome(spans, brim, 'leather')
+    iron = dome(spans, brim, 'iron') + list(extra)
+    ty, tx0, tx1 = spans[0]
+    spines = [(x, ty - 1 - (i % 2), 'χ') for i, x in enumerate(range(tx0, tx1 + 1, 2))] + [(tx1 + 1, ty, 'ω')]
+    return {
+        'leather_cap': leather,
+        'iron_helm': iron,
+        'warden_hood': tint(leather, {'A': 'ρ', 'F': 'σ', 'I': 'τ', 'J': 'υ'}),
+        'steel_helm': tint(iron, {'N': 'Γ', 'O': 'Δ', 'U': 'Θ', 'V': 'Λ', 'X': 'Ξ'}),
+        'bonespine_mantle': tint(leather, {'A': 'Φ', 'F': 'Ψ', 'I': 'Ω', 'J': 'ς'}) + spines,
+    }
 
 
 # ---------------------------------------------------------------------------------------------
@@ -734,6 +780,10 @@ def weapon_spec(hero, item):
         return dict(base, kind='sword', L=max(4, L0 - 1), blade=['Oe', 'Oa', 'ae', 'Oe', 'Of', 'Oe'], guard='VUUV', grip='J', pommel='U', rest=W.get('rest', 'up'))
     if item == 'iron_sword':
         return dict(base, kind='sword', L=L0 + 1, low_L=L0, blade='NO', guard='ZYYZ', grip='J', pommel='Y', rest=W.get('rest', 'up'))
+    if item == 'warden_blade':
+        return dict(base, kind='sword', L=L0 + 1, low_L=L0, blade='NO', guard='VUUV', grip='τ', pommel='U', rest=W.get('rest', 'up'))
+    if item == 'steel_sword':
+        return dict(base, kind='sword', L=L0 + 1, low_L=L0, blade='ΓΔ', guard='ZYYZ', grip='J', pommel='Y', rest=W.get('rest', 'up'))
     if item in BOWS:
         # a bow's size follows the hero's (their sword's length), and never reaches the feet
         half = max(4, min(9, round(L0 * 0.7) + 1 + BOWS[item]['size']))
@@ -776,7 +826,7 @@ def amulet(v, x, y, size):
 def shield(v, hero, item, x, y):
     v.tag('offhand')
     rows = SHIELDS[item]
-    if hero.small and item == 'iron_shield':
+    if hero.small and item in ('iron_shield', 'steel_shield'):
         rows = rows[:5] + rows[6:]
     for i, r in enumerate(rows):
         v.at(x, y + i, r)

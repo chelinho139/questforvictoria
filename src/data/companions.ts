@@ -1,6 +1,7 @@
 import type { Cond } from './story';
 import type { ItemId, Slot } from './items';
 import type { VoiceSound } from '../sim/types';
+import type { NpcId } from './npcs';
 
 /**
  * Companions: someone from the story who walks with the heroes for a while and fights beside
@@ -17,7 +18,7 @@ export type CompanionId = 'wren';
  * kind (`near:<kind>`), and night falling.
  */
 export type BarkOn =
-  'join' | 'down' | 'up' | 'ambush' | 'kill' | 'night' | `see:${string}` | `near:${string}`;
+  'join' | 'down' | 'up' | 'ambush' | 'kill' | 'night' | 'roots' | `see:${string}` | `near:${string}`;
 
 export interface Bark {
   on: BarkOn;
@@ -28,9 +29,12 @@ export interface Bark {
 
 export interface CompanionDef {
   name: string;
+  /** Who she is when you talk to her (her dialog, her quests, her voice). */
+  npc?: NpcId;
   /** Her voice (a Speaker in phaser/audio/sounds.ts). */
   voice?: VoiceSound;
-  /** How she is drawn: an HD hero look and what she wears (data/items.ts). */
+  /** How she is drawn: her own frames (render/npcArt.ts), or else an HD hero look and what she wears (data/items.ts). */
+  art?: 'wren';
   look: string;
   equip: Partial<Record<Slot, ItemId>>;
   /** With the heroes while this holds. */
@@ -52,6 +56,9 @@ export const COMPANIONS: Record<CompanionId, CompanionDef> = {
   // Marcian's sister: from the thorn wall to the Weeping Bridge she walks the wood with you
   wren: {
     name: 'Wren',
+    npc: 'wren',
+    voice: 'wrenVoice',
+    art: 'wren',
     look: 'traveller',
     equip: {
       weapon: 'hunting_bow',
@@ -79,6 +86,22 @@ export const COMPANIONS: Record<CompanionId, CompanionDef> = {
       },
       { on: 'up', lines: ['Right. Where were we.', 'Up. Still here.', 'That one’s mine.'], cd: 15 },
       { on: 'ambush', lines: ['Spider. Up. UP.', 'Above you!', 'Look up!'], cd: 20 },
+      // the first time the roots on the bridge hold someone
+      { on: 'roots', lines: ['The whistle! Blow the whistle!'], cd: 45 },
+      { on: 'join', lines: ['Stay on the path.', 'Right behind you.', 'Watch the willows.'], cd: 90 },
+      { on: 'kill', lines: ['Got it.', 'Mine.', 'Stay down.', 'That’s for Marcian.'], cd: 45 },
+      { on: 'see:mourning_light', lines: ['Don’t follow the lights.', 'Lights. Don’t look at them.'], cd: 60 },
+      { on: 'see:wolf', lines: ['Wolves. Back to back.'], cd: 90 },
+      { on: 'see:thornback', lines: ['Thornbacks. If one howls, the rest come.'], cd: 90 },
+      { on: 'see:spider', lines: ['Mind the canopy. They drop.'], cd: 90 },
+      { on: 'see:mourner', lines: ['Kill the weeping one first. It keeps the others up.'], cd: 90 },
+      { on: 'see:tower_guard', lines: ['Wait for the shield to drop. Then hit him.'], cd: 90 },
+      { on: 'see:deer', lines: ['Venison. Don’t tell Ada.'], cd: 120 },
+      {
+        on: 'near:mark',
+        lines: ['That’s one of his marks.', 'There. In the bark. That’s Marcian’s.'],
+        cd: 60,
+      },
       {
         on: 'night',
         lines: ['It’s getting dark. Stay close.', 'Night. Watch the trees.'],

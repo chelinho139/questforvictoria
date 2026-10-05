@@ -9,6 +9,7 @@ import { KINDS } from '../../data/enemies';
 function voiceOf(who: string): VoiceSound | null {
   const npc = (Object.keys(NPCS) as NpcId[]).find(id => NPCS[id].name === who);
   if (npc) return `${npc}Voice`;
+  if (who === KINDS.thane.n) return 'thaneVoice';
   return who === KINDS.bellringer.n ? 'bellringerVoice' : null;
 }
 

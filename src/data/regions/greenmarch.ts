@@ -36,7 +36,7 @@ export const greenmarch: RegionDef = {
     'TTT.T.........~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~....::...................TTT',
     'TTT...........~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.....::.o...oT.........o...TT',
     'TTTT..........~~~~~~~~~~~~~~~~~~~~~~~~~~~..T....::....T.........TTTTTTTT',
-    'TT..........T..~~~~~~~~~~~~~~~~~~~~~~~~~........::..............TTTTTTTT',
+    'TT.............~~~~~~~~~~~~~~~~~~~~~~~~~........::..............TTTTTTTT',
     'TTT.............~~~~~~~~~~~~~~...~~~~..........:::.o.....T......TTTTTTTT',
     'TTTT.............~~~~~~~~~~~...T..............T:::........o.T:::T.....TT',
     'TT.TTT...........~~~~...~.....................:::.T.T.:::::::::o......TT',
@@ -116,7 +116,16 @@ export const greenmarch: RegionDef = {
     { kind: 'goblin', at: [60, 17] },
     { kind: 'shaman', at: [62, 18] },
   ],
-  npcs: [{ id: 'aldric', at: [35, 37] }],
+  npcs: [
+    { id: 'aldric', at: [35, 37] },
+    // Act II: Wren at Aldric's camp, then at the hollow oak, until she leads the way into the wood
+    { id: 'wren', at: [33, 38], when: { quest: 'seven_years', is: ['active', 'ready'] } },
+    {
+      id: 'wren',
+      at: [11, 25],
+      when: { all: [{ quest: 'seven_years', is: 'done' }, { quest: 'through_thorns', is: ['locked', 'available'] }] },
+    },
+  ],
   objects: [
     {
       id: 'proclamation',
@@ -125,6 +134,17 @@ export const greenmarch: RegionDef = {
       name: "The Hollow King's proclamation",
       say: 'A proclamation, nailed up over the old notices. It is in your journal now (J).',
       then: { docs: ['hollow_proclamation'] },
+    },
+    {
+      id: 'hollow',
+      kind: 'hollow',
+      at: [12, 24],
+      name: 'The hollow in the old oak',
+      once: true,
+      need: { quest: 'feathers_oak', is: ['active', 'ready'] },
+      needSay: 'A hollow in the old oak, dark and dry. Nothing in it you can see from here.',
+      say: "Inside the hollow, wrapped in a Warden's oilskin: a key to a code of feathers, two notes signed V., and on top of them a black crow feather, fresh as this morning. (J)",
+      then: { docs: ['feather_key', 'v_note_1', 'v_note_2', 'crow_feather'] },
     },
   ],
   props: [
@@ -137,4 +157,17 @@ export const greenmarch: RegionDef = {
     { kind: 'willow', at: [27, 7] },
   ],
   onEnter: [{ scene: 'lake_wake', when: { quest: 'slime_meadow', is: ['locked', 'available'] } }],
+  triggers: [
+    // Act II: Wren has it out with Aldric; a crow lifts off the oak as you come near
+    { area: [31, 33, 40, 41], scene: 'wren_aldric', when: { quest: 'seven_years', is: 'active' } },
+    { area: [7, 18, 17, 28], scene: 'oak_crow', when: { quest: 'feathers_oak', is: 'active' } },
+  ],
+  // crows on the oak and along the north shore, since the bells
+  crows: [
+    [11, 21],
+    [14, 22],
+    [24, 8],
+    [30, 6],
+    [38, 9],
+  ],
 };

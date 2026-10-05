@@ -47,7 +47,8 @@ export interface Crop {
 
 export interface StyleArt {
   heroes(): { knight: Frames; horse: Frames };
-  creatures(): Record<CreatureKey, Frames>;
+  /** The game's creatures by texture key: the eight below, and every hand-drawn one (creatureArt.ts). */
+  creatures(): Record<CreatureKey, Frames> & Record<string, Frames>;
   forest(): { tree: Frames; pine: Frames; rock: Frames; stump: Frames; rubble: Frames };
   /** People in the world (idle frames). */
   npcs(): Record<NpcId, Frames>;
