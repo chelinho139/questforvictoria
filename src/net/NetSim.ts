@@ -1,3 +1,6 @@
+import { FLAT_OBJECTS } from '../data/regions/types';
+import type { ObjectKind } from '../data/regions/types';
+import type { PropKind } from '../data/props';
 import { Sim } from '../sim/Sim';
 import type { CheatSwitches } from '../sim/Sim';
 import { Hero } from '../sim/Hero';
@@ -7,7 +10,8 @@ import type { EnemyKind } from '../data/enemies';
 import type { Key, WheelKey } from '../data/skills';
 import type { NpcId } from '../data/npcs';
 import type { ItemId, Slot } from '../data/items';
-import { CHOP, MINE } from '../data/items';
+import { MINE } from '../data/items';
+import { treeHits } from '../data/trees';
 import type { SpellKey } from '../data/spells';
 import { STRUCTURES } from '../data/crafting';
 import type { StructureKind } from '../data/crafting';
@@ -194,6 +198,8 @@ export class NetSim extends Sim {
     if (t.tr) this.syncTrees(R, t.tr);
     if (t.rk) this.syncRocks(R, t.rk);
     if (t.st) this.syncStructures(R, t.st as StructureSnap[]);
+    // props that left with the story (the fallen willow sawn through)
+    if (t.pr) R.setProps((t.pr as [PropKind, number, number][]).map(([kind, c, r]) => ({ kind, c, r })));
     if (t.ob) this.syncObjects(R, t.ob as string[]);
     if (t.np) this.syncNpcs(R, t.np);
     if (t.tz) R.traps = t.tz.map(([x, y], i) => ({ id: i, x, y, owner: '', t: 60, hold: 0 }));
@@ -480,7 +486,7 @@ export class NetSim extends Sim {
     const set = new Map(list.map(v => [v[0], v]));
     R.trees.forEach((t, i) => {
       const v = set.get(i);
-      t.hp = v ? v[1] : CHOP.hits;
+      t.hp = v ? v[1] : treeHits(t);
       t.stumpT = v ? v[2] : 0;
       t.shakeT = v ? v[3] : 0;
     });
@@ -530,7 +536,7 @@ export class NetSim extends Sim {
 
   private syncObjects(R: Region, ids: string[]): void {
     const defs = R.def.objects ?? [];
-    const flat = (k: string) => k === 'page' || k === 'letter' || k === 'thorn';
+    const flat = (k: ObjectKind) => FLAT_OBJECTS.has(k);
     for (const o of R.objects)
       if (!ids.includes(o.id) && !flat(o.kind)) R.map.setBlocker(o.c, o.r, null);
     R.objects = ids.flatMap(id => {

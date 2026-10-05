@@ -38,6 +38,36 @@ export type ItemId =
   | 'warm_cloak'
   | 'hound_trousers'
   | 'sexton_lantern'
+  // Act II
+  | 'aldric_whistle'
+  | 'marcian_whistle'
+  | 'thornback_pelt'
+  | 'spider_silk'
+  | 'black_willow'
+  | 'charcoal'
+  | 'steel_bar'
+  | 'venison'
+  | 'roast_venison'
+  | 'smoked_venison'
+  | 'dunn_pie'
+  | 'flour_sack'
+  | 'dispatch_bag'
+  | 'warden_cloak'
+  | 'warden_hood'
+  | 'warden_boots'
+  | 'warden_blade'
+  | 'warden_longbow'
+  | 'steel_sword'
+  | 'steel_shield'
+  | 'steel_helm'
+  | 'silk_recurve'
+  | 'thornback_jerkin'
+  | 'fang_necklace'
+  | 'broodsilk_leggings'
+  | 'pell_horn'
+  | 'bonespine_mantle'
+  | 'thane_torc'
+  | 'royal_greaves'
   // the archer's
   | 'worn_shortbow'
   | 'hunting_bow'
@@ -69,9 +99,11 @@ export interface Stats {
   mine: number;
   /** A wider pool of light around you at night (px). */
   light: number;
+  /** Creatures you hit stay angry at you this many seconds longer. */
+  anger: number;
 }
 
-export const NO_STATS: Stats = { atk: 0, armor: 0, hp: 0, speed: 0, chop: 0, mine: 0, light: 0 };
+export const NO_STATS: Stats = { atk: 0, armor: 0, hp: 0, speed: 0, chop: 0, mine: 0, light: 0, anger: 0 };
 
 export interface ItemDef {
   name: string;
@@ -421,6 +453,244 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     fine: true,
     col: FINE_COL,
   },
+  // ---- Act II: the Weepwood
+  aldric_whistle: {
+    name: "Aldric's bone whistle",
+    desc: "Every Warden carries one. Blow it if you're in trouble. Nobody will come. There's nobody left. Blow it anyway.",
+    stack: 1,
+    unique: true,
+    fine: true,
+    col: FINE_COL,
+    use: {
+      cd: 30,
+      call: 'warden',
+      sound: 'wardenCall',
+      say: 'You blow the Warden call. It goes high and thin over the trees.',
+      quiet: 'Nobody answers. There is nobody left to.',
+    },
+  },
+  marcian_whistle: {
+    name: "Marcian's bone whistle",
+    desc: "Small and yellow with age, a nick cut in it by a boy's knife. Wren will want it, one day.",
+    stack: 1,
+    unique: true,
+    fine: true,
+    col: FINE_COL,
+  },
+  thornback_pelt: {
+    name: 'Thornback pelt',
+    desc: 'Coarse grey fur with a ridge of bone spines down it. Three would make a jerkin.',
+    stack: 20,
+    col: '#a8a4a0',
+    price: 20,
+  },
+  spider_silk: { name: 'Spider silk', desc: 'A skein of Weepwood silk, strong as wire and cold to the touch.', stack: 50, col: '#e8e8f0', price: 20 },
+  black_willow: {
+    name: 'Black willow',
+    desc: "Wood from the Weepwood's willows gone black: hard as horn and cold to the touch. A bowyer's dream.",
+    stack: 50,
+    col: '#9aa0b8',
+    price: 12,
+  },
+  charcoal: { name: 'Charcoal', desc: "Kilnholt's charcoal, burned slow in an earth kiln. Steel wants it.", stack: 50, col: '#a0a0a0', price: 10 },
+  steel_bar: { name: 'Steel bar', desc: 'Iron forged with charcoal: harder, brighter, lighter.', stack: 50, col: '#dce6f2', price: 120 },
+  venison: {
+    name: 'Venison',
+    desc: "A haunch of the King's deer. Eat it raw for 30 health, or roast it on a campfire.",
+    stack: 20,
+    heal: 30,
+    col: '#e07a6a',
+    price: 6,
+  },
+  roast_venison: { name: 'Roast venison', desc: 'Venison roasted over a fire, dripping. Restores 90 health.', stack: 20, heal: 90, col: '#e8a060', price: 18 },
+  smoked_venison: {
+    name: 'Smoked venison',
+    desc: 'Strips of venison smoked over a slow fire, the way Wren does it. Restores 90 health.',
+    stack: 20,
+    heal: 90,
+    col: '#c8885a',
+    price: 22,
+  },
+  dunn_pie: {
+    name: "Mother Dunn's pie",
+    desc: 'Venison and onion under a crust as thick as your thumb. Restores 130 health.',
+    stack: 20,
+    heal: 130,
+    col: '#e8b878',
+    price: 32,
+  },
+  flour_sack: { name: 'Sack of flour', desc: "Maud's flour, for Mother Dunn at Kilnholt.", stack: 10, col: '#f0ece0' },
+  dispatch_bag: {
+    name: 'Dispatch bag',
+    desc: "A courier's satchel with the Steward's seal on the flap, still buckled.",
+    stack: 1,
+    col: '#e8c890',
+  },
+  warden_cloak: {
+    name: "Warden's cloak",
+    desc: 'Grey-green wool with the Warden badge at the throat, a feather in a ring. Better than mail, and warmer.',
+    stack: 1,
+    slot: 'body',
+    stats: { armor: 8, hp: 25 },
+    unique: true,
+    fine: true,
+    col: FINE_COL,
+  },
+  warden_hood: {
+    name: "Warden's hood",
+    desc: 'Grey-green wool, oiled against the rain. From a Warden cache, under an owl.',
+    stack: 1,
+    slot: 'head',
+    stats: { armor: 4, hp: 15 },
+    unique: true,
+    fine: true,
+    col: FINE_COL,
+  },
+  warden_boots: {
+    name: "Warden's boots",
+    desc: 'Soft boots for long rounds through wet woods. You walk a little quicker in them.',
+    stack: 1,
+    slot: 'feet',
+    stats: { armor: 2, speed: 0.1 },
+    unique: true,
+    fine: true,
+    col: FINE_COL,
+  },
+  warden_blade: {
+    name: "Warden's blade",
+    desc: "A plain straight sword from the lodge's rack, the grip wrapped in green. Forty Wardens carried its like.",
+    stack: 1,
+    slot: 'weapon',
+    stats: { atk: 10 },
+    unique: true,
+    fine: true,
+    col: FINE_COL,
+    cls: 'warrior',
+  },
+  warden_longbow: {
+    name: "Warden's longbow",
+    desc: "A long grey-green bow from the lodge's rack. It still pulls true.",
+    stack: 1,
+    slot: 'weapon',
+    stats: { atk: 10 },
+    unique: true,
+    fine: true,
+    col: FINE_COL,
+    cls: 'archer',
+  },
+  steel_sword: {
+    name: 'Steel sword',
+    desc: 'Bright steel with a gilded guard. It keeps an edge through a night of skeletons.',
+    stack: 1,
+    slot: 'weapon',
+    stats: { atk: 9 },
+    fine: true,
+    col: FINE_COL,
+    price: 420,
+    cls: 'warrior',
+  },
+  steel_shield: {
+    name: 'Steel kite shield',
+    desc: 'Steel over oak, a dark green field and a silver boss.',
+    stack: 1,
+    slot: 'offhand',
+    stats: { armor: 10 },
+    fine: true,
+    col: FINE_COL,
+    price: 420,
+    cls: 'warrior',
+  },
+  steel_helm: {
+    name: 'Steel helm',
+    desc: 'A bright steel helm with a nasal guard.',
+    stack: 1,
+    slot: 'head',
+    stats: { armor: 6 },
+    fine: true,
+    col: FINE_COL,
+    price: 300,
+  },
+  silk_recurve: {
+    name: 'Silk-strung recurve',
+    desc: 'Black willow limbs and a Weepwood silk string. It throws an arrow like a sling throws a stone.',
+    stack: 1,
+    slot: 'weapon',
+    stats: { atk: 9 },
+    fine: true,
+    col: FINE_COL,
+    price: 420,
+    cls: 'archer',
+  },
+  thornback_jerkin: {
+    name: 'Thornback jerkin',
+    desc: 'Thornback hide with the spines left on at the shoulders. Lighter than mail, and nothing wants to bite it.',
+    stack: 1,
+    slot: 'body',
+    stats: { armor: 6, hp: 15, speed: 0.05 },
+    fine: true,
+    col: FINE_COL,
+    price: 300,
+  },
+  fang_necklace: {
+    name: 'Fang necklace',
+    desc: "Six of the old King's hounds' fangs on a cord, a gold bead between each.",
+    stack: 1,
+    slot: 'trinket',
+    stats: { atk: 2, hp: 15 },
+    fine: true,
+    col: FINE_COL,
+    price: 320,
+  },
+  broodsilk_leggings: {
+    name: 'Broodsilk leggings',
+    desc: "Woven at Kilnholt from the Brood Mother's silk. Light as cloth, tough as leather.",
+    stack: 1,
+    slot: 'legs',
+    stats: { armor: 5, speed: 0.05 },
+    unique: true,
+    fine: true,
+    col: FINE_COL,
+  },
+  pell_horn: {
+    name: "Pell's hunting horn",
+    desc: "Grandad Pell's old horn. What you strike won't let you go so easily after: it hears the hunt in you, he says.",
+    stack: 1,
+    slot: 'trinket',
+    stats: { hp: 20, anger: 6 },
+    unique: true,
+    fine: true,
+    col: FINE_COL,
+  },
+  bonespine_mantle: {
+    name: 'Bonespine mantle',
+    desc: "The old wolf's skull and spined hide, worn over the head. Marcian let him go, once.",
+    stack: 1,
+    slot: 'head',
+    stats: { armor: 6, hp: 20 },
+    unique: true,
+    fine: true,
+    col: FINE_COL,
+  },
+  thane_torc: {
+    name: "The Thane's torc",
+    desc: 'Green bronze, twisted like rope. Older than Corvalis.',
+    stack: 1,
+    slot: 'trinket',
+    stats: { hp: 30, armor: 4 },
+    unique: true,
+    fine: true,
+    col: FINE_COL,
+  },
+  royal_greaves: {
+    name: 'Royal guard greaves',
+    desc: "Plate from the King's own guard, rusted at every joint. The first plate you have worn.",
+    stack: 1,
+    slot: 'legs',
+    stats: { armor: 8, hp: 10 },
+    unique: true,
+    fine: true,
+    col: FINE_COL,
+  },
 };
 
 export const BAG_SLOTS = 24;
@@ -458,6 +728,12 @@ export const CLASS_TWIN: Partial<Record<ItemId, ItemId>> = {
   hunters_quiver: 'iron_shield',
   // the hunting bow's warrior counterpart is the axe (which stays an axe: it's a tool for anyone)
   hunting_bow: 'woodcutter_axe',
+  warden_blade: 'warden_longbow',
+  warden_longbow: 'warden_blade',
+  steel_sword: 'silk_recurve',
+  silk_recurve: 'steel_sword',
+  // there is no steel quiver: an archer finds the hunter's quiver instead
+  steel_shield: 'hunters_quiver',
 };
 
 /** Loot as a hero of this class finds it. */
@@ -513,5 +789,6 @@ export function statLines(s: Partial<Stats> | undefined): string[] {
   if (s.chop) out.push(`+${Math.round(s.chop * 100)}% chopping speed`);
   if (s.mine) out.push(`+${Math.round(s.mine * 100)}% mining speed`);
   if (s.light) out.push('Lights the dark around you');
+  if (s.anger) out.push('What you strike stays angry at you longer');
   return out;
 }

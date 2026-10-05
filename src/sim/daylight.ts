@@ -118,9 +118,15 @@ const RING_DIM: Rgb[] = [
   { r: 84, g: 52, b: 80 },
 ];
 
+/** The grave-mist's light, as darkness taken out of each channel (0-255): dim and green. */
+const MIST: Rgb = { r: 150, g: 104, b: 158 };
+
 export function ringDarkness(base: Rgb, ring: number, dusk = false): Rgb {
-  // under the grave-mist (a region at dusk all day) it is as ring 4: never lighter than dusk
-  if (ring >= 4 || dusk) {
+  // under the grave-mist (a region at dusk all day) the light comes down green and dim: never
+  // lighter than that, red and blue taken out more than green
+  if (dusk && ring < 4) return { r: Math.max(base.r, MIST.r), g: Math.max(base.g, MIST.g), b: Math.max(base.b, MIST.b) };
+  // ring 4 is never lighter than dusk
+  if (ring >= 4) {
     const floor = ring >= 5 ? ambientDarkness(0) : ambientDarkness(0.8);
     return { r: Math.max(base.r, floor.r + 30), g: Math.max(base.g, floor.g + 20), b: Math.max(base.b, floor.b) };
   }

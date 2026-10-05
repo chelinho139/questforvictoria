@@ -2,7 +2,7 @@ import type { Sim } from '../../sim/Sim';
 import { goalTarget } from '../../sim/Sim';
 import { QUESTS, QUEST_IDS } from '../../data/quests';
 import { NPCS } from '../../data/npcs';
-import { ITEMS } from '../../data/items';
+import { ITEMS, lootFor } from '../../data/items';
 import type { ItemId } from '../../data/items';
 import { itemIcon } from '../render/itemArt';
 import { dockLeft, undockLeft, openedLeft } from './panels';
@@ -136,7 +136,7 @@ export class QuestWindow {
     const locked = by('locked').length;
     const rewards = (id: string) => {
       const r = QUESTS[id].reward;
-      const items = r.items.map(i => `<span class="reward"><canvas data-item="${i}" width="22" height="22"></canvas>${ITEMS[i].name}</span>`).join('');
+      const items = r.items.map(it => lootFor(it, this.sim.cls)).map(i => `<span class="reward"><canvas data-item="${i}" width="22" height="22"></canvas>${ITEMS[i].name}</span>`).join('');
       return `<div class="talk-rewards"><em>Reward:</em> ${r.xp ? `<span class="reward xp">${r.xp} XP</span>` : ''}${r.gold ? `<span class="reward gold">${r.gold} gold</span>` : ''}${items}</div>`;
     };
     const card = (id: string) => {

@@ -1,3 +1,5 @@
+import { FLAT_OBJECTS, GLINTING_OBJECTS } from '../../data/regions/types';
+import { KILN_OUT } from './structureArt';
 import Phaser from 'phaser';
 import type { Sim } from '../../sim/Sim';
 import { RISE_DUR } from '../../sim/Sim';
@@ -7,7 +9,7 @@ import type { Companion } from '../../sim/Companion';
 import { NPCS } from '../../data/npcs';
 import { Tile, T, isoX, isoY } from '../../sim/map';
 import { Fonts, hex, PIXEL_SCALE } from '../config';
-import { Tex, WALL_H, TOWER_TOP, heroLookTexture, heroLookRider } from './textures';
+import { Tex, WALL_H, TOWER_TOP, heroLookTexture, companionTexture, heroLookRider } from './textures';
 import type { BuiltWorld } from './textures';
 import type { RiderFit } from './styleArt';
 import { artScale, artFrames, artAnim, frameKey, animKey, riderFit } from './art';
@@ -63,7 +65,7 @@ export class WorldRenderer {
   private readonly playerShadow: Phaser.GameObjects.Image;
   private readonly buffMark: Phaser.GameObjects.Text;
   /** Tree sprites by tile ("c,r"): which texture they show now, so felling swaps in the stump. */
-  private readonly treeViews = new Map<string, { img: Phaser.GameObjects.Image; key: string; x: number; shown: string }>();
+  private readonly treeViews = new Map<string, { img: Phaser.GameObjects.Image; key: string; stump: string; x: number; shown: string }>();
   /** Rocks by "c,r": the boulder becomes rubble while mined out. */
   private readonly rockViews = new Map<string, { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image; x: number; shown: string }>();
   private readonly dropViews = new Map<Drop, { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image }>();
@@ -87,9 +89,11 @@ export class WorldRenderer {
   /** Companions walking with the heroes (Wren). */
   private readonly companionViews = new Map<
     Companion,
-    { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image; name: Phaser.GameObjects.Text; walkSeen: number; walkingT: number }
+    { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image; name: Phaser.GameObjects.Text; mark: Phaser.GameObjects.Text; walkSeen: number; walkingT: number }
   >();
   private lastNow = 0;
+  /** Crows perched about the region (RegionDef.crows): `t` seconds into flying off, or -1 perched. */
+  private readonly crows: { wx: number; wy: number; up: number; img: Phaser.GameObjects.Image; t: number; dir: number }[] = [];
   private readonly npcViews = new Map<NpcState, { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image; name: Phaser.GameObjects.Text; mark: Phaser.GameObjects.Text }>();
   /** Static world sprites whose texture changes with the art style. */
   private readonly statics: { img: Phaser.GameObjects.Image; key: string; scaled: boolean }[] = [];
@@ -99,6 +103,9 @@ export class WorldRenderer {
   readonly pins = new Map<Phaser.GameObjects.GameObject, Pin>();
   /** Buildings, for sorting what stands in front of them (see depthAt). */
   private readonly propBoxes: PropBox[] = [];
+  /** Each prop's images and box, by 'kind,c,r', so one that leaves with the story can go. */
+  private readonly propViews = new Map<string, { imgs: Phaser.GameObjects.Image[]; box: PropBox }>();
+  private propCount = 0;
   /** Lit windows: faded in as night falls. */
   private readonly litViews: Phaser.GameObjects.Image[] = [];
   /** Animations over buildings (the mill wheel). */
@@ -114,7 +121,10 @@ export class WorldRenderer {
     };
     for (const g of world.ground) keep(this.image(g.x, g.y, g.key).setOrigin(0).setDepth(-1e6), g.key);
     for (const [wx, wy] of world.water) {
-      this.water.push(keep(this.image(isoX(wx, wy) - 32, isoY(wx, wy) - 16, Tex.water1).setOrigin(0).setDepth(-1e6 + 1).setVisible(false), Tex.water1));
+      const w = keep(this.image(isoX(wx, wy) - 32, isoY(wx, wy) - 16, Tex.water1).setOrigin(0).setDepth(-1e6 + 1).setVisible(false), Tex.water1);
+      // from ring 2 the rivers run dark
+      if (sim.regionDef.ring >= 2) w.setTint(0x5a6270);
+      this.water.push(w);
     }
     // buildings first: trees and rocks beside them sort against their boxes
     for (const p of sim.props) {
@@ -131,23 +141,42 @@ export class WorldRenderer {
       const y1 = (cr + ch) * T;
       const depth = def.core ? x0 + y0 + T : x1 + y1;
       const img = this.image(left, bottom, key).setOrigin(0, 1).setDepth(depth);
-      this.propBoxes.push({ x0, x1, y0, y1, depth, sl: left, sr: left + img.width, st: bottom - img.height, sb: bottom });
-      if (scene.textures.exists(Tex.propLit(p.kind))) this.litViews.push(this.image(left, bottom, Tex.propLit(p.kind)).setOrigin(0, 1).setDepth(depth + 0.01).setAlpha(0));
+      const box = { x0, x1, y0, y1, depth, sl: left, sr: left + img.width, st: bottom - img.height, sb: bottom };
+      this.propBoxes.push(box);
+      const imgs = [img];
+      if (scene.textures.exists(Tex.propLit(p.kind))) {
+        const lit = this.image(left, bottom, Tex.propLit(p.kind)).setOrigin(0, 1).setDepth(depth + 0.01).setAlpha(0);
+        this.litViews.push(lit);
+        imgs.push(lit);
+      }
       if (def.anim) {
         const key = Tex.prop(def.anim.art);
         const n = PROP_ART[def.anim.art]?.frames?.length ?? 0;
-        if (n) this.animViews.push({ img: this.image(left, bottom, key + ':0').setOrigin(0, 1).setDepth(depth + 0.02), key, n, ms: def.anim.ms });
+        if (n) {
+          const a = this.image(left, bottom, key + ':0').setOrigin(0, 1).setDepth(depth + 0.02);
+          this.animViews.push({ img: a, key, n, ms: def.anim.ms });
+          imgs.push(a);
+        }
       }
+      this.propViews.set(`${p.kind},${p.c},${p.r}`, { imgs, box });
     }
+    this.propCount = sim.props.length;
+    const kinds = new Map(sim.trees.filter(t => t.kind).map(t => [`${t.c},${t.r}`, t.kind!]));
     for (const o of world.objects) {
       const px = isoX(o.wx, o.wy);
       const py = isoY(o.wx, o.wy);
       const d = this.depthAt(o.wx, o.wy);
       if (o.kind === Tile.Tree) {
-        // about one tree in three is a pine, picked by tile so it never changes
-        const key = (Math.floor(o.wx / T) * 7 + Math.floor(o.wy / T) * 13) % 3 === 0 ? Tex.pine : Tex.tree;
+        // a tree of the Weepwood's kinds draws as itself; of the oaks, about one in three is a
+        // pine, picked by tile so it never changes
+        const tc = Math.floor(o.wx / T);
+        const tr = Math.floor(o.wy / T);
+        const kind = kinds.get(`${tc},${tr}`);
+        const own = kind && scene.textures.exists(Tex.treeKind(kind));
+        const key = own ? Tex.treeKind(kind) : (tc * 7 + tr * 13) % 3 === 0 ? Tex.pine : Tex.tree;
+        const stump = own && scene.textures.exists(Tex.stumpKind(kind)) ? Tex.stumpKind(kind) : Tex.stump;
         const img = this.pin(keep(this.image(px, py + 6, key).setOrigin(0.5, 1).setScale(artScale(key)).setDepth(d), key, true), o.wx, o.wy, 6);
-        this.treeViews.set(`${Math.floor(o.wx / T)},${Math.floor(o.wy / T)}`, { img, key, x: px, shown: key });
+        this.treeViews.set(`${tc},${tr}`, { img, key, stump, x: px, shown: key });
       } else if (o.kind === Tile.Rock) {
         const shadow = this.pin(this.image(px, py + 4, Tex.shadow).setDisplaySize(32, 16).setAlpha(0.3).setDepth(d - 0.5), o.wx, o.wy, 4);
         const img = this.pin(keep(this.image(px, py + 7, Tex.rock).setOrigin(0.5, 1).setScale(artScale(Tex.rock)).setDepth(d), Tex.rock, true), o.wx, o.wy, 7);
@@ -284,7 +313,23 @@ export class WorldRenderer {
     return base;
   }
 
+  /** A prop left with the story (the fallen willow sawn through): its images and box go too. */
+  private dropGoneProps(): void {
+    if (this.sim.props.length === this.propCount) return;
+    this.propCount = this.sim.props.length;
+    const here = new Set(this.sim.props.map(p => `${p.kind},${p.c},${p.r}`));
+    for (const [k, v] of this.propViews) {
+      if (here.has(k)) continue;
+      for (const img of v.imgs) img.setVisible(false).setAlpha(0);
+      this.litViews.splice(0, this.litViews.length, ...this.litViews.filter(x => !v.imgs.includes(x)));
+      this.animViews.splice(0, this.animViews.length, ...this.animViews.filter(x => !v.imgs.includes(x.img)));
+      this.propBoxes.splice(this.propBoxes.indexOf(v.box), 1);
+      this.propViews.delete(k);
+    }
+  }
+
   draw(now: number): void {
+    this.dropGoneProps();
     const wf = Math.floor(now / 450) % 2 === 1;
     if (this.litViews.length) {
       const k = Math.max(0, Math.min(1, (darknessLevel(this.sim.day.t) - 0.25) / 0.4));
@@ -304,12 +349,55 @@ export class WorldRenderer {
     this.drawNpcs(now);
     const dt = this.lastNow ? Math.min(0.1, (now - this.lastNow) / 1000) : 0;
     this.lastNow = now;
+    this.drawCrows(now, dt);
     this.drawOthers(now, dt, g);
     this.drawCompanions(now, dt, g);
     this.drawWanderers(now);
     this.drawDrops(now);
     this.drawPlayer(now, g);
   }
+
+  /**
+   * Crows, since the bells: perched on the trees, turning their heads now and then; when a hero
+   * comes near one lifts off and flies away north, and is gone until you come back.
+   */
+  private drawCrows(now: number, dt: number): void {
+    if (!this.crows.length && !this.crowsMade) {
+      this.crowsMade = true;
+      if (!this.scene.textures.exists(frameKey('crow', 0))) return;
+      for (const [c, r] of this.sim.regionDef.crows ?? []) {
+        const wx = c * T + T / 2;
+        const wy = r * T + T / 2;
+        // up in a tree, or on the ground
+        const up = this.sim.map.tile(c, r) === Tile.Tree ? 34 : 0;
+        const img = this.image(isoX(wx, wy), isoY(wx, wy) + 6 - up, frameKey('crow', 0)).setOrigin(0.5, 1);
+        img.setDepth(this.depthAt(wx, wy) + (up ? 1 : 0));
+        this.crows.push({ wx, wy, up, img, t: -1, dir: c % 2 ? 1 : -1 });
+      }
+    }
+    const h = this.sim.hero;
+    this.crows.forEach((cr, i) => {
+      if (cr.t < 0) {
+        // perched: now and then it turns its head
+        cr.img.setTexture(frameKey('crow', Math.floor(now / 1700 + i * 0.37) % 3 === 0 ? 1 : 0)).setFlipX(cr.dir < 0);
+        if (Math.hypot(h.x - cr.wx, h.y - cr.wy) < 150) cr.t = 0;
+        return;
+      }
+      if (cr.t > 2.4) return;
+      cr.t += dt;
+      // off it goes, flapping, up and away
+      const x = isoX(cr.wx, cr.wy) + cr.dir * 46 * cr.t;
+      const y = isoY(cr.wx, cr.wy) + 6 - cr.up - 70 * cr.t - 18 * cr.t * cr.t;
+      cr.img
+        .setTexture(frameKey('crow', 2 + (Math.floor(now / 90) % 2)))
+        .setPosition(Math.round(x), Math.round(y))
+        .setDepth(OVERLAY_DEPTH - 1)
+        .setAlpha(Math.max(0, Math.min(1, (2.4 - cr.t) / 0.8)));
+      if (cr.t > 2.4) cr.img.setVisible(false);
+    });
+  }
+
+  private crowsMade = false;
 
   /** The other players' heroes: their look and gear, walking, swinging, jumping; a name and a health bar. */
   private drawOthers(now: number, dt: number, g: Phaser.GameObjects.Graphics): void {
@@ -399,20 +487,21 @@ export class WorldRenderer {
     const here = this.sim.companions;
     for (const [c, v] of this.companionViews) {
       if (here.includes(c)) continue;
-      for (const x of [v.img, v.shadow, v.name]) {
+      for (const x of [v.img, v.shadow, v.name, v.mark]) {
         this.pins.delete(x);
         x.destroy();
       }
       this.companionViews.delete(c);
     }
     for (const c of here) {
-      const key = heroLookTexture(this.scene, c.def.look, c.def.equip);
+      const key = c.def.art ? companionTexture(this.scene, c.def.art) : heroLookTexture(this.scene, c.def.look, c.def.equip);
       let v = this.companionViews.get(c);
       if (!v) {
         v = {
           img: this.image(0, 0, key).setOrigin(0.5, 1),
           shadow: this.image(0, 0, Tex.shadow).setAlpha(0.3),
           name: this.mark('8px', '#c8f0b8').setOrigin(0.5, 1),
+          mark: this.mark('24px', '#f2c14e').setOrigin(0.5, 1),
           walkSeen: c.walk,
           walkingT: 0,
         };
@@ -424,33 +513,43 @@ export class WorldRenderer {
       } else v.walkingT = Math.max(0, v.walkingT - dt);
       const n = (group: string) => artAnim(key, group);
       let fk: string;
-      if (c.atkAnimT > 0 && n('shoot')) fk = animKey(key, 'shoot', Math.min(n('shoot') - 1, Math.floor((1 - c.atkAnimT / 0.36) * n('shoot'))));
+      // down on one knee: her own kneeling frame, or else a hero's squashed lower
+      const kneel = c.dead > 0 && n('kneel') > 0;
+      if (kneel) fk = animKey(key, 'kneel', 0);
+      else if (c.atkAnimT > 0 && n('shoot')) fk = animKey(key, 'shoot', Math.min(n('shoot') - 1, Math.floor((1 - c.atkAnimT / 0.36) * n('shoot'))));
       else if (v.walkingT > 0 && artFrames(key) > 1) fk = frameKey(key, Math.floor(now / 95) % artFrames(key));
       else if (n('idle')) fk = animKey(key, 'idle', Math.floor(now / 380) % n('idle'));
       else fk = frameKey(key, 0);
       const qx = isoX(c.x, c.y);
       const qy = isoY(c.x, c.y);
       const depth = this.depthAt(c.x, c.y);
-      for (const o of [v.img, v.shadow, v.name]) this.pin(o, c.x, c.y, 8);
-      // down on one knee: lower and squatter, still facing the fight
-      const down = c.dead > 0;
+      for (const o of [v.img, v.shadow, v.name, v.mark]) this.pin(o, c.x, c.y, 8);
+      const down = c.dead > 0 && !kneel;
       v.img
         .setTexture(fk)
         .setScale(1, down ? 0.78 : 1)
         .setPosition(Math.round(qx), Math.round(qy + 8))
         .setFlipX(c.face < 0)
         .setDepth(depth)
-        .setAlpha(down ? 0.85 : 1);
+        .setAlpha(c.dead > 0 ? 0.85 : 1);
       if (c.flash > 0) v.img.setTintFill(0xffffff);
       else v.img.clearTint();
       v.shadow.setPosition(qx, qy + 5).setDisplaySize(26, 13).setDepth(depth - 0.5);
       const top = qy + 8 - v.img.frame.height * (down ? 0.78 : 1);
       v.name.setText(c.name).setPosition(Math.round(qx), Math.round(top - 6)).setVisible(true);
+      // her quests show over her head like anyone's (! new, ? to hand in)
+      const m = c.def.npc ? this.sim.npcMark(c.def.npc) : null;
+      v.mark
+        .setText(m ?? '')
+        .setColor(m === '…' ? '#c8c0a8' : '#f2c14e')
+        .setPosition(Math.round(qx), Math.round(top - 15 + Math.sin(now / 260) * 1.5))
+        .setVisible(!!m);
       const w = 22;
       const x0 = Math.round(qx - w / 2);
       const y0 = Math.round(top - 4);
       g.fillStyle(hex('#0a0d14')).fillRect(x0 - 1, y0 - 1, w + 2, 4);
-      g.fillStyle(hex(down ? '#c8a05a' : '#5fc46a')).fillRect(x0, y0, Math.round(down ? w * (1 - c.dead / c.def.down) : (w * Math.max(0, c.hp)) / Math.max(1, c.hpMax)), 2);
+      const knee = c.dead > 0;
+      g.fillStyle(hex(knee ? '#c8a05a' : '#5fc46a')).fillRect(x0, y0, Math.round(knee ? w * (1 - c.dead / c.def.down) : (w * Math.max(0, c.hp)) / Math.max(1, c.hpMax)), 2);
     }
   }
 
@@ -500,11 +599,11 @@ export class WorldRenderer {
       const key = Tex.object(o.kind);
       let img = this.objectViews.get(o);
       if (!img) {
-        const flat = o.kind === 'page' || o.kind === 'letter';
+        const flat = FLAT_OBJECTS.has(o.kind);
         img = this.pin(this.image(isoX(o.x, o.y), isoY(o.x, o.y) + (flat ? 4 : 7), key).setOrigin(0.5, 1).setDepth(this.depthAt(o.x, o.y, flat ? o.x + o.y - 8 : o.x + o.y)), o.x, o.y, flat ? 4 : 7);
         this.objectViews.set(o, img);
       }
-      const glint = (o.kind === 'page' || o.kind === 'letter') && Math.floor(now / 160) % 16 === 0;
+      const glint = GLINTING_OBJECTS.has(o.kind) && Math.floor(now / 160) % 16 === 0;
       img.setTexture(frameKey(key, glint ? 1 : 0)).setScale(artScale(key));
     }
   }
@@ -514,7 +613,7 @@ export class WorldRenderer {
     for (const t of this.sim.trees) {
       const v = this.treeViews.get(`${t.c},${t.r}`);
       if (!v) continue;
-      const want = t.stumpT > 0 ? Tex.stump : v.key;
+      const want = t.stumpT > 0 ? v.stump : v.key;
       if (v.shown !== want) {
         v.img.setTexture(want).setScale(artScale(want));
         v.shown = want;
@@ -605,9 +704,11 @@ export class WorldRenderer {
         };
         this.structureViews.set(s, v);
       }
-      this.pin(v.img, s.x, s.y, s.kind === 'forge' ? 9 : 6);
+      this.pin(v.img, s.x, s.y, s.kind === 'campfire' ? 6 : 9);
       this.pin(v.shadow, s.x, s.y, 3);
-      const n = artFrames(key);
+      // a kiln's last frame is it gone cold; the others smoulder
+      const kiln = s.kind === 'kiln';
+      const n = kiln ? Math.min(KILN_OUT, artFrames(key)) : artFrames(key);
       const f = n > 1 ? Math.floor(now / (s.kind === 'campfire' ? 120 : 260) + s.id) % n : 0;
       const k = frameKey(key, f);
       const sc = artScale(key);
@@ -615,10 +716,11 @@ export class WorldRenderer {
       const w = v.img.frame.width * sc;
       const fade = s.t < 6 ? Math.max(0.15, s.t / 6) : 1;
       // a fire put out goes dark and still; one being smothered dims as it goes
-      if (s.out) v.img.setTexture(frameKey(key, 0)).setTint(0x404040);
+      if (s.out && kiln && artFrames(key) > KILN_OUT) v.img.setTexture(frameKey(key, KILN_OUT)).clearTint();
+      else if (s.out) v.img.setTexture(frameKey(key, 0)).setTint(0x404040);
       else if ((s.smother ?? 0) > 0) v.img.setTint(Phaser.Display.Color.GetColor(255, Math.round(255 - 150 * (s.smother ?? 0)), Math.round(255 - 150 * (s.smother ?? 0))));
       else v.img.clearTint();
-      v.img.setPosition(Math.round(qx), Math.round(qy + (s.kind === 'forge' ? 9 : 6))).setDepth(this.depthAt(s.x, s.y)).setAlpha(fade);
+      v.img.setPosition(Math.round(qx), Math.round(qy + (s.kind === 'campfire' ? 6 : 9))).setDepth(this.depthAt(s.x, s.y)).setAlpha(fade);
       v.shadow.setDisplaySize(w * 0.85, w * 0.35).setDepth(this.depthAt(s.x, s.y) - 0.5);
     }
   }

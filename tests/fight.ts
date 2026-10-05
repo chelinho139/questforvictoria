@@ -16,9 +16,12 @@ import type { Key } from '../src/data/skills';
 import { isSkill } from '../src/data/skills';
 import { skipScenes } from './helpers';
 
-export type Tier = 0 | 1 | 2;
+export type Tier = 0 | 1 | 2 | 3;
 
-/** What a hero wears at each gear tier (0: the start; 1: leather and the first real weapon; 2: iron). */
+/**
+ * What a hero wears at each gear tier (0: the start; 1: leather and the first real weapon; 2: iron;
+ * 3: Act II's steel and Warden gear).
+ */
 export const KITS: Record<ClassId, Record<Tier, Partial<Record<Slot, ItemId>>>> = {
   warrior: {
     0: { weapon: 'rusty_sword', legs: 'cloth_trousers' },
@@ -39,6 +42,15 @@ export const KITS: Record<ClassId, Record<Tier, Partial<Record<Slot, ItemId>>>> 
       feet: 'leather_boots',
       trinket: 'vigour_amulet',
     },
+    3: {
+      weapon: 'steel_sword',
+      offhand: 'steel_shield',
+      head: 'steel_helm',
+      body: 'warden_cloak',
+      legs: 'iron_greaves',
+      feet: 'warden_boots',
+      trinket: 'fang_necklace',
+    },
   },
   archer: {
     0: { weapon: 'worn_shortbow', legs: 'cloth_trousers' },
@@ -58,6 +70,15 @@ export const KITS: Record<ClassId, Record<Tier, Partial<Record<Slot, ItemId>>>> 
       legs: 'iron_greaves',
       feet: 'leather_boots',
       trinket: 'vigour_amulet',
+    },
+    3: {
+      weapon: 'silk_recurve',
+      offhand: 'hunters_quiver',
+      head: 'warden_hood',
+      body: 'thornback_jerkin',
+      legs: 'broodsilk_leggings',
+      feet: 'warden_boots',
+      trinket: 'fang_necklace',
     },
   },
 };

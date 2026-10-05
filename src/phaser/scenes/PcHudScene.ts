@@ -1,3 +1,4 @@
+import { FLAT_OBJECTS } from '../../data/regions/types';
 import Phaser from 'phaser';
 import { SceneKeys } from '../SceneKeys';
 import type { Sim } from '../../sim/Sim';
@@ -826,7 +827,7 @@ export class PcHudScene extends Phaser.Scene {
       const dx = Math.abs(l.x);
       const dy = l.y + 6;
       const tall = o.kind === 'board' ? 36 : o.kind === 'chest' || o.kind === 'thorn' ? 18 : 10;
-      if (dx <= (o.kind === 'page' || o.kind === 'letter' ? 10 : 13) && dy >= -6 && dy <= tall) return o;
+      if (dx <= (FLAT_OBJECTS.has(o.kind) ? 10 : 13) && dy >= -6 && dy <= tall) return o;
     }
     return null;
   }
@@ -837,6 +838,12 @@ export class PcHudScene extends Phaser.Scene {
       const dx = Math.abs(l.x);
       const dy = l.y + 6;
       if (dx <= 12 && dy >= -2 && dy <= 40) return n;
+    }
+    // a companion is someone to talk to as well (Wren, walking with you)
+    for (const c of this.sim.companions) {
+      if (!c.def.npc || c.dead > 0) continue;
+      const l = this.local(p, c.x, c.y);
+      if (Math.abs(l.x) <= 12 && l.y + 6 >= -2 && l.y + 6 <= 40) return { id: c.def.npc, x: c.x, y: c.y, face: c.face };
     }
     return null;
   }

@@ -20,6 +20,11 @@ export const Tile = {
   Flags: 15,
   /** Solid rock round an interior: nothing is drawn. */
   Void: 16,
+  // ring 2, the Weepwood (render/groundArt.ts): grey-green moss and leaf litter, the old road's
+  // cobbles with thorns through them, and a ford of stones across a river
+  Moss: 17,
+  OldRoad: 18,
+  Ford: 19,
 } as const;
 export type TileId = (typeof Tile)[keyof typeof Tile];
 
@@ -29,6 +34,10 @@ export const TILE_CHARS: Record<string, TileId> = {
   ':': Tile.Dirt,
   '~': Tile.Water,
   T: Tile.Tree,
+  // more kinds of tree (data/trees.ts): a black willow, a half-green willow, a black oak
+  Y: Tile.Tree,
+  y: Tile.Tree,
+  K: Tile.Tree,
   o: Tile.Rock,
   '*': Tile.Flower,
   '#': Tile.Wall,
@@ -42,6 +51,9 @@ export const TILE_CHARS: Record<string, TileId> = {
   c: Tile.Cobble,
   '+': Tile.Flags,
   '&': Tile.Void,
+  m: Tile.Moss,
+  r: Tile.OldRoad,
+  F: Tile.Ford,
 };
 
 /** Turn a region layout into tiles. Every row must be the same width. */
@@ -120,6 +132,11 @@ export class RegionMap {
   /** Mark a tile as covered by a building. */
   setPropSolid(c: number, r: number): void {
     this.propSolid.add(r * this.cols + c);
+  }
+
+  /** A building or prop is gone from tile (c, r) (the fallen willow sawn through). */
+  clearPropSolid(c: number, r: number): void {
+    this.propSolid.delete(r * this.cols + c);
   }
 
   /** True when a building stands on tile (c, r). */

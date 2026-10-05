@@ -6,7 +6,7 @@ import { DOCS } from '../data/docs';
 import { NPCS } from '../data/npcs';
 import type { NpcId } from '../data/npcs';
 import { QUESTS, QUEST_IDS } from '../data/quests';
-import { ITEMS } from '../data/items';
+import { ITEMS, lootFor } from '../data/items';
 import type { ItemId } from '../data/items';
 import { SAVE_VERSION, readableSave } from './save';
 import { isClass } from '../data/classes';
@@ -314,12 +314,13 @@ export class Game {
     hero.questLog.set(id, 'done');
     hero.gold += def.reward.gold;
     hero.gainXp(def.reward.xp);
-    for (const item of def.reward.items) hero.give(item as ItemId);
+    // a reward is something the hero's class can use (a Warden's blade is a longbow for an archer)
+    for (const item of def.reward.items) hero.give(lootFor(item as ItemId, hero.cls));
     for (const d of def.reward.docs ?? []) this.findDoc(d);
     const got = [
       def.reward.gold ? `${def.reward.gold} gold` : '',
       def.reward.xp ? `${def.reward.xp} XP` : '',
-      ...def.reward.items.map(i => ITEMS[i].name.toLowerCase()),
+      ...def.reward.items.map(i => ITEMS[lootFor(i, hero.cls)].name.toLowerCase()),
     ]
       .filter(Boolean)
       .join(', ');

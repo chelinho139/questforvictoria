@@ -1,12 +1,15 @@
 """Check a region file: every spot, person, creature, object and exit tile stands on ground
-you can walk on, outside buildings. python3 check.py greenmarch millbrook belltower"""
+you can walk on, outside buildings. python3 check.py greenmarch millbrook belltower weepwood ..."""
 import os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from maps import PROP_SIZE
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../..')
-SOLID = set('~T#X&')
-SOLID_MASK = {'chapel': ['####', '####', '####', '####', '####', '#..#'], 'hollow_oak': ['...', '.#.', '...'], 'willow': ['...', '.#.', '...']}
+SOLID = set('~T#X&YyK')
+SOLID_MASK = {'chapel': ['####', '####', '####', '####', '####', '#..#'], 'hollow_oak': ['...', '.#.', '...'], 'willow': ['...', '.#.', '...'],
+              # Act II (as in src/data/props.ts)
+              'webbed_willow': ['...', '.#.', '...'], 'gallows_willow': ['...', '.#.', '...'], 'thorn_tunnel': ['#..', '#..'],
+              'lisle_barrow': ['####', '####', '####', '#.##'], 'bridge_arch': ['.....'], 'great_willow': ['....', '.##.', '.##.', '....']}
 
 for name in sys.argv[1:]:
     src = open(os.path.join(ROOT, 'src/data/regions', name + '.ts')).read()

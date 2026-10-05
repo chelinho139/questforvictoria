@@ -2,7 +2,9 @@
  * Ground tiles added for the campaign (Millbrook and beyond), drawn straight in the
  * Silhouette palette like the buildings, matching what the HD · Silhouette recolour makes of
  * the grass and dirt: a bridge deck, tilled fields, wilted crops, blighted grass touched by
- * the Blackthorn, and a cobbled square. 64×32 iso diamonds, lit from the top-left.
+ * the Blackthorn, a cobbled square; and for the Weepwood (ring 2) grey-green moss and dead
+ * leaves, the old road's cobbles with thorns coming up through them, and a ford of stepping
+ * stones across a dark river. 64×32 iso diamonds, lit from the top-left.
  */
 
 function hash(x: number, y: number, s: number): number {
@@ -210,6 +212,107 @@ function flags(v: number): HTMLCanvasElement {
   });
 }
 
+/** Grey-green moss over dead leaf litter, a root or two (the floor of the Weepwood). */
+function moss(v: number): HTMLCanvasElement {
+  const m = ['#3e4a44', '#4a5a50', '#56665a', '#627262'];
+  const cv = tile((x, y) => {
+    const { u, v: w } = local(x, y);
+    const p = smooth(u, w, 8, 700 + v) * 0.65 + smooth(u, w, 4, 720 + v) * 0.35;
+    const n = hash(x, y, 730 + v);
+    // patches of leaf litter where the moss thins
+    if (p > 0.66) return n < 0.35 ? '#4a3c34' : n < 0.8 ? '#5e4e46' : '#7c6c58';
+    if (p < 0.3) return n < 0.5 ? m[2] : m[3];
+    return n < 0.2 ? m[0] : n < 0.7 ? m[1] : m[2];
+  });
+  const c = cv.getContext('2d')!;
+  // a root breaking the surface now and then
+  if (hash(v, 1, 740) < 0.5) {
+    const x0 = 14 + Math.floor(hash(v, 2, 741) * 30);
+    const y0 = 10 + Math.floor(hash(v, 3, 742) * 10);
+    for (let i = 0; i < 9; i++) {
+      const x = x0 + i;
+      const y = y0 + Math.round(Math.sin(i / 2 + v) * 1.2);
+      if (!inDiamond(x, y, 2)) continue;
+      c.fillStyle = '#2e2632';
+      c.fillRect(x, y, 1, 1);
+      c.fillStyle = '#463b50';
+      c.fillRect(x, y - 1, 1, 1);
+    }
+  }
+  // pale bits of leaf
+  for (let i = 0; i < 6; i++) {
+    const x = 6 + Math.floor(hash(i, v, 750) * 52);
+    const y = 4 + Math.floor(hash(v, i, 751) * 24);
+    if (!inDiamond(x, y, 2)) continue;
+    c.fillStyle = hash(i, v, 752) < 0.5 ? '#8c7c66' : '#6e8a74';
+    c.fillRect(x, y, 1, 1);
+  }
+  return cv;
+}
+
+/** The old road: cobbles gone mossy in the joints, black thorns coming up between them. */
+function oldRoad(v: number): HTMLCanvasElement {
+  const cv = cobble(10 + v);
+  const c = cv.getContext('2d')!;
+  // darken it a touch: older stone than the square's
+  c.globalCompositeOperation = 'source-atop';
+  c.fillStyle = 'rgba(30,34,30,.22)';
+  c.fillRect(0, 0, 64, 32);
+  c.globalCompositeOperation = 'source-over';
+  // moss creeping along the joints
+  for (let i = 0; i < 18; i++) {
+    const x = 4 + Math.floor(hash(i, v, 760) * 56);
+    const y = 3 + Math.floor(hash(v, i, 761) * 26);
+    if (!inDiamond(x, y, 1)) continue;
+    c.fillStyle = hash(i, v, 762) < 0.5 ? '#4a5a50' : '#56665a';
+    c.fillRect(x, y, 2, 1);
+  }
+  // a thorn shoot or two through the stones
+  const shoots = 1 + Math.floor(hash(v, 4, 763) * 2);
+  for (let i = 0; i < shoots; i++) {
+    const x = 16 + Math.floor(hash(i, v, 764) * 32);
+    const y = 12 + Math.floor(hash(v, i, 765) * 10);
+    c.fillStyle = '#2e2632';
+    c.fillRect(x, y - 4, 1, 5);
+    c.fillRect(x + 1, y - 2, 1, 1);
+    c.fillStyle = '#6e6078';
+    c.fillRect(x - 1, y - 5, 1, 1);
+    c.fillStyle = '#c8c0aa';
+    c.fillRect(x + 2, y - 3, 1, 1);
+  }
+  return cv;
+}
+
+/** A ford: flat stepping stones through shallow dark water. */
+function ford(v: number): HTMLCanvasElement {
+  const water = ['#2c3840', '#34424a', '#3e4e56'];
+  const st = ['#46545c', '#5e6e76', '#747a74', '#9aa39c'];
+  const G = 9;
+  const n = 32 / G;
+  const pt = (i: number, j: number) => {
+    const wi = ((i % n) + n) % n;
+    const wj = ((j % n) + n) % n;
+    return { u: i * G + 2 + hash(wi, wj, 800 + v) * (G - 4), w: j * G + 2 + hash(wj, wi, 810 + v) * (G - 4), r: 2.2 + hash(wi, wj, 820 + v) * 1.6 };
+  };
+  return tile((x, y) => {
+    const { u, v: w } = local(x, y);
+    const i0 = Math.floor(u / G);
+    const j0 = Math.floor(w / G);
+    for (let i = i0 - 1; i <= i0 + 1; i++)
+      for (let j = j0 - 1; j <= j0 + 1; j++) {
+        const p = pt(i, j);
+        const du = u - p.u;
+        const dw = w - p.w;
+        const d = Math.hypot(du, dw);
+        if (d < p.r) return du + dw < -1.2 ? st[3] : du + dw > 1.4 ? st[1] : st[2];
+        if (d < p.r + 0.9) return st[0];
+      }
+    // ripples
+    const k = hash(x, y, 830 + v);
+    return k < 0.08 ? water[2] : (Math.floor(local(x, y).u + local(x, y).v) % 7) === 0 ? water[1] : water[0];
+  });
+}
+
 export interface GroundTiles {
   blight: HTMLCanvasElement[];
   field: HTMLCanvasElement[];
@@ -217,6 +320,9 @@ export interface GroundTiles {
   cobble: HTMLCanvasElement[];
   deck: HTMLCanvasElement[];
   flags: HTMLCanvasElement[];
+  moss: HTMLCanvasElement[];
+  oldRoad: HTMLCanvasElement[];
+  ford: HTMLCanvasElement[];
 }
 
 let cache: GroundTiles | null = null;
@@ -230,5 +336,8 @@ export function groundTiles(): GroundTiles {
     cobble: [0, 1].map(cobble),
     deck: [0].map(deck),
     flags: [0, 1].map(flags),
+    moss: [0, 1, 2, 3, 4, 5].map(moss),
+    oldRoad: [0, 1, 2].map(oldRoad),
+    ford: [0, 1].map(ford),
   });
 }

@@ -108,7 +108,7 @@ export class GameScene extends Phaser.Scene {
     // the hero wears what the sim has equipped: redraw them whenever the gear changes
     this.wearGear();
     this.sim.events.on('bag', () => this.wearGear());
-    const built = buildRegionGround(this, this.sim.map);
+    const built = buildRegionGround(this, this.sim.map, this.sim.regionDef.ring);
     this.built = built;
     this.world = new WorldRenderer(this, this.sim, built);
     this.effects = new Effects(this, this.sim);
@@ -252,6 +252,35 @@ export class GameScene extends Phaser.Scene {
   }
 
   private structureLights = new Set<string>();
+
+  /** The grey lantern carries its own small, pale light through the trees. */
+  private lightWanderers(): void {
+    for (const w of this.sim.wanderers) {
+      if (w.id !== 'lantern') continue;
+      const id = 'wanderer:' + w.id;
+      if (w.alpha <= 0.02) {
+        if (this.wandererLit.delete(id)) this.lighting.removeLight(id);
+        continue;
+      }
+      this.wandererLit.add(id);
+      this.lighting.setLight({
+        id,
+        x: isoX(w.x, w.y) + 3 * w.face,
+        y: isoY(w.x, w.y) - 14,
+        wx: w.x,
+        wy: w.y,
+        radius: 72,
+        r: 0.05,
+        g: 0.08,
+        b: 0.2,
+        intensity: w.alpha,
+        flickerHz: 5,
+        flickerAmount: 0.1,
+      });
+    }
+  }
+
+  private wandererLit = new Set<string>();
 
   /** The windows that open and close with a sound. */
   private windows(): { isOpen: boolean }[] {
@@ -428,7 +457,7 @@ export class GameScene extends Phaser.Scene {
   /** A new region: build its ground, redraw the world, move the lights and clouds. */
   private rebuildWorld(): void {
     this.world.destroy();
-    const built = buildRegionGround(this, this.sim.map);
+    const built = buildRegionGround(this, this.sim.map, this.sim.regionDef.ring);
     this.built = built;
     this.world = new WorldRenderer(this, this.sim, built);
     this.world.layer.setVisible(!this.view3d);
@@ -629,6 +658,7 @@ export class GameScene extends Phaser.Scene {
       this.lighting.setLight({ id: 'lantern', x: px, y: py, wx: this.sim.x, wy: this.sim.y, radius: 110 + this.sim.gear.light, r: 0.02, g: 0.06, b: 0.16, intensity: 0.75, flickerHz: 5, flickerAmount: 0.06 });
     else this.lighting.removeLight('lantern');
     this.lightStructures();
+    this.lightWanderers();
     // the grey postman carries a faint cold light of his own
     for (const w of this.sim.wanderers) {
       const id = 'wanderer:' + w.id;

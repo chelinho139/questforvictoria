@@ -1,7 +1,9 @@
-"""Write src/phaser/render/propArt.ts: every building and big prop, outlined, palette-indexed,
-plus a night overlay with only the pixels that change when its windows are lit."""
+"""Write src/phaser/render/propArt.ts: every building and big prop (buildings.py, and Act II's
+in buildings2.py), outlined, palette-indexed, plus a night overlay with only the pixels that
+change when its windows are lit."""
 import json, os
 from buildings import BUILDINGS, ANIMS
+from buildings2 import BUILDINGS2
 from iso import outline, to_rows
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../src/phaser/render/propArt.ts')
@@ -24,7 +26,7 @@ export interface PropArt {
 }
 
 export const PROP_ART: Record<string, PropArt> = {"""]
-    for name, make in BUILDINGS.items():
+    for name, make in {**BUILDINGS, **BUILDINGS2}.items():
         day = outline(make(False).render())
         try:
             night = outline(make(True).render())
