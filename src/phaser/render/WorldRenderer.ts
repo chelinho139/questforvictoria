@@ -290,12 +290,18 @@ export class WorldRenderer {
     this.companionViews.clear();
   }
 
+  /** Every name, quest mark and telegraph made (so a clean shot can hide them all). */
+  private readonly marks = new Set<Phaser.GameObjects.Text>();
+
   private mark(size: string, color: string): Phaser.GameObjects.Text {
-    return this.text(0, 0, '', { fontFamily: Fonts.display, fontSize: size, color })
+    const m = this.text(0, 0, '', { fontFamily: Fonts.display, fontSize: size, color })
       .setResolution(PIXEL_SCALE)
       .setShadow(1, 1, '#000', 0, false, true)
       .setDepth(OVERLAY_DEPTH + 1)
       .setVisible(false);
+    this.marks.add(m);
+    m.once(Phaser.GameObjects.Events.DESTROY, () => this.marks.delete(m));
+    return m;
   }
 
   /**
@@ -328,7 +334,19 @@ export class WorldRenderer {
     }
   }
 
+  /** Names, bars, marks and brackets over heads (off for a clean trailer shot: dev/Director.ts). */
+  static showUi = true;
+  /** The hero the camera belongs to (off when a trailer shot is about other people: dev/Director.ts). */
+  static showPlayer = true;
+
   draw(now: number): void {
+    this.drawWorld(now);
+    if (WorldRenderer.showUi) return;
+    this.overlay.clear();
+    for (const m of this.marks) m.setVisible(false);
+  }
+
+  private drawWorld(now: number): void {
     this.dropGoneProps();
     const wf = Math.floor(now / 450) % 2 === 1;
     if (this.litViews.length) {
@@ -922,6 +940,10 @@ export class WorldRenderer {
   }
 
   private drawPlayer(now: number, g: Phaser.GameObjects.Graphics): void {
+    if (!WorldRenderer.showPlayer) {
+      for (const o of [this.knight, this.playerShadow, this.horse, this.rider, this.buffMark, this.ghost]) o.setVisible(false);
+      return;
+    }
     const s = this.sim;
     const { x: qx, y: qy } = this.heroScreen();
     const depth = this.depthAt(s.x, s.y);

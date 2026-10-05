@@ -41,6 +41,7 @@ import { WeatherFx } from '../render/WeatherFx';
 import { View3D, VIEW_MODES, VIEW_NAMES } from '../view3d/View3D';
 import type { ViewMode } from '../view3d/View3D';
 import { fromIso } from '../../sim/map';
+import { Director, directorWanted } from '../dev/Director';
 
 const VIEW_KEY = 'qfv-view';
 
@@ -86,6 +87,8 @@ export class GameScene extends Phaser.Scene {
   private viewMode: ViewMode = 'iso';
   /** The region's ground as built for the 2D view (the 3D views lay the same art flat). */
   private built!: BuiltWorld;
+  /** Filming a trailer (dev, `?director`): the director runs the clock and may hold the camera. */
+  private director: Director | null = null;
 
   constructor() {
     super(SceneKeys.Game);
@@ -194,6 +197,7 @@ export class GameScene extends Phaser.Scene {
     this.registry.set('getView', () => this.viewMode);
     this.registry.set('cycleView', (dir: 1 | -1) => this.cycleView(dir));
     this.setView(readView(), true);
+    if (directorWanted()) this.director = new Director(this.game, () => ({ sim: this.sim, sfx: this.sfx, weather: this.weather, lighting: this.lighting }));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
       this.effects.destroy();
@@ -626,9 +630,10 @@ export class GameScene extends Phaser.Scene {
     this.sim.tick(dt);
     this.soundWindows();
     this.music.update(dt);
-    // the HUD steps aside while a scene plays (the black bars would cut through it)
+    // the HUD steps aside while a scene plays (the black bars would cut through it), and for a clean shot
     const hud = this.scene.get(PLATFORM === 'pc' ? SceneKeys.PcHud : SceneKeys.MobileHud);
-    if (hud && hud.sys.settings.visible === !!this.sim.scene) hud.sys.setVisible(!this.sim.scene);
+    const hideHud = !!this.sim.scene || !!this.director?.clean;
+    if (hud && hud.sys.settings.visible === hideHud) hud.sys.setVisible(!hideHud);
 
     // the camera follows the hero, or eases over to what a scene is showing
     const look = this.sim.scene?.look;
@@ -643,7 +648,13 @@ export class GameScene extends Phaser.Scene {
       this.camAt = { x: this.camAt.x + (want.x - this.camAt.x) * k, y: this.camAt.y + (want.y - this.camAt.y) * k };
     }
     const shake = (this.sim.shake > 0 ? Math.random() * 6 - 3 : 0) + this.weather.shake;
-    this.cameras.main.centerOn(Math.round(this.camAt.x + shake), Math.round(this.camAt.y));
+    // filming: the director may hold the camera (where, and how close)
+    const shot = this.director?.camera() ?? null;
+    const zoom = PIXEL_SCALE * (shot?.zoom ?? 1);
+    if (this.cameras.main.zoom !== zoom) this.cameras.main.setZoom(zoom);
+    // (the director's camera glides between whole pixels: a slow pan doesn't step)
+    if (shot) this.cameras.main.centerOn(shot.x + shake, shot.y);
+    else this.cameras.main.centerOn(Math.round(this.camAt.x + shake), Math.round(this.camAt.y));
     this.world.draw(time);
     if (!this.view3d) this.effects.draw();
     this.weather.update(dt, !this.view3d);
@@ -653,7 +664,8 @@ export class GameScene extends Phaser.Scene {
     // the player carries a small neutral light so night stays playable; a lantern adds a warm pool
     const px = isoX(this.sim.x, this.sim.y);
     const py = isoY(this.sim.x, this.sim.y) - 10;
-    this.lighting.setLight({ id: 'player', x: px, y: py, wx: this.sim.x, wy: this.sim.y, radius: 110, r: 0, g: 0, b: 0, intensity: 0.9 });
+    if (this.director?.playerLight === false) this.lighting.removeLight('player');
+    else this.lighting.setLight({ id: 'player', x: px, y: py, wx: this.sim.x, wy: this.sim.y, radius: 110, r: 0, g: 0, b: 0, intensity: 0.9 });
     if (this.sim.gear.light > 0)
       this.lighting.setLight({ id: 'lantern', x: px, y: py, wx: this.sim.x, wy: this.sim.y, radius: 110 + this.sim.gear.light, r: 0.02, g: 0.06, b: 0.16, intensity: 0.75, flickerHz: 5, flickerAmount: 0.06 });
     else this.lighting.removeLight('lantern');

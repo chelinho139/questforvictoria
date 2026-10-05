@@ -46,6 +46,8 @@ export class Effects {
   private readonly ghosts = new Map<Fx, Phaser.GameObjects.Image[]>();
   /** Dev: draw the click-to-move route. */
   showPath = false;
+  /** The click-to-move ring (off for a clean trailer shot: dev/Director.ts). */
+  static showGoal = true;
 
   constructor(private readonly scene: Phaser.Scene, private readonly sim: Sim) {
     const outer = scene.add.container(ISO_OX, 0).setScale(Math.SQRT2, Math.SQRT1_2).setDepth(1e6);
@@ -91,7 +93,7 @@ export class Effects {
     }
 
     // click-to-move destination: a small pulsing ring on the ground
-    const goal = this.sim.moveGoal;
+    const goal = Effects.showGoal ? this.sim.moveGoal : null;
     if (goal) {
       const k = (Math.sin(this.scene.time.now / 140) + 1) / 2;
       g.lineStyle(2, hex('#f2c14e'), 0.45 + 0.35 * k);
