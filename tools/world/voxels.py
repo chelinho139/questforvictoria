@@ -13,6 +13,13 @@ meet at a corner (a house's body) are filled as one box, so the house gets its b
   python3 voxels.py                         write public/voxels.json
   python3 voxels.py preview out.png [name]  a turntable sheet: each model from four sides
 
+Act II's props (buildings2.py) add their own primitives to the ray-caster: tubes (rounded cones),
+convex polyhedra (hewn stones), parallelograms and the pixel sprites made of them, ellipsoids
+and cone shells. Those are recorded too and filled as solids here, each voxel coloured by the
+primitive's own material from the surface normal there, as the 2D art reads it from the iso
+camera; a `masked` cut (a doorway, the gaps in a paling) is kept on the walls and flats it cuts.
+Tree-like props (the willows, the thickets) and the mist keep their painted art, stood up.
+
 The output: { name: { w, h, o: [ox, oy], n, pal: ['#rrggbb', ...], f: base64, lit?: base64 } }
 where f is n faces of 5 bytes (x, y, z voxel index from o, direction 0..5 = +x -x +y -y +z -z,
 palette index) and lit lists (uint32 face index, uint8 palette index) for the faces that
@@ -31,6 +38,8 @@ import iso
 from iso import Scene, LIT, SHADE, TOP, hsh
 import buildings
 from buildings import BUILDINGS, ANIMS
+import buildings2
+from buildings2 import BUILDINGS2, lam_of
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../public/voxels.json')
 T = 32
@@ -38,6 +47,14 @@ PX, NX, PY, NY, PZ, NZ = range(6)
 DIRS = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)]
 # painted in render/storyTrees.ts, not by the ray-caster: the 3D view stands their art up
 SKIP = {'hollow_oak', 'willow'}
+# Act II's tree-like and see-through props read well as their art stood up (and a willow would
+# be tens of thousands of faces)
+SKIP2 = {'thicket', 'webbed_willow', 'gallows_willow', 'great_willow', 'mist',
+         # not placed anywhere yet (its vault is a hand-made surface)
+         'bridge_arch', 'bridge_arch_y'}
+# parts the 2D art paints to look right from the iso camera alone, left out of the models: the
+# shadowed inside of Wren's lean-to (a panel that would wall off its open side)
+SKIP_PARTS = {'leanto': {'inside'}}
 
 # ---------------------------------------------------------------- recording the primitives
 KINDS = ('wall_x', 'wall_y', 'flat', 'box', 'gable_x', 'gable_y', 'pyramid', 'shed', 'cylinder', 'sphere', 'dome')
@@ -86,6 +103,54 @@ def _disc_rec(s, *a, **k):
 buildings.disc_x = _disc_rec
 
 
+def _record_fn(mod, fname):
+    """Record one of buildings2's module-level primitives (called as fn(s, ...))."""
+    orig = getattr(mod, fname)
+    sig = inspect.signature(orig)
+
+    def rec(s, *a, **k):
+        n0 = len(s.surfs)
+        r = orig(s, *a, **k)
+        b = sig.bind(s, *a, **k)
+        b.apply_defaults()
+        args = dict(b.arguments)
+        args.pop('s')
+        s.__dict__.setdefault('prims', []).append((fname, args, n0, len(s.surfs)))
+        return r
+    setattr(mod, fname, rec)
+
+
+# tube() calls rcone and sprite() calls quad through the module, so they are caught too
+for _f in ('rcone', 'quad', 'ell', 'shell', 'poly'):
+    _record_fn(buildings2, _f)
+
+_masked = buildings2.masked
+
+
+def _masked_rec(s, mask):
+    """masked() cuts the last surface: keep the cut on the primitive that made it."""
+    _masked(s, mask)
+    last = len(s.surfs) - 1
+    for _, args, n0, n1 in reversed(s.__dict__.get('prims', [])):
+        if n0 <= last < n1:
+            prev = args.get('_mask')
+            args['_mask'] = mask if prev is None else (lambda u, v, a=prev, b=mask: a(u, v) and b(u, v))
+            break
+
+
+buildings2.masked = _masked_rec
+
+
+def _vec(fn, *arrays):
+    """fn over broadcast arrays (the masks are written for scalars)."""
+    return np.vectorize(lambda *xs: bool(fn(*xs)), otypes=[bool])(*arrays)
+
+
+def _n3(x, y, z):
+    n = math.sqrt(x * x + y * y + z * z)
+    return (x / n, y / n, z / n) if n > 1e-9 else (0.0, 0.0, 1.0)
+
+
 # ---------------------------------------------------------------- voxelizing
 class Model:
     """One building on a voxel grid: which primitive fills each voxel (the last one wins, as
@@ -125,10 +190,12 @@ class Model:
         return (X >= x0) & (X <= x1) & (Y >= y0) & (Y <= y1) & (Z >= z0) & (Z <= z1)
 
     # -- the primitives ------------------------------------------------
-    def wall_x(self, X, y0, y1, z0, z1, mat, name, zmax=None):
+    def wall_x(self, X, y0, y1, z0, z1, mat, name, zmax=None, _mask=None):
         m = self.box_mask(X - 1, X, y0, y1, z0, z1)
         if zmax:
             m = m & (self.z <= np.vectorize(zmax)(self.y))
+        if _mask:
+            m = m & _vec(lambda y, z: _mask(y1 - y, z - z0), self.y, self.z)
         P = self.paint
 
         def col(x, y, z, d):
@@ -139,10 +206,12 @@ class Model:
             return P(name, mat, y1 - y, z - z0, SHADE)
         self.add(m, col)
 
-    def wall_y(self, Y, x0, x1, z0, z1, mat, name, zmax=None):
+    def wall_y(self, Y, x0, x1, z0, z1, mat, name, zmax=None, _mask=None):
         m = self.box_mask(x0, x1, Y - 1, Y, z0, z1)
         if zmax:
             m = m & (self.z <= np.vectorize(zmax)(self.x))
+        if _mask:
+            m = m & _vec(lambda x, z: _mask(x - x0, z - z0), self.x, self.z)
         P = self.paint
 
         def col(x, y, z, d):
@@ -170,16 +239,26 @@ class Model:
             if d == PZ:
                 return P(wy['name'], wy['mat'], x - x0, y1 - y, TOP)
             return P(wy['name'], wy['mat'], x - x0, z - z0, LIT)
-        self.add(self.box_mask(x0, x1, y0, y1, z0, z1), col)
+        m = self.box_mask(x0, x1, y0, y1, z0, z1)
+        # a doorway or recess cut into either wall is cut through the body too (what is built
+        # into it afterwards, a recess's back wall, fills it back)
+        if wy.get('_mask'):
+            m = m & _vec(lambda x, z: wy['_mask'](x - x0, z - z0), self.x, self.z)
+        if wx.get('_mask'):
+            m = m & _vec(lambda y, z: wx['_mask'](wx['y1'] - y, z - z0), self.y, self.z)
+        self.add(m, col)
 
-    def flat(self, Z, x0, x1, y0, y1, mat, name):
+    def flat(self, Z, x0, x1, y0, y1, mat, name, _mask=None):
         P = self.paint
 
         def col(x, y, z, d):
             return P(name, mat, x - x0, y1 - y, TOP if d == PZ else SHADE)
-        self.add(self.box_mask(x0, x1, y0, y1, Z - 1, Z), col)
+        m = self.box_mask(x0, x1, y0, y1, Z - 1, Z)
+        if _mask:
+            m = m & _vec(lambda x, y: _mask(x - x0, y1 - y), self.x, self.y)
+        self.add(m, col)
 
-    def box(self, x0, x1, y0, y1, z0, z1, mat, name, top_mat=None):
+    def box(self, x0, x1, y0, y1, z0, z1, mat, name, top_mat=None, _mask=None):
         P = self.paint
 
         def col(x, y, z, d):
@@ -196,7 +275,7 @@ class Model:
             return P(name + '.y', mat, x - x0, 0, SHADE)
         self.add(self.box_mask(x0, x1, y0, y1, z0, z1), col)
 
-    def gable_x(self, x0, x1, y0, y1, ze, zr, roof, wall, name, ov=3, gx=None):
+    def gable_x(self, x0, x1, y0, y1, ze, zr, roof, wall, name, ov=3, gx=None, _mask=None):
         ym = (y0 + y1) / 2
         k = (zr - ze) / ((y1 - y0) / 2)
         Y0, Y1, X0, X1 = y0 - ov, y1 + ov, x0 - ov, x1 + ov
@@ -225,7 +304,7 @@ class Model:
             return P(name + '.back', roof, X1 - x, (y - Y0) * vs, SHADE)
         self.add((X >= X0) & (X <= X1) & (Y >= Y0) & (Y <= Y1) & (Z <= top) & (Z >= top - th), slab)
 
-    def gable_y(self, x0, x1, y0, y1, ze, zr, roof, wall, name, ov=3, gy=None):
+    def gable_y(self, x0, x1, y0, y1, ze, zr, roof, wall, name, ov=3, gy=None, _mask=None):
         xm = (x0 + x1) / 2
         k = (zr - ze) / ((x1 - x0) / 2)
         Y0, Y1, X0, X1 = y0 - ov, y1 + ov, x0 - ov, x1 + ov
@@ -254,7 +333,7 @@ class Model:
             return P(name + '.back', roof, y - Y0, (x - X0) * vs, LIT)
         self.add((X >= X0) & (X <= X1) & (Y >= Y0) & (Y <= Y1) & (Z <= top) & (Z >= top - th), slab)
 
-    def pyramid(self, x0, x1, y0, y1, ze, zr, roof, name, ov=2):
+    def pyramid(self, x0, x1, y0, y1, ze, zr, roof, name, ov=2, _mask=None):
         xm, ym = (x0 + x1) / 2, (y0 + y1) / 2
         hx = (x1 - x0) / 2 + ov
         k = (zr - ze) / ((x1 - x0) / 2)
@@ -277,7 +356,7 @@ class Model:
             return P(name + '.x', roof, y - (ym - hx), (x - (xm - hx)) * vs, LIT)
         self.add((r <= hx) & (Z <= surf) & (Z >= zr - k * hx - max(2, k + 1)), col)
 
-    def shed(self, x0, x1, y0, y1, zt, zb, roof, name):
+    def shed(self, x0, x1, y0, y1, zt, zb, roof, name, _mask=None):
         k = (zt - zb) / (y1 - y0)
         vs = 0.5 + k
         X, Y, Z = self.x, self.y, self.z
@@ -293,7 +372,7 @@ class Model:
             return P(name, roof, x - x0, (y1 - y) * vs, SHADE if d == NZ else LIT)
         self.add((X >= x0) & (X <= x1) & (Y >= y0) & (Y <= y1) & (Z <= top) & (Z >= top - max(2, k + 1)), col)
 
-    def cylinder(self, cx, cy, r, z0, z1, mat, name, top_mat=None, inner=None):
+    def cylinder(self, cx, cy, r, z0, z1, mat, name, top_mat=None, inner=None, _mask=None):
         X, Y, Z = self.x, self.y, self.z
         d2 = (X - cx) ** 2 + (Y - cy) ** 2
         m = (d2 <= r * r) & (Z >= z0) & (Z <= z1)
@@ -314,7 +393,7 @@ class Model:
             return P(name, mat, u, z - z0, SHADE if d == NZ else sh)
         self.add(m, col)
 
-    def sphere(self, cx, cy, cz, r, tones, name, squash=1.0, seed=0, leafy=0.0):
+    def sphere(self, cx, cy, cz, r, tones, name, squash=1.0, seed=0, leafy=0.0, _mask=None):
         X, Y, Z = self.x, self.y, self.z
         m = ((X - cx) / r) ** 2 + ((Y - cy) / r) ** 2 + ((Z - cz) / (r * squash)) ** 2 <= 1
         # the same facets and light as iso.Scene.sphere
@@ -334,7 +413,7 @@ class Model:
             return tones[0 if lam > 0.75 else 1 if lam > 0.45 else 2 if lam > 0.1 else 3]
         self.add(m, col)
 
-    def dome(self, cx, cy, rx, ry, h, mat, name):
+    def dome(self, cx, cy, rx, ry, h, mat, name, _mask=None):
         X, Y, Z = self.x, self.y, self.z
         m = Z <= h * (1 - ((X - cx) / rx) ** 2 - ((Y - cy) / ry) ** 2)
         ka, kb = h / (rx * rx), h / (ry * ry)
@@ -355,6 +434,148 @@ class Model:
         def col(x, y, z, d):
             return mat(int(y), int(z), LIT if d == NX else sh, name)
         self.add(m, col)
+
+    # -- Act II's primitives (buildings2.py), each filled in its own bounding box ---------------
+    def sub(self, x0, x1, y0, y1, z0, z1):
+        """The voxels in a world box: their slices, and their centres as broadcastable arrays."""
+        i0, i1 = max(0, int(math.floor(x0 - self.ox)) - 1), min(self.nx, int(math.ceil(x1 - self.ox)) + 2)
+        j0, j1 = max(0, int(math.floor(y0 - self.oy)) - 1), min(self.ny, int(math.ceil(y1 - self.oy)) + 2)
+        k0, k1 = max(0, int(math.floor(z0)) - 1), min(self.nz, int(math.ceil(z1)) + 2)
+        if i0 >= i1 or j0 >= j1 or k0 >= k1:
+            return None
+        return (slice(i0, i1), slice(j0, j1), slice(k0, k1)), self.x[i0:i1], self.y[:, j0:j1], self.z[:, :, k0:k1]
+
+    def add_sub(self, sl, m, colour):
+        view = self.owner[sl]
+        m = np.broadcast_to(m, view.shape)
+        if not m.any():
+            return
+        view[m] = len(self.colour)
+        self.colour.append(colour)
+
+    def rcone(self, p0, p1, r0, r1, mat, name, zmin=None, along0=0.0, data=None, _mask=None):
+        ax, ay, az = p0
+        bx, by, bz = p1
+        bax, bay, baz = bx - ax, by - ay, bz - az
+        L2 = bax * bax + bay * bay + baz * baz or 1e-9
+        L = math.sqrt(L2)
+        R = max(r0, r1, 0.62) + 1
+        b = self.sub(min(ax, bx) - R, max(ax, bx) + R, min(ay, by) - R, max(ay, by) + R, min(az, bz) - R, max(az, bz) + R)
+        if not b:
+            return
+        sl, X, Y, Z = b
+        t = np.clip(((X - ax) * bax + (Y - ay) * bay + (Z - az) * baz) / L2, 0, 1)
+        d = np.sqrt((X - ax - t * bax) ** 2 + (Y - ay - t * bay) ** 2 + (Z - az - t * baz) ** 2)
+        # a thin pole still gets its row of voxels
+        m = d <= np.maximum(r0 + (r1 - r0) * t, 0.62)
+        if zmin is not None:
+            m = m & (Z >= zmin)
+        # the same frame round the axis as buildings2.rcone, for the angle its materials read
+        Ax, Ay, Az = bax / L, bay / L, baz / L
+        if abs(Az) > 0.9:
+            Rx, Ry, Rz = _n3(1 - Ax * Ax, -Ax * Ay, -Ax * Az)
+        else:
+            Rx, Ry, Rz = _n3(-Az * Ax, -Az * Ay, 1 - Az * Az)
+        Qx, Qy, Qz = Ay * Rz - Az * Ry, Az * Rx - Ax * Rz, Ax * Ry - Ay * Rx
+
+        def col(x, y, z, dd):
+            tt = min(1.0, max(0.0, ((x - ax) * bax + (y - ay) * bay + (z - az) * baz) / L2))
+            ex, ey, ez = x - ax - tt * bax, y - ay - tt * bay, z - az - tt * baz
+            nx, ny, nz = _n3(ex, ey, ez) if ex * ex + ey * ey + ez * ez > 1e-6 else DIRS[dd]
+            ang = math.atan2(nx * Qx + ny * Qy + nz * Qz, nx * Rx + ny * Ry + nz * Rz)
+            rad = r0 + (r1 - r0) * tt
+            return mat(lam_of(nx, ny, nz), (x, y, z, nx, ny, nz, along0 + tt * L, ang, rad, data), 'raw', name)
+        self.add_sub(sl, m, col)
+
+    def poly(self, planes, mat, name, bb, data=None, _mask=None):
+        b = self.sub(*bb)
+        if not b:
+            return
+        sl, X, Y, Z = b
+        m = np.ones(np.broadcast(X, Y, Z).shape, bool)
+        for (n, dd) in planes:
+            m &= n[0] * X + n[1] * Y + n[2] * Z <= dd + 0.3
+
+        def col(x, y, z, d):
+            # the face this voxel lies on: the plane nearest it, leaning to the way the face looks
+            fd = DIRS[d]
+            fi = max(range(len(planes)), key=lambda i: planes[i][0][0] * x + planes[i][0][1] * y + planes[i][0][2] * z - planes[i][1]
+                     + 0.6 * (planes[i][0][0] * fd[0] + planes[i][0][1] * fd[1] + planes[i][0][2] * fd[2]))
+            nx, ny, nz = planes[fi][0]
+            return mat(lam_of(nx, ny, nz), (fi, x, y, z, nx, ny, nz, data), 'raw', name)
+        self.add_sub(sl, m, col)
+
+    def ell(self, c, r3, mat, name, zmin=0.0, data=None, _mask=None):
+        cx, cy, cz = c
+        rx, ry, rz = (max(r, 0.62) for r in r3)
+        b = self.sub(cx - rx, cx + rx, cy - ry, cy + ry, cz - rz, cz + rz)
+        if not b:
+            return
+        sl, X, Y, Z = b
+        m = ((X - cx) / rx) ** 2 + ((Y - cy) / ry) ** 2 + ((Z - cz) / rz) ** 2 <= 1
+        if zmin is not None:
+            m = m & (Z >= zmin)
+
+        def col(x, y, z, d):
+            nx, ny, nz = _n3((x - cx) / (rx * rx), (y - cy) / (ry * ry), (z - cz) / (rz * rz))
+            return mat(lam_of(nx, ny, nz), (x, y, z, nx, ny, nz, data), 'raw', name)
+        self.add_sub(sl, m, col)
+
+    def shell(self, cx, cy, z0, z1, r0, r1, mat, name, mask=None, back=True, _mask=None):
+        g = (r1 - r0) / (z1 - z0)
+        R = max(r0, r1) + 1
+        b = self.sub(cx - R, cx + R, cy - R, cy + R, z0, z1)
+        if not b:
+            return
+        sl, X, Y, Z = b
+        dist = np.sqrt((X - cx) ** 2 + (Y - cy) ** 2)
+        m = (np.abs(dist - (r0 + g * (Z - z0))) <= 0.62) & (Z >= z0) & (Z <= z1)
+        if mask:
+            m = m & _vec(lambda x, y, z: mask(math.atan2(y - cy, x - cx), z), X, Y, Z)
+
+        def col(x, y, z, d):
+            fd = DIRS[d]
+            inside = d < PZ and fd[0] * (x - cx) + fd[1] * (y - cy) < 0
+            nx, ny, nz = _n3(x - cx, y - cy, -g * (r0 + g * (z - z0)))
+            if inside:
+                nx, ny, nz = -nx, -ny, -nz
+            return mat(lam_of(nx, ny, nz), (x, y, z, math.atan2(y - cy, x - cx), inside), 'raw', name)
+        self.add_sub(sl, m, col)
+
+    def quad(self, p0, e1, e2, mat, name, sh=None, mask=None, raw=False, _mask=None):
+        px0, py0, pz0 = p0
+        pts = [p0, [p0[i] + e1[i] for i in range(3)], [p0[i] + e2[i] for i in range(3)], [p0[i] + e1[i] + e2[i] for i in range(3)]]
+        b = self.sub(*[f(p[i] for p in pts) for i in range(3) for f in (min, max)])
+        if not b:
+            return
+        sl, X, Y, Z = b
+        n = np.cross(e1, e2)
+        nl = float(np.linalg.norm(n))
+        if nl < 1e-9:
+            return
+        n = n / nl
+        inv = np.linalg.inv(np.array([e1, e2, n], float).T)
+        l1, l2 = float(np.linalg.norm(e1)), float(np.linalg.norm(e2))
+        wx, wy, wz = X - px0, Y - py0, Z - pz0
+        u = inv[0, 0] * wx + inv[0, 1] * wy + inv[0, 2] * wz
+        v = inv[1, 0] * wx + inv[1, 1] * wy + inv[1, 2] * wz
+        h = inv[2, 0] * wx + inv[2, 1] * wy + inv[2, 2] * wz
+        m = (u >= 0) & (u <= 1) & (v >= 0) & (v <= 1) & (np.abs(h) <= 0.55)
+        if mask is not None:
+            m = m & _vec(lambda a, c: mask(a * l1, c * l2), u, v)
+        if n[0] + n[1] + n[2] < 0:
+            n = -n
+        P = self.paint
+
+        def col(x, y, z, d):
+            w = np.array([x - px0, y - py0, z - pz0])
+            U, V = float(inv[0] @ w) * l1, float(inv[1] @ w) * l2
+            fd = DIRS[d]
+            nn = n if n[0] * fd[0] + n[1] * fd[1] + n[2] * fd[2] >= 0 else -n
+            if raw:
+                return mat(lam_of(*nn), (U, V), 'raw', name)
+            return P(name, mat, U, V, sh or (TOP if nn[2] > 0.75 else LIT if nn[1] >= nn[0] else SHADE))
+        self.add_sub(sl, m, col)
 
     def loose(self, surf):
         """A surface appended by hand (a tent's open flap, a barrow's dark doorway): sample it
@@ -433,25 +654,38 @@ class Model:
         return out
 
 
-def voxelize(make, lit=False):
+def voxelize(make, lit=False, name=''):
     try:
         s = make(lit)
     except TypeError:
         s = make()
+    skip = SKIP_PARTS.get(name)
+    if skip:
+        prims = s.__dict__.get('prims', [])
+        s.prims = [p for p in prims if p[1].get('name') not in skip]
+        # and their surfaces aren't sampled as loose ones either
+        gone = set()
+        for p in prims:
+            if p[1].get('name') in skip:
+                gone.update(range(p[2], p[3]))
+        s.surfs = [sf if i not in gone else (lambda a, b: None, sf[1], sf[2], sf[3]) for i, sf in enumerate(s.surfs)]
     return Model(s).build()
 
 
 def models():
     """name -> (model, faces, lit faces or None); animations as name~frame."""
     out = {}
-    for name, make in BUILDINGS.items():
-        if name in SKIP:
+    for name, make in list(BUILDINGS.items()) + list(BUILDINGS2.items()):
+        if name in SKIP or name in SKIP2:
             continue
-        m = voxelize(make)
+        m = voxelize(make, name=name)
         f = m.faces()
         try:
-            lf = voxelize(make, True).faces()
+            lf = voxelize(make, True, name).faces()
         except TypeError:
+            lf = None
+        # night only recolours faces: a lit version with other geometry (a flame) keeps the day's
+        if lf and (len(lf) != len(f) or any(a[:4] != b[:4] for a, b in zip(f, lf))):
             lf = None
         out[name] = (m, f, lf if lf and lf != f else None)
     for name, (n, make) in ANIMS.items():
@@ -504,8 +738,8 @@ def preview(out, names):
     from PIL import Image, ImageDraw
     sheets = []
     for name in names:
-        make = BUILDINGS[name]
-        m = voxelize(make)
+        make = BUILDINGS.get(name) or BUILDINGS2[name]
+        m = voxelize(make, name=name)
         faces = m.faces()
         cx = m.s.w * T / 2
         cy = m.s.h * T / 2
