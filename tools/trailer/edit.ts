@@ -72,12 +72,14 @@ function timeline(items: Item[]): { start: number; end: number }[] {
 /** Render one item to its own segment (cached by what it is). */
 async function segment(edit: Edit, it: Item, i: number): Promise<string> {
   const caps = await Promise.all((it.text ?? []).map(c => captionPng(c)));
-  const src = 'shot' in it ? path.join(SHOTS, `${it.shot}.mp4`) : '';
-  if (src && !fs.existsSync(src)) throw new Error(`${edit.name}: shot ${'shot' in it ? it.shot : ''} hasn't been filmed (film.ts)`);
+  const names = 'shot' in it ? [it.shot] : 'grid' in it ? it.grid : [];
+  const srcs = names.map(n => path.join(SHOTS, `${n}.mp4`));
+  for (const [j, f] of srcs.entries()) if (!fs.existsSync(f)) throw new Error(`${edit.name}: shot ${names[j]} hasn't been filmed (film.ts)`);
+  const src = srcs.map(f => f + fs.statSync(f).mtimeMs).join();
   const logo = 'logo' in it ? await logoPng(PORT) : '';
   const key = crypto
     .createHash('sha1')
-    .update(JSON.stringify(it) + (src ? fs.statSync(src).mtimeMs : '') + caps.join() + (logo ? fs.statSync(logo).mtimeMs : '') + 'v3')
+    .update(JSON.stringify(it) + src + caps.join() + (logo ? fs.statSync(logo).mtimeMs : '') + 'v3')
     .digest('hex')
     .slice(0, 14);
   fs.mkdirSync(SEG, { recursive: true });
@@ -87,8 +89,17 @@ async function segment(edit: Edit, it: Item, i: number): Promise<string> {
   const n = frames(dur);
   const inputs: string[] = [];
   const f: string[] = [];
-  if ('shot' in it) {
-    inputs.push('-i', src);
+  if ('grid' in it) {
+    // three views in a 2x2 split screen, the fourth corner dark (for a caption), thin dark lines between
+    for (const f of srcs) inputs.push('-i', f);
+    inputs.push('-f', 'lavfi', '-i', `color=c=0x0b0d12:s=960x540:r=${FPS}:d=${dur + 0.5}`);
+    srcs.forEach((_, j) => f.push(`[${j}:v]trim=start=${it.in ?? 0}:duration=${dur + 0.5},setpts=PTS-STARTPTS,fps=${FPS},scale=960:540:flags=lanczos,format=yuv420p[g${j}]`));
+    f.push(
+      `[3:v]format=yuv420p[g3]`,
+      `[g0][g1][g2][g3]xstack=inputs=4:layout=0_0|w0_0|0_h0|w0_h0,drawbox=x=957:y=0:w=6:h=ih:color=0x0b0d12:t=fill,drawbox=x=0:y=537:w=iw:h=6:color=0x0b0d12:t=fill,format=yuv420p[b0]`
+    );
+  } else if ('shot' in it) {
+    inputs.push('-i', srcs[0]);
     f.push(`[0:v]trim=start=${it.in ?? 0}:duration=${dur + 0.5},setpts=PTS-STARTPTS,fps=${FPS}${it.grade ? ',' + eq(it.grade) : ''},format=yuv420p[b0]`);
   } else if ('logo' in it) {
     inputs.push('-f', 'lavfi', '-i', `color=c=black:s=1920x1080:r=${FPS}:d=${dur + 0.5}`, '-loop', '1', '-framerate', String(FPS), '-t', String(dur + 0.5), '-i', logo);
@@ -179,8 +190,9 @@ function join(edit: Edit, segs: string[], out: string, audio: string): void {
       'high',
       '-c:a',
       'aac',
+      // (at 256k the encoder's low-pass rings: true peaks come out ~4 dB over the mix's)
       '-b:a',
-      '256k',
+      '320k',
       '-movflags',
       '+faststart',
       '-t',
@@ -214,8 +226,8 @@ function mix(edit: Edit, out: string): void {
   }
   const fx = new Stereo(n);
   edit.items.forEach((it, i) => {
-    if (!('shot' in it) || it.sfx === 0) return;
-    const file = path.join(SHOTS, `${it.shot}.audio.json`);
+    if (!('shot' in it || 'grid' in it) || it.sfx === 0) return;
+    const file = path.join(SHOTS, `${'shot' in it ? it.shot : it.grid[0]}.audio.json`);
     if (!fs.existsSync(file)) return;
     const events = (JSON.parse(fs.readFileSync(file, 'utf8')) as { events: AudioEvent[] }).events;
     const { start, end } = tl[i];

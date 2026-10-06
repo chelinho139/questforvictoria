@@ -153,6 +153,14 @@ export class Director {
   readonly brains = new Map<Hero, Brain>();
   /** Heroes who take their blows (the bars go down, webs and roots hold them) but never fall below STOUT of their health. */
   private readonly stout = new Set<Hero>();
+  /** The brains' own dice (not Math.random, which the renderer shares), so takes of a shot in different views stay in step. */
+  private seed = 0x9e3779b9;
+  private rand(): number {
+    let t = (this.seed = (this.seed + 0x6d2b79f5) >>> 0);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
   private heroN = 0;
 
   constructor(
@@ -588,7 +596,7 @@ export class Director {
     for (const k of b.spells) {
       if (k === 'charge') continue;
       if (!h.canDo(k) && h.castKey(k)) {
-        b.waitT = GCD + 0.12 + Math.random() * 0.35;
+        b.waitT = GCD + 0.12 + this.rand() * 0.35;
         break;
       }
     }
@@ -600,9 +608,14 @@ export class Director {
     return this;
   }
 
-  /** The 2D view or one of the 3D ones (the director's camera only steers the 2D view). */
-  view(mode: ViewMode): this {
+  /**
+   * The 2D view or one of the 3D ones (a 3D view looks where the director's camera holds, or at
+   * the hero). `sameWalk`: the hero keeps the 2D view's walking pace (the 3D views walk at an even
+   * pace over the ground), so a shot filmed in each view plays out the same.
+   */
+  view(mode: ViewMode, sameWalk = false): this {
     (this.game.registry.get('setView') as ((m: ViewMode) => void) | undefined)?.(mode);
+    if (sameWalk) this.hero.walkFlat = false;
     return this;
   }
 

@@ -679,8 +679,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.view3d) {
       this.lighting.tick(dt);
-      // the 3D camera follows the hero, or the 2D camera's eased point while a scene shows something
-      const at = this.sim.scene || this.camEase > 0 ? fromIso(this.camAt.x, this.camAt.y - 20) : { x: this.sim.x, y: this.sim.y };
+      // the 3D camera follows the hero, or the 2D camera's eased point while a scene shows something,
+      // or what the director holds it on (filming)
+      const at = shot ? fromIso(shot.x, shot.y) : this.sim.scene || this.camEase > 0 ? fromIso(this.camAt.x, this.camAt.y - 20) : { x: this.sim.x, y: this.sim.y };
       this.view3d.update(time, dt, at);
     } else this.lighting.update(dt);
     this.bossBar.update();

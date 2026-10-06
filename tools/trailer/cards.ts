@@ -23,7 +23,11 @@ export type Style =
   /** A line someone says, with their name over it. */
   | 'voice'
   /** A signature in a fine hand. */
-  | 'sign';
+  | 'sign'
+  /** A devlog's note: a gold heading and a line under it ("Heading|line"), set left. */
+  | 'dev'
+  /** A small label (the views in a split screen). */
+  | 'label';
 
 export interface Caption {
   text: string;
@@ -31,7 +35,7 @@ export interface Caption {
   /** Who says it (style 'voice'). */
   who?: string;
   /** Where on the frame. */
-  pos?: 'center' | 'low' | 'high' | 'lowLeft';
+  pos?: 'center' | 'low' | 'high' | 'lowLeft' | 'qTL' | 'qTR' | 'qBL' | 'qBR';
   /** Seconds into the item it appears, and how long it stays (default: the whole item). */
   at?: number;
   dur?: number;
@@ -64,6 +68,16 @@ html, body { margin: 0; width: 1920px; height: 1080px; background: transparent; 
   text-shadow: 0 0 14px rgba(0,0,0,0.95); }
 .voice .line { font-family: 'IM Fell English', serif; font-style: italic; font-size: 48px; line-height: 1.3; color: #efe7d6;
   text-shadow: 0 0 18px rgba(0,0,0,0.95), 0 2px 3px rgba(0,0,0,0.9); }
+.qTL, .qTR, .qBL { justify-content: flex-start; align-items: flex-start; text-align: left; padding: 26px 0 0 30px; }
+.qTR { padding-left: 990px; }
+.qBL { padding-top: 566px; }
+.qBR { justify-content: center; align-items: center; padding: 540px 0 0 960px; }
+.dev .h { font-family: 'Pixelify Sans', sans-serif; font-weight: 700; font-size: 60px; letter-spacing: 0.04em; color: #ffd24a;
+  -webkit-text-stroke: 3px #1e0c04; paint-order: stroke fill; text-shadow: 0 5px 0 #1e0c04, 0 0 26px rgba(0,0,0,0.8); }
+.dev .n { font-family: 'Pixelify Sans', sans-serif; font-weight: 500; font-size: 36px; color: #fce6b4; margin-top: 10px;
+  -webkit-text-stroke: 2px #1e0c04; paint-order: stroke fill; text-shadow: 0 3px 0 #1e0c04, 0 0 18px rgba(0,0,0,0.85); }
+.label { font-family: 'Pixelify Sans', sans-serif; font-weight: 700; font-size: 30px; letter-spacing: 0.12em; color: #fce6b4;
+  background: rgba(10,12,18,0.72); padding: 6px 14px 8px; border-radius: 4px; text-transform: uppercase; }
 .sign { font-family: 'Pinyon Script', cursive; font-size: 96px; color: #ece3d0; text-shadow: 0 0 20px rgba(0,0,0,0.9); }
 `;
 
@@ -72,7 +86,9 @@ function html(c: Caption): string {
   const body =
     c.style === 'voice'
       ? `<div class="voice">${c.who ? `<div class="who">${esc(c.who)}</div>` : ''}<div class="line">${esc(c.text)}</div></div>`
-      : c.style === 'feature' && c.text.includes('|')
+      : c.style === 'dev'
+        ? `<div class="dev"><div class="h">${esc(c.text.split('|')[0])}</div>${c.text.includes('|') ? `<div class="n">${esc(c.text.split('|')[1])}</div>` : ''}</div>`
+        : c.style === 'feature' && c.text.includes('|')
         ? `<div class="feature">${esc(c.text.split('|')[0])}</div><div class="featureSmall">${esc(c.text.split('|')[1])}</div>`
         : `<div class="${c.style}">${esc(c.text)}</div>`;
   return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${FONTS}"><style>${CSS}</style></head>

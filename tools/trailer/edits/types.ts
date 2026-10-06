@@ -48,7 +48,14 @@ export interface LogoItem extends Common {
   scale?: number;
 }
 
-export type Item = ShotItem | CardItem | LogoItem;
+/** Three shots filmed the same way in different views, in a 2x2 split screen (the fourth corner is left dark for a caption); the sound is the first shot's. */
+export interface GridItem extends Common {
+  grid: [string, string, string];
+  in?: number;
+  sfx?: number;
+}
+
+export type Item = ShotItem | CardItem | LogoItem | GridItem;
 
 /** A stretch of music on the timeline. */
 export interface MusicCue {
