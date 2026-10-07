@@ -116,7 +116,7 @@ function texty(s: string): boolean {
   if (/^\d+px|^bold \d|^normal \d|\d+px ['"A-Z]/.test(s)) return false; // fonts
   if (/^[\w-]+(\s[\w-]+)*$/.test(s) && /-/.test(s) && !/[A-Z]/.test(s)) return false; // css classes
   if (/^[a-z]+(-[a-z]+)*(\s[a-z]+(-[a-z]+)*)*$/.test(s) && s.split(' ').every(w => /-/.test(w))) return false;
-  if (/[;{}]/.test(s) && /:/.test(s)) return false; // css
+  if (/^[\w-]+\s*:\s*[^\s;]+;/.test(s) || /[{}]\s*$/.test(s)) return false; // css
   if (/^https?:|^\/\w|\.(png|json|ogg|mp3|html|ts|js)$/.test(s)) return false;
   return /\s/.test(s) || /^[A-Z¡¿]/.test(s) || /[.!?…]$/.test(s);
 }

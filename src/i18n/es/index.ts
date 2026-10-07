@@ -14,6 +14,8 @@ import settings from './settings.json';
  * everything else refers to (places, people, creatures, gear, spells, quests), so it goes
  * last: they read the same everywhere.
  */
-const ES: Record<string, string> = { ...quests, ...npcs, ...story, ...world, ...items, ...skills, ...sim, ...ui, ...settings, ...names };
+const ES: Record<string, string> = {};
+for (const d of [quests, npcs, story, world, items, skills, sim, ui, settings, names] as Record<string, string>[])
+  for (const [en, es] of Object.entries(d)) if (es) ES[en] = es;
 
 export default ES;

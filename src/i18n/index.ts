@@ -61,15 +61,16 @@ function build(dict: Record<string, string>): Table {
     raw.set(key, v.trim());
     if (/\{\d+\}/.test(key)) {
       const words = key.replace(HOLE, '');
-      // a template needs some words of its own to be told apart ("{0} {1}" would match anything)
-      if (!/[A-Za-z]/.test(words)) continue;
+      // a template needs something of its own to be told apart ("{0} {1}" would match anything);
+      // one of only signs ("{0}  [{1}]") is tried last, to translate the parts around them
+      if (!words.replace(/[\s,]/g, '')) continue;
       const holes: number[] = [];
       const src = key
         .split(HOLE)
         .map((part, i) => (i % 2 ? (holes.push(Number(part)), '(.+?)') : escapeRe(part)))
         .join('');
       const out = v.trim().replace(HOLE, (_, n: string) => `\u0000${holes.indexOf(Number(n))}\u0000`);
-      templates.push({ re: new RegExp(`^${src}$`, 's'), out, lines: key.includes('\n'), weight: words.length });
+      templates.push({ re: new RegExp(`^${src}$`, 's'), out, lines: key.includes('\n'), weight: /[A-Za-z]/.test(words) ? words.length : 0 });
     } else {
       exact.set(key, v);
       lower.set(key.toLowerCase(), v);
