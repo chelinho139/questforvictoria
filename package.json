@@ -14,7 +14,8 @@
     "share:art-board": "node tools/build-art-board.js",
     "share:lore": "node tools/build-lore-artifact.js",
     "music": "node --import tsx tools/music/encode.ts",
-    "bot": "node tools/net/bot.js"
+    "bot": "node tools/net/bot.js",
+    "i18n": "node --import tsx tools/i18n/strings.ts"
   },
   "license": "PolyForm-Noncommercial-1.0.0",
   "dependencies": {

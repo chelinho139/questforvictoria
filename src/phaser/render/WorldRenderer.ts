@@ -16,6 +16,7 @@ import { artScale, artFrames, artAnim, frameKey, animKey, riderFit } from './art
 import { PROPS } from '../../data/props';
 import { PROP_ART } from './propArt';
 import { darknessLevel } from '../../sim/daylight';
+import { keepAsIs } from '../../i18n/dom';
 
 const OVERLAY_DEPTH = 1e5;
 
@@ -573,7 +574,7 @@ export class WorldRenderer {
 
   /** Another player's name and level over their head (at screen y `top`), with a small health bar under it. */
   private nameAndHealth(o: Hero, name: Phaser.GameObjects.Text, g: Phaser.GameObjects.Graphics, qx: number, top: number): void {
-    name.setText(`${o.name} · ${o.level}`).setPosition(Math.round(qx), Math.round(top - 6)).setVisible(true);
+    keepAsIs(name).setText(`${o.name} · ${o.level}`).setPosition(Math.round(qx), Math.round(top - 6)).setVisible(true);
     const w = 22;
     const x0 = Math.round(qx - w / 2);
     const y0 = Math.round(top - 4);

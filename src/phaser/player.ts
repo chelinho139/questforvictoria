@@ -1,3 +1,5 @@
+import { keepNames } from '../i18n';
+
 /** The name on the HUD: the character being played (single player's from before characters: localStorage `qfv-player-name`). */
 const KEY = 'qfv-player-name';
 export const DEFAULT_NAME = 'Hero';
@@ -8,6 +10,7 @@ let playing: string | null = null;
 
 export function playAs(name: string): void {
   playing = name;
+  keepNames(name);
 }
 
 export function playerName(): string {

@@ -210,6 +210,8 @@ export interface EnemyDef {
   /** Rises from the ground at dusk and crumbles at dawn. */
   nightOnly?: boolean;
   sounds: CreatureSounds;
+  /** Seconds, on average, between its idle calls while it wanders (default 18). */
+  idleEvery?: number;
   /** Squash-and-stretch hop instead of a walk bob. */
   bounce?: boolean;
   /** Floating text shown (sometimes) when hit. */
@@ -338,6 +340,8 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
   cow: {
     n: 'Cow',
     sounds: { idle: 'cowIdle', hurt: 'cowHurt', die: 'cowDie' },
+    // a herd mooing every few seconds wears on the ear
+    idleEvery: 60,
     hp: 60,
     atk: 0,
     per: 99,

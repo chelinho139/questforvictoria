@@ -73,7 +73,7 @@ export class InventoryWindow {
       <header><span>Inventory</span><button type="button" class="inv-x" title="Close (I or Esc)">×</button></header>
       <div class="inv-hero">
         <canvas width="96" height="96" aria-hidden="true"></canvas>
-        <div class="inv-who"><b class="inv-name"></b><span class="inv-lv"></span><ul class="inv-stats"></ul></div>
+        <div class="inv-who"><b class="inv-name" translate="no"></b><span class="inv-lv"></span><ul class="inv-stats"></ul></div>
       </div>
       <div class="inv-doll"></div>
       <div class="inv-bag-head"><span>Bag</span><span class="inv-gold"></span></div>

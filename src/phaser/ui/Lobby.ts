@@ -7,6 +7,7 @@ import { HD_HERO_IDS } from '../render/art';
 import { CharacterList } from './CharacterList';
 import { NewCharacter } from './NewCharacter';
 import { esc } from './html';
+import { keepNames, t } from '../../i18n';
 
 /**
  * Multi player, like Diablo II's Battle.net: your characters (kept on the server; the same
@@ -97,7 +98,9 @@ export class Lobby {
     document.body.append(root);
     this.rooms = root;
     const input = root.querySelector<HTMLInputElement>('#lobby-name')!;
-    input.value = `${ch.name}'s room`;
+    keepNames(ch.name);
+    // a field's value isn't translated on screen: the name it suggests is, here
+    input.value = t("{0}'s room", ch.name);
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') this.host(input.value);
     });
@@ -148,6 +151,7 @@ export class Lobby {
         '<p class="lobby-empty">No rooms are open yet. Open one, and friends on this server will see it here.</p>';
       return;
     }
+    keepNames(...rooms.flatMap(r => [r.name, ...r.players.map(p => p.name)]));
     list.innerHTML = rooms
       .map(r => {
         const full = r.players.length >= ROOM_MAX;
@@ -155,7 +159,7 @@ export class Lobby {
           ? r.players.map(p => `${esc(p.name)} (${p.level})`).join(', ')
           : 'nobody right now';
         return `<div class="lobby-room">
-          <h3>${esc(r.name)}</h3>
+          <h3 translate="no">${esc(r.name)}</h3>
           <button type="button" class="select-go" data-room="${esc(r.id)}"${full ? ' disabled' : ''}>${full ? 'Full' : 'Join'}</button>
           <p>${r.players.length}/${r.max} · ${who}</p>
           <p>${esc(r.place)} · ${esc(r.story)}</p>
@@ -178,6 +182,7 @@ export class Lobby {
     } else if (m.t === 'rooms') this.renderRooms(m.rooms);
     else if (m.t === 'joined') {
       this.joined = { room: m.room, hero: m.hero };
+      keepNames(m.room.name);
       this.roomStatus(`Entering ${m.room.name}…`);
     } else if (m.t === 'tick' && this.joined && this.conn && this.char) {
       // the first look at the world: the game takes over the line from here
