@@ -9,10 +9,8 @@
   "{0} · Level {1} {2}": "{0} · {2} de nivel {1}",
   "Your own adventure": "Tu propia aventura",
   "your characters in this browser": "tus personajes en este navegador",
-
   "Saved in this browser: each one has their own adventure.": "Guardados en este navegador: cada uno tiene su propia aventura.",
   "Make your first character. Each one has their own adventure, saved in this browser.": "Crea tu primer personaje. Cada uno tiene su propia aventura, guardada en este navegador.",
-
   "played {0}": "última partida: {0}",
   "not played yet": "aún sin jugar",
   "{0} · Your characters": "{0} · Tus personajes",
@@ -26,7 +24,6 @@
   "Play ▸": "Jugar ▸",
   "Play {0} ▸": "Jugar con {0} ▸",
   "Delete {0} for good?": "¿Borrar a {0} para siempre?",
-
   "{0} · New character": "{0} · Nuevo personaje",
   "Name": "Nombre",
   "Name your character": "Ponle nombre a tu personaje",
@@ -44,7 +41,6 @@
   "Ginger hair, seen in profile.": "Pelirrojo, visto de perfil.",
   "A big dark-haired head with dot eyes.": "Una gran cabeza de pelo oscuro con ojos de punto.",
   "A pale floating spirit wearing a mask; its weapons hover beside it.": "Un espíritu pálido que flota con una máscara; sus armas flotan a su lado.",
-
   "They live on this server: level, gear, gold and the story so far go with them into every room.": "Viven en este servidor: su nivel, su equipo, su oro y la historia hasta ahora los acompañan a cada sala.",
   "Make your first character. They live on this server and keep their level, gear and story in every room.": "Crea tu primer personaje. Vive en este servidor y conserva su nivel, su equipo y su historia en cada sala.",
   "Connecting…": "Conectando…",
@@ -64,18 +60,15 @@
   "Full": "Llena",
   "Join": "Unirse",
   "Entering {0}…": "Entrando en {0}…",
-
   "Leave": "Salir",
   "{0} here": "{0} en la sala",
   "alone here": "nadie más aquí",
   "connection lost": "conexión perdida",
   "Back to start": "Volver al inicio",
   "{0} ms": "{0} ms",
-
   "Close ({0} or Esc)": "Cerrar ({0} o Esc)",
   "Close (Esc)": "Cerrar (Esc)",
   "Goodbye (Esc)": "Adiós (Esc)",
-
   "Controls": "Controles",
   "Moving": "Movimiento",
   "Fighting": "Combate",
@@ -136,7 +129,6 @@
   "Point of view: step sideways": "Punto de vista: paso lateral",
   "Rev: next step, on/off, auto (turn Rev on in Settings)": "Rev: siguiente paso, activar/desactivar, auto (activa Rev en Ajustes)",
   "Time of day, lighting": "Hora del día, iluminación",
-
   "Build": "Construir",
   "Cook": "Cocinar",
   "Smelt": "Fundir",
@@ -153,7 +145,6 @@
   "Built next to you": "Se construye a tu lado",
   "For archers": "Para arqueros",
   "For warriors": "Para guerreros",
-
   "{0} (in progress)": "{0} (en curso)",
   "Let me see what you have.": "Déjame ver qué tienes.",
   "Goodbye.": "Adiós.",
@@ -169,7 +160,6 @@
   "{0} gold": "{0} de oro",
   "{0} XP": "{0} XP",
   "Reward:": "Recompensa:",
-
   "Bag": "Bolsa",
   "Attack": "Ataque",
   "Armor": "Armadura",
@@ -189,7 +179,6 @@
   "Click to use": "Haz clic para usar",
   "Click to eat": "Haz clic para comer",
   "{0} · Unique": "{0} · Único",
-
   "Return to {0}": "Vuelve con {0}",
   "No quests. Look for a gold ! over someone's head.": "Sin misiones. Busca un ! dorado sobre la cabeza de alguien.",
   "Quests come from people with a gold ! over their head.": "Las misiones las dan quienes llevan un ! dorado sobre la cabeza.",
@@ -199,7 +188,7 @@
   "Nothing yet. Pages, letters and notes you find will be kept here.": "Nada aún. Aquí se guardarán las páginas, cartas y notas que encuentres.",
   "Done! Go to {0} to hand it in.": "¡Hecho! Ve con {0} para entregarla.",
   "Talk to {0} to start it.": "Habla con {0} para empezarla.",
-  "From {0}": "De {0}",
+  "From {0}": "De parte de {0}",
   "In progress": "En curso",
   "Nothing right now.": "Nada por ahora.",
   "To pick up": "Por aceptar",
@@ -207,9 +196,7 @@
   "None yet.": "Ninguna aún.",
   "1 more quest will open up as you go.": "1 misión más se abrirá a medida que avances.",
   "{0} more quests will open up as you go.": "{0} misiones más se abrirán a medida que avances.",
-
   "Click or press Space ▸": "Haz clic o pulsa Espacio ▸",
-
   "Drag a spell onto your action bar. While the book is open, drag spells along the bar to move them, or off it to remove them.": "Arrastra un hechizo a tu barra de acción. Con el libro abierto, arrastra hechizos por la barra para moverlos, o fuera de ella para quitarlos.",
   "{0} mana · {1} s cooldown": "{0} de maná · {1} s de recarga",
   "{0} mana · no cooldown": "{0} de maná · sin recarga",
@@ -226,7 +213,6 @@
   "Level {0}": "Nivel {0}",
   "{0} talents": "Talentos de {0}",
   "from the talent tree": "del árbol de talentos",
-
   "Reset talents": "Reiniciar talentos",
   "Level {0} (max)": "Nivel {0} (máx.)",
   "Level {0} · {1} / {2} XP": "Nivel {0} · {1} / {2} XP",
@@ -237,7 +223,6 @@
   "Click to learn": "Haz clic para aprender",
   "✦ A new ability: it goes in your spellbook and on your bar.": "✦ Una habilidad nueva: va a tu libro de hechizos y a tu barra.",
   "{0} · Rank {1}/{2}": "{0} · Rango {1}/{2}",
-
   "Restores {0} health": "Restaura {0} de salud",
   "For sale": "En venta",
   "Sell from your bag": "Vende de tu bolsa",
@@ -246,7 +231,6 @@
   "Buy": "Comprar",
   "Sell": "Vender",
   "Nothing in your bag to sell.": "No hay nada en tu bolsa para vender.",
-
   "Ready!": "¡Listo!",
   "Polishing armour…": "Puliendo armaduras…",
   "Waking the slimes…": "Despertando a los limos…",
@@ -260,7 +244,6 @@
   "Teaching the bards…": "Instruyendo a los bardos…",
   "Gathering the rain clouds…": "Juntando las nubes de lluvia…",
   "v0.1 · early build": "v0.1 · versión preliminar",
-
   "Press J and open the Journal tab to read it.": "Pulsa J y abre la pestaña Cuaderno para leerlo.",
   "The 3D views need WebGL.": "Las vistas 3D necesitan WebGL.",
   "View: {0}  ({1} for the next one)": "Vista: {0}  ({1} para la siguiente)",
@@ -273,7 +256,6 @@
   "Isometric": "Isométrica",
   "Diorama (3D)": "Diorama (3D)",
   "Point of view (3D)": "Punto de vista (3D)",
-
   "{0} · DAY {1}": "{0} · DÍA {1}",
   "Night": "Noche",
   "Dawn": "Amanecer",
@@ -281,7 +263,6 @@
   "Noon": "Mediodía",
   "Afternoon": "Tarde",
   "Dusk": "Anochecer",
-
   "No target": "Sin objetivo",
   "Fireball": "Bola de fuego",
   "War Cry {0}s": "Grito de guerra {0}s",
@@ -302,13 +283,6 @@
   "Quests in progress, to pick up and done, and your journal.": "Misiones en curso, por aceptar y completadas, y tu cuaderno.",
   "Graphics, time of day, advanced options.": "Gráficos, hora del día, opciones avanzadas.",
   "Every key in one place.": "Todas las teclas en un solo lugar.",
-  "Inventory  [I]": "Inventario  [I]",
-  "Spellbook  [P]": "Libro de hechizos  [P]",
-  "Talents  [N]": "Talentos  [N]",
-  "Crafting  [K]": "Fabricación  [K]",
-  "Quests  [J]": "Misiones  [J]",
-  "Settings  [O]": "Ajustes  [O]",
-  "Controls  [/]": "Controles  [/]",
   "1 talent point to spend!": "¡1 punto de talento por gastar!",
   "{0} talent points to spend!": "¡{0} puntos de talento por gastar!",
   "1 new journal page to read!": "¡1 página nueva del cuaderno por leer!",
@@ -323,7 +297,6 @@
   "Rev · next step  [{0}]": "Rev · siguiente paso  [{0}]",
   "Each press casts the next skill of your sequence.\n{0} toggles Rev, {1} toggles auto.": "Cada pulsación lanza la siguiente habilidad de tu secuencia.\n{0} activa o desactiva Rev, {1} activa o desactiva el modo auto.",
   "{0}  [click · {1} turns the view]": "{0}  [clic · {1} gira la vista]",
-
   "Tap an enemy": "Toca un enemigo",
   "Mount": "Montar",
   "Dismount": "Desmontar",
@@ -337,14 +310,11 @@
   "KILLS {0}   PERFECT {1}   GOLD {2}": "BAJAS {0}   PERFECTOS {1}   ORO {2}",
   "Release to cast": "Suelta para lanzar",
   "Rev · {0}": "Rev · {0}",
-
   "zzz": "zzz",
-
   "You can keep {0} characters. Delete one to make another.": "Puedes tener {0} personajes. Borra uno para crear otro.",
   "Names are 2 to 14 letters or digits (spaces, apostrophes and hyphens too).": "Los nombres tienen de 2 a 14 letras o dígitos (también espacios, apóstrofos y guiones).",
   "You already have a {0}. Try another name.": "Ya tienes un personaje llamado {0}. Prueba otro nombre.",
   "The lakeshore": "La orilla del lago",
-
   "Suonatore di Liuto": "Suonatore di Liuto",
   "Teller of the Tales": "Teller of the Tales",
   "Medieval: Exploration": "Medieval: Exploration",

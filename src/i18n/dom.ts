@@ -13,7 +13,7 @@ import type { Lang } from './index';
  *
  * Each remembers its English, so switching language translates everything on screen again.
  */
-const ATTRS = ['title', 'placeholder', 'aria-label', 'data-label'];
+const ATTRS = ['title', 'placeholder', 'aria-label', 'data-label', 'label'];
 
 interface Done {
   src: string;
@@ -66,7 +66,10 @@ function walk(root: Node, again = false): void {
   }
 }
 
-type Translatable = Phaser.GameObjects.Text & { i18nSrc?: string | string[]; noTranslate?: boolean };
+type Translatable = Phaser.GameObjects.Text & {
+  i18nSrc?: string | string[];
+  noTranslate?: boolean;
+};
 
 function patchPhaser(): void {
   const proto = Phaser.GameObjects.Text.prototype as Translatable;
@@ -74,7 +77,12 @@ function patchPhaser(): void {
   proto.setText = function (this: Translatable, value: string | string[]) {
     this.i18nSrc = value;
     if (this.noTranslate || getLang() === 'en') return setText.call(this, value);
-    const out = typeof value === 'string' ? t(value) : Array.isArray(value) ? value.map(v => (typeof v === 'string' ? t(v) : v)) : value;
+    const out =
+      typeof value === 'string'
+        ? t(value)
+        : Array.isArray(value)
+          ? value.map(v => (typeof v === 'string' ? t(v) : v))
+          : value;
     return setText.call(this, out);
   };
 }
@@ -86,7 +94,8 @@ function phaserAgain(game: Phaser.Game): void {
       if (o instanceof Phaser.GameObjects.Text) {
         const tx = o as Translatable;
         if (tx.i18nSrc !== undefined) tx.setText(tx.i18nSrc);
-      } else if (o instanceof Phaser.GameObjects.Container) visit(o.list);
+      } else if (o instanceof Phaser.GameObjects.Container || o instanceof Phaser.GameObjects.Layer)
+        visit(o.list);
     }
   };
   for (const s of game.scene.getScenes(false)) visit(s.children.list);
@@ -116,13 +125,23 @@ export function startTranslating(): void {
       else if (r.type === 'attributes') attr(r.target as Element, r.attributeName!);
       else r.addedNodes.forEach(n => walk(n));
     }
-  }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+  }).observe(document.body, {
+    subtree: true,
+    childList: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ATTRS,
+  });
   onLang(() => {
     walk(document.body, true);
     if (game) phaserAgain(game);
   });
   // for poking at from the console: qfvI18n.missing() lists what showed untranslated
-  (window as unknown as { qfvI18n: unknown }).qfvI18n = { missing, setLang: (l: Lang) => setLang(l), lang: getLang };
+  (window as unknown as { qfvI18n: unknown }).qfvI18n = {
+    missing,
+    setLang: (l: Lang) => setLang(l),
+    lang: getLang,
+  };
 }
 
 /** The running game, so a change of language reaches its texts too. */

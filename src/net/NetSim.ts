@@ -26,6 +26,7 @@ import type { Companion } from '../sim/Companion';
 import { TICK_HZ } from './protocol';
 import { isShot } from '../data/skills';
 import { AIM_HOLD } from '../data/classes';
+import { keepNames } from '../i18n';
 
 /** A structure in a snapshot: id, kind, tile, seconds left (-1: for good), put out, how far smothered. */
 type StructureSnap = [number, StructureKind, number, number, number, number, number];
@@ -395,6 +396,7 @@ export class NetSim extends Sim {
     ] of list) {
       let o = by.get(id);
       if (!o) {
+        keepNames(name);
         o = new Hero(g, id, name) as Hero & Glide;
         o.regionId = R.id;
       }

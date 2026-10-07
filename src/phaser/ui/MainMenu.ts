@@ -4,7 +4,7 @@ import type { CharInfo } from '../../net/protocol';
 import { heroArt } from './NewCharacter';
 import { esc } from './html';
 import { CLASSES } from '../../data/classes';
-import { LANGS, LANG_NAMES, getLang, setLang, onLang } from '../../i18n';
+import { LANGS, LANG_NAMES, getLang, setLang, onLang, keepNames } from '../../i18n';
 
 export type MenuPick = 'single' | 'multi';
 
@@ -57,6 +57,7 @@ export class MainMenu {
     const root = document.createElement('div');
     root.className = 'mainmenu';
     const s = this.last;
+    if (s) keepNames(s.name);
     root.innerHTML = `
       <div class="mainmenu-row" role="menu" aria-label="Main menu">
         <button type="button" class="mainmenu-pick" role="menuitem">

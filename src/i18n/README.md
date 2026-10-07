@@ -13,9 +13,10 @@ is Spanish (`navigator.languages`), else in English; the choice is kept in `loca
   the English text exactly as the screen would show it.
 - `dom.ts`: the browser side. Every Phaser `Text` goes through `t` when its text is set, and
   a `MutationObserver` translates every text node and every `title`, `placeholder`,
-  `aria-label` and `data-label` in the page as it appears, so no window has to call `t` itself.
-  Anything inside `translate="no"` (and a Phaser text with `noTranslate`) is left alone:
-  player and room names. Switching language re-translates everything on screen from its English.
+  `aria-label`, `data-label` and `label` (a list's groups) in the page as it appears, so no window has to call `t` itself.
+  Names players chose (characters, rooms) are registered with `keepNames` as they arrive and
+  are never translated, alone or inside other text; anything inside `translate="no"` (and a
+  Phaser text marked with `keepAsIs`) is left alone too. Switching language re-translates everything on screen from its English.
 - `es/*.json`: Spanish, one file per part of the game (`npm run i18n` shows which source files
   each covers). `names.json` is the glossary of names everything else refers to (places,
   people, creatures, gear, spells, quests, documents); it wins over the other files, so a name

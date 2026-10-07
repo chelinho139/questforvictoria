@@ -18,7 +18,19 @@ import patterns from './patterns.json';
  * article mid-sentence ("Vuelve con el Guardián Aldric").
  */
 const ES: Record<string, string> = {};
-for (const d of [patterns, quests, npcs, story, world, items, skills, sim, ui, settings, names] as Record<string, string>[])
+for (const d of [
+  patterns,
+  quests,
+  npcs,
+  story,
+  world,
+  items,
+  skills,
+  sim,
+  ui,
+  settings,
+  names,
+] as Record<string, string>[])
   for (const [en, es] of Object.entries(d)) if (es) ES[en] = es;
 
 export default ES;

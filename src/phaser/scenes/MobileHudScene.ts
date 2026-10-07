@@ -10,6 +10,7 @@ import { isoX, isoY } from '../../sim/map';
 import { Colors, Fonts, hex, PIXEL_SCALE, logicalSize } from '../config';
 import { Tex } from '../render/textures';
 import { CLASSES } from '../../data/classes';
+import { t } from '../../i18n';
 
 type Text = Phaser.GameObjects.Text;
 type Graphics = Phaser.GameObjects.Graphics;
@@ -122,7 +123,7 @@ export class MobileHudScene extends Phaser.Scene {
     this.gTop = this.add.graphics().setDepth(100);
 
     // plates
-    this.txt(14, 14, `${playerName()} · ${CLASSES[this.sim.cls].name} ${this.sim.level}`, 'display', 9, Colors.ink);
+    this.txt(14, 14, `${playerName()} · ${CLASSES[this.sim.cls].name} · Lv ${this.sim.level}`, 'display', 9, Colors.ink);
     this.pHp = this.txt(14 + 132 - 3, 25, '', 'body', 13, '#fff').setOrigin(1, 0);
     this.pMp = this.txt(14 + 132 - 3, 39, '', 'body', 13, '#fff').setOrigin(1, 0);
     this.eName = this.txt(180, 14, 'Tap an enemy', 'display', 9, Colors.ink).setOrigin(0.5, 0);
@@ -541,7 +542,9 @@ export class MobileHudScene extends Phaser.Scene {
       const inf = s.info(this.hot);
       const why = s.canDo(this.hot);
       this.wName.setText(inf.n);
-      this.wSub.setText(why ? why.replace(inf.n + ': ', '').replace(inf.n + ' ', '') : inf.desc);
+      // the reason without the spell's name (it's over it), in the player's language
+      const name = t(inf.n);
+      this.wSub.setText(why ? t(why).replace(name + ': ', '').replace(name + ' ', '') : inf.desc);
     }
   }
 

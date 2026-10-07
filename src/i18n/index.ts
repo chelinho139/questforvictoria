@@ -46,6 +46,8 @@ const cache = new Map<string, string>();
 const listeners = new Set<(l: Lang) => void>();
 /** Text that reached `t` with no translation (for qfvI18n.missing() in the browser). */
 const missed = new Set<string>();
+/** Names people chose (characters, rooms): never translated, whatever they look like. */
+const kept = new Set<string>();
 
 const HOLE = /\{(\d+)\}/g;
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -69,8 +71,15 @@ function build(dict: Record<string, string>): Table {
         .split(HOLE)
         .map((part, i) => (i % 2 ? (holes.push(Number(part)), '(.+?)') : escapeRe(part)))
         .join('');
-      const out = v.trim().replace(HOLE, (_, n: string) => `\u0000${holes.indexOf(Number(n))}\u0000`);
-      templates.push({ re: new RegExp(`^${src}$`, 's'), out, lines: key.includes('\n'), weight: /[A-Za-z]/.test(words) ? words.length : words.replace(/\s/g, '').length / 100 });
+      const out = v
+        .trim()
+        .replace(HOLE, (_, n: string) => `\u0000${holes.indexOf(Number(n))}\u0000`);
+      templates.push({
+        re: new RegExp(`^${src}$`, 's'),
+        out,
+        lines: key.includes('\n'),
+        weight: /[A-Za-z]/.test(words) ? words.length : words.replace(/\s/g, '').length / 100,
+      });
     } else {
       exact.set(key, v);
       lower.set(key.toLowerCase(), v);
@@ -109,7 +118,10 @@ function lookup(tb: Table, s: string, depth: number): string | null {
   for (const tp of tb.templates) {
     if (lines && !tp.lines) continue;
     const m = tp.re.exec(s);
-    if (m) return tp.out.replace(/\u0000(\d+)\u0000/g, (_, i: string) => fill(tb, m[Number(i) + 1], depth + 1));
+    if (m)
+      return tp.out.replace(/\u0000(\d+)\u0000/g, (_, i: string) =>
+        fill(tb, m[Number(i) + 1], depth + 1)
+      );
   }
   // text in lines: each on its own
   if (lines) {
@@ -119,18 +131,20 @@ function lookup(tb: Table, s: string, depth: number): string | null {
   return null;
 }
 
-/** What fills a template's hole: a name, a number, or a list of them. */
+/**
+ * What fills a template's hole: a name, a number, or a list of them ("+3 attack, +1 armor":
+ * each item on its own, before any template could take the whole list for one).
+ */
 function fill(tb: Table, s: string, depth: number): string {
-  const one = tr(tb, s, depth, false);
-  if (one !== s || !s.includes(', ')) return one;
-  return s
-    .split(', ')
-    .map(x => tr(tb, x, depth, false))
-    .join(', ');
+  if (!s.includes(', ') || kept.has(s.trim())) return tr(tb, s, depth, false);
+  const whole = tb.exact.get(s.trim()) ?? tb.lower.get(s.trim().toLowerCase());
+  if (whole !== undefined) return tr(tb, s, depth, false);
+  const parts = s.split(', ').map(x => tr(tb, x, depth, false));
+  return parts.join(', ') !== s ? parts.join(', ') : tr(tb, s, depth, false);
 }
 
 function tr(tb: Table, s: string, depth: number, note = true): string {
-  if (!/[A-Za-z]/.test(s)) return s;
+  if (!/[A-Za-z]/.test(s) || kept.has(s.trim())) return s;
   const lead = s.match(/^\s*/)![0];
   const trail = s.slice(lead.length).match(/\s*$/)![0];
   const core = s.slice(lead.length, s.length - trail.length);
@@ -174,6 +188,19 @@ export function translator(dict: Record<string, string>): (s: string) => string 
 export function translated(s: string, l: Lang = lang): boolean {
   const tb = tableOf(l);
   return !tb || !/[A-Za-z]/.test(s) || lookup(tb, s.trim(), 0) !== null;
+}
+
+/**
+ * Leave these as they are in every language, alone or inside other text: names players
+ * chose for their characters and rooms (a hero called Wolf is not "Lobo").
+ */
+export function keepNames(...names: string[]): void {
+  let added = false;
+  for (const n of names) {
+    const k = n.trim();
+    if (k && !kept.has(k)) (kept.add(k), (added = true));
+  }
+  if (added) cache.clear();
 }
 
 export function getLang(): Lang {

@@ -14,7 +14,8 @@ export class ControlsWindow {
     root.className = 'craft controls';
     root.hidden = true;
     const k = (key: string) => `<kbd>${key}</kbd>`;
-    const row = (keys: string, what: string) => `<li><span>${keys}</span>${what}</li>`;
+    // (what it does in a block of its own, so a key inside the sentence stays in the sentence)
+    const row = (keys: string, what: string) => `<li><span>${keys}</span><div>${what}</div></li>`;
     const bar = BAR_KEYS.map(b => k(b.bind)).join('');
     root.innerHTML = `<header><span>Controls</span><button type="button" class="inv-x" title="Close (/ or Esc)">×</button></header><div class="craft-list">
       <section><h3><span>Moving</span></h3><ul>

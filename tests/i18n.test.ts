@@ -16,9 +16,9 @@ const tr = translator({
   'Slime in the Meadow': 'Limos en el prado',
   'You eat the {0}. +{1} health.': 'Comes: {0}. +{1} de salud.',
   '{0} on cooldown ({1} s).': '{0}: en recarga ({1} s).',
-  'Whirlwind': 'Torbellino',
+  Whirlwind: 'Torbellino',
   'Click to use': 'Haz clic para usar',
-  'Empty': '',
+  Empty: '',
 });
 
 test('exact text, and anything unknown stays as it is', () => {
@@ -46,7 +46,11 @@ test('templates fill their holes with translations, and the more specific one wi
     'Misión completada: Limos en el prado. Recibes 15 de oro, Espada de hierro.'
   );
   assert.equal(tr('Whirlwind on cooldown (3 s).'), 'Torbellino: en recarga (3 s).');
-  assert.equal(tr('Something unknown defeated.'), 'Something unknown derrotado.', 'what it cannot translate stays');
+  assert.equal(
+    tr('Something unknown defeated.'),
+    'Something unknown derrotado.',
+    'what it cannot translate stays'
+  );
 });
 
 test('text in several lines goes line by line', () => {
@@ -58,7 +62,10 @@ test('text in several lines goes line by line', () => {
 const nav = globalThis as { navigator?: unknown; localStorage?: Storage };
 const realNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
 function computerSpeaks(...languages: string[]): void {
-  Object.defineProperty(globalThis, 'navigator', { value: { languages, language: languages[0] }, configurable: true });
+  Object.defineProperty(globalThis, 'navigator', {
+    value: { languages, language: languages[0] },
+    configurable: true,
+  });
 }
 beforeEach(() => {
   nav.localStorage = memoryStorage();
@@ -68,7 +75,7 @@ afterEach(() => {
   setLang('en', false);
 });
 
-test("a computer in Spanish starts the game in Spanish; anything else, in English", () => {
+test('a computer in Spanish starts the game in Spanish; anything else, in English', () => {
   computerSpeaks('es-AR', 'en');
   assert.equal(detectLang(), 'es');
   computerSpeaks('es');
@@ -125,25 +132,110 @@ import { STRUCTURES } from '../src/data/crafting';
 
 /** Fields that hold names for the code (ids, keys, art), never words for the screen. */
 const CODE_FIELDS = new Set([
-  'id', 'kind', 'tex', 'icon', 'col', 'color', 'flag', 'flags', 'giver', 'turnIn', 'requires', 'enemy', 'build',
-  'recipe', 'region', 'npc', 'item', 'items', 'object', 'objectKind', 'to', 'at', 'spot', 'scene', 'sounds', 'music',
-  'when', 'need', 'not', 'quest', 'is', 'cls', 'slot', 'station', 'grants', 'talent', 'tree', 'call', 'free', 'by',
-  'docs', 'doc', 'sells', 'into', 'rider', 'fire', 'art', 'home', 'regions', 'look', 'fade', 'mood', 'ring', 'tile',
-  'behavior', 'mouth', 'voice', 'key', 'bind', 'set', 'take', 'give', 'loot', 'drop', 'learn', 'unlock', 'wake',
+  'id',
+  'kind',
+  'tex',
+  'icon',
+  'col',
+  'color',
+  'flag',
+  'flags',
+  'giver',
+  'turnIn',
+  'requires',
+  'enemy',
+  'build',
+  'recipe',
+  'region',
+  'npc',
+  'item',
+  'items',
+  'object',
+  'objectKind',
+  'to',
+  'at',
+  'spot',
+  'scene',
+  'sounds',
+  'music',
+  'when',
+  'need',
+  'not',
+  'quest',
+  'is',
+  'cls',
+  'slot',
+  'station',
+  'grants',
+  'talent',
+  'tree',
+  'call',
+  'free',
+  'by',
+  'docs',
+  'doc',
+  'sells',
+  'into',
+  'rider',
+  'fire',
+  'art',
+  'home',
+  'regions',
+  'look',
+  'fade',
+  'mood',
+  'ring',
+  'tile',
+  'behavior',
+  'mouth',
+  'voice',
+  'key',
+  'bind',
+  'set',
+  'take',
+  'give',
+  'loot',
+  'drop',
+  'learn',
+  'unlock',
+  'wake',
 ]);
 
 /** Every string a player can read in this data (functions of a rank are called for each rank). */
 function words(x: unknown, out: Set<string>, field = ''): Set<string> {
   if (typeof x === 'string') {
-    if (!CODE_FIELDS.has(field) && /[A-Za-z]/.test(x) && (/\s/.test(x) || /^[A-Z]/.test(x)) && !/^[a-z0-9_:.\-]+$/.test(x)) out.add(x);
+    if (
+      !CODE_FIELDS.has(field) &&
+      /[A-Za-z]/.test(x) &&
+      (/\s/.test(x) || /^[A-Z]/.test(x)) &&
+      !/^[a-z0-9_:.\-]+$/.test(x)
+    )
+      out.add(x);
   } else if (Array.isArray(x)) for (const v of x) words(v, out, field);
-  else if (x && typeof x === 'object') for (const [k, v] of Object.entries(x)) if (!CODE_FIELDS.has(k)) words(v, out, k);
+  else if (x && typeof x === 'object')
+    for (const [k, v] of Object.entries(x)) if (!CODE_FIELDS.has(k)) words(v, out, k);
   return out;
 }
 
 test('every name, line, description and document of the game has its Spanish', () => {
   const all = new Set<string>();
-  for (const d of [NPCS, QUESTS, ITEMS, DOCS, DOC_KINDS, SCENES, KINDS, SPELLS, SKILLS, ACTIONS, TREES, CLASSES, COMPANIONS, STRUCTURES]) words(d, all);
+  for (const d of [
+    NPCS,
+    QUESTS,
+    ITEMS,
+    DOCS,
+    DOC_KINDS,
+    SCENES,
+    KINDS,
+    SPELLS,
+    SKILLS,
+    ACTIONS,
+    TREES,
+    CLASSES,
+    COMPANIONS,
+    STRUCTURES,
+  ])
+    words(d, all);
   for (const r of Object.values(REGIONS)) {
     const { name, exits, objects, wanderers, hold, wake } = r as unknown as Record<string, unknown>;
     words({ name, exits, objects, wanderers, hold, wake }, all);
@@ -158,13 +250,20 @@ test('every name, line, description and document of the game has its Spanish', (
 
 const DIR = path.join(__dirname, '..', 'src', 'i18n', 'es');
 const files = fs.readdirSync(DIR).filter(f => f.endsWith('.json'));
-const dicts = files.map(f => [f, JSON.parse(fs.readFileSync(path.join(DIR, f), 'utf8')) as Record<string, string>] as const);
+const dicts = files.map(
+  f =>
+    [f, JSON.parse(fs.readFileSync(path.join(DIR, f), 'utf8')) as Record<string, string>] as const
+);
 
 test('every entry is translated, with the same holes as its English', () => {
   for (const [f, d] of dicts) {
     for (const [en, es] of Object.entries(d)) {
       assert.ok(es, `${f}: "${en}" has no Spanish`);
-      const holes = (s: string) => [...s.matchAll(/\{(\d+)\}/g)].map(m => m[1]).sort().join();
+      const holes = (s: string) =>
+        [...s.matchAll(/\{(\d+)\}/g)]
+          .map(m => m[1])
+          .sort()
+          .join();
       assert.equal(holes(es), holes(en), `${f}: "${en}" → "${es}" has other holes`);
     }
   }
@@ -176,7 +275,8 @@ test('the dictionaries agree: a text means the same everywhere', () => {
   for (const [f, d] of dicts) {
     for (const [en, es] of Object.entries(d)) {
       const was = seen.get(en.trim());
-      if (was && was[1] !== es.trim()) clashes.push(`"${en}": ${was[0]} "${was[1]}" vs ${f} "${es}"`);
+      if (was && was[1] !== es.trim())
+        clashes.push(`"${en}": ${was[0]} "${was[1]}" vs ${f} "${es}"`);
       else seen.set(en.trim(), [f, es.trim()]);
     }
   }

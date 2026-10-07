@@ -5,10 +5,11 @@ import type { HdHeroId, HeroCanvases } from '../render/hdHeroes';
 import { heroArt, paint } from './NewCharacter';
 import { esc } from './html';
 import { CLASSES } from '../../data/classes';
+import { getLang, keepNames } from '../../i18n';
 
 const when = (ms: number) =>
   ms
-    ? 'played ' + new Date(ms).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+    ? 'played ' + new Date(ms).toLocaleString(getLang(), { dateStyle: 'medium', timeStyle: 'short' })
     : 'not played yet';
 
 export interface CharacterListOpts {
@@ -88,6 +89,7 @@ export class CharacterList {
   setChars(chars: CharInfo[], select?: string): void {
     const keep = select ?? this.chars[this.sel]?.id;
     this.chars = chars;
+    keepNames(...chars.map(c => c.name));
     const i = chars.findIndex(c => c.id === keep);
     this.sel = i >= 0 ? i : Math.min(this.sel, Math.max(0, chars.length - 1));
     this.render();
