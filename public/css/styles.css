@@ -187,6 +187,15 @@ html, body { height: 100%; margin: 0; background: #0c1018; overflow: hidden; }
 .mainmenu-pick:focus-visible { outline: 2px solid #c8392f; outline-offset: -4px; }
 .mainmenu-div { width: 4px; margin: 12px 0; background: #9a5626; box-shadow: 2px 0 0 #fcecc4; }
 .mainmenu-hint { margin: 0; font-size: 14px; color: #fce6b4; text-shadow: 0 2px 0 #0a0d14; }
+.mainmenu-lang { pointer-events: auto; display: flex; gap: 4px; }
+.mainmenu-lang button {
+  font: 700 11px 'Pixelify Sans', monospace; letter-spacing: 0.04em; cursor: pointer;
+  color: #fce6b4; background: rgba(59, 31, 14, 0.75); border: 2px solid #4a2410; padding: 3px 8px;
+  text-shadow: 0 1px 0 #3b1f0e;
+}
+.mainmenu-lang button:hover { background: #8a4a1e; }
+.mainmenu-lang button[aria-pressed='true'] { background: #f2c14e; color: #4a2410; text-shadow: none; }
+.mainmenu-lang button:focus-visible { outline: 2px solid #f2c14e; outline-offset: 2px; }
 @media (max-width: 520px) {
   .mainmenu-row { grid-template-columns: 1fr; }
   .mainmenu-div { width: auto; height: 4px; margin: 0 12px; box-shadow: 0 2px 0 #fcecc4; }

@@ -29,6 +29,7 @@ import { SPELLS, SPELL_ORDER } from '../../data/spells';
 import type { SpellKey } from '../../data/spells';
 import { SKILLS, ACTIONS, isSkill } from '../../data/skills';
 import { CLASS_IDS, CLASSES } from '../../data/classes';
+import { LANGS, LANG_NAMES, getLang, setLang, onLang } from '../../i18n';
 
 /** Everything the panel can change that is worth keeping across reloads. */
 /** The documents in docs/, served by server.js in the book viewer. Add new specs here (and to SPECS in server.js). */
@@ -230,6 +231,8 @@ export class DevMenu {
   private readonly weatherBtns: HTMLButtonElement[] = [];
   private readonly clockSlider: HTMLInputElement;
   private readonly speedBtns: HTMLButtonElement[] = [];
+  private readonly langBtns: HTMLButtonElement[] = [];
+  private readonly offLang: () => void;
   private draggingClock = false;
   private lastSync = 0;
   private fpsTimer = 0;
@@ -266,6 +269,22 @@ export class DevMenu {
     close.addEventListener('click', () => this.setOpen(false));
     head.append(close);
     this.root.append(head);
+
+    // ---- language: every word of the game (src/i18n), switched at once and kept in this browser
+    const lang = this.section('Language');
+    const langSeg = el('div', 'dev-seg');
+    for (const l of LANGS) {
+      const b = this.button(LANG_NAMES[l], () => setLang(l));
+      b.dataset.lang = l;
+      b.lang = l;
+      b.translate = false;
+      this.langBtns.push(b);
+      langSeg.append(b);
+    }
+    lang.append(langSeg);
+    const syncLang = () => this.langBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === getLang())));
+    syncLang();
+    this.offLang = onLang(syncLang);
 
     // ---- time
     // ---- documents: the story and the build specs, read in the book viewer (a new tab, so the game keeps running)
@@ -758,6 +777,7 @@ export class DevMenu {
 
   destroy(): void {
     window.removeEventListener('resize', this.onResize);
+    this.offLang();
     this.styleBoard.close();
     this.root.remove();
     this.fpsEl.remove();

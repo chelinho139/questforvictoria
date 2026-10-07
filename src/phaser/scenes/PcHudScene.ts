@@ -22,6 +22,7 @@ import type { TreeState, RockState, NpcState, ObjectState } from '../../sim/type
 import { CLASSES } from '../../data/classes';
 import { VIEW_MODES, VIEW_NAMES } from '../view3d/View3D';
 import type { View3D, ViewMode } from '../view3d/View3D';
+import { keepAsIs } from '../../i18n/dom';
 
 type NineSlice = Phaser.GameObjects.NineSlice;
 type Image = Phaser.GameObjects.Image;
@@ -190,7 +191,7 @@ export class PcHudScene extends Phaser.Scene {
     this.gTop = this.add.graphics().setDepth(D.overlay);
 
     this.player = this.unitFrame(true);
-    this.player.name.setText(playerName());
+    keepAsIs(this.player.name).setText(playerName());
     this.player.sub.setText(`${CLASSES[this.sim.cls].name} · Lv 1`);
     this.player.portrait.setTexture(Tex.knight);
     this.target = this.unitFrame(false);

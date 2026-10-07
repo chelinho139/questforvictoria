@@ -155,7 +155,7 @@ export class Lobby {
           ? r.players.map(p => `${esc(p.name)} (${p.level})`).join(', ')
           : 'nobody right now';
         return `<div class="lobby-room">
-          <h3>${esc(r.name)}</h3>
+          <h3 translate="no">${esc(r.name)}</h3>
           <button type="button" class="select-go" data-room="${esc(r.id)}"${full ? ' disabled' : ''}>${full ? 'Full' : 'Join'}</button>
           <p>${r.players.length}/${r.max} · ${who}</p>
           <p>${esc(r.place)} · ${esc(r.story)}</p>

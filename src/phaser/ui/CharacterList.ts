@@ -125,7 +125,7 @@ export class CharacterList {
       b.append(cv);
       b.insertAdjacentHTML(
         'beforeend',
-        `<span>${esc(ch.name)}</span><small>Level ${ch.level} ${CLASSES[ch.cls]?.name ?? 'Warrior'}</small><small>${esc(ch.place)}</small><small>${ch.busy ? 'playing right now' : when(ch.at)}</small>`
+        `<span translate="no">${esc(ch.name)}</span><small>Level ${ch.level} ${CLASSES[ch.cls]?.name ?? 'Warrior'}</small><small>${esc(ch.place)}</small><small>${ch.busy ? 'playing right now' : when(ch.at)}</small>`
       );
       b.addEventListener('click', () => this.select(i));
       b.addEventListener('dblclick', () => this.play());

@@ -1,0 +1,19 @@
+import names from './names.json';
+import quests from './quests.json';
+import npcs from './npcs.json';
+import story from './story.json';
+import world from './world.json';
+import items from './items.json';
+import skills from './skills.json';
+import sim from './sim.json';
+import ui from './ui.json';
+import settings from './settings.json';
+
+/**
+ * Spanish, keyed by the English text (see src/i18n/README.md). `names` holds the names
+ * everything else refers to (places, people, creatures, gear, spells, quests), so it goes
+ * last: they read the same everywhere.
+ */
+const ES: Record<string, string> = { ...quests, ...npcs, ...story, ...world, ...items, ...skills, ...sim, ...ui, ...settings, ...names };
+
+export default ES;

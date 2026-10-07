@@ -11,6 +11,7 @@ npm run build    # one-off bundles: public/dist/game.js (the browser) and dist/s
 npm test         # the automated tests (see Tests)
 npm run verify   # type-check + tests + build
 npm run bot      # a test player for online play (see Online co-op)
+npm run i18n     # strings in the source still missing a Spanish translation (see Languages)
 ```
 
 ## Tests
@@ -35,6 +36,7 @@ npm run bot      # a test player for online play (see Online co-op)
 | `behaviours.test.ts` | What the wood's creatures can do, each on a creature made for the test in an open test field: shields up (front and back, dropped by a stun), crossbow bolts that slow (and miss if you step aside), spiders waiting in the canopy, webs that hold you (keys, clicks, the server and dodging all refuse) and casts cut short, snares (jump them), riders on foot, eggs that hatch unless burned, a pack's howl, summons up to a cap, leaps at the furthest hero, lures that lead you on and blink, smotherers putting out fires, a mourner's healing wail, a song that raises the fallen; the earlier night of ring 2 and the all-day dusk under the grave-mist |
 | `places.test.ts` | A night held round the fires (won, and lost and lit again), a region's own fires (with the story, never saved), objects that cost what's in the bag, waking by a safe fire (here or in another region), a trader's stock growing with the story, recipes you have to be taught, and a whistle a knight answers |
 | `companion.test.ts` | Wren: nowhere until the story brings her, walking with the hero and keeping up, going on into the next region, waiting at her camp until fetched, shooting what fights the heroes (her kills theirs), going down on one knee and getting up, held by a snare; online, in the snapshots, and a held hero can't walk in their own browser |
+| `i18n.test.ts` | Languages: looking text up (exactly, in capitals, by templates with names and numbers filled in, line by line), a computer in Spanish starting in Spanish, the choice in Settings winning and being kept, every name, line, description and document of the game having its Spanish, and the dictionaries agreeing with each other |
 
 `tests/helpers.ts` has the shared pieces: a game with heroes and the opening scene clicked through, standing next to an NPC, running the clock, and a `localStorage` for Node.
 
@@ -45,6 +47,7 @@ npm run bot      # a test player for online play (see Online co-op)
 - `src/server/` — the game server, bundled to `dist/server/` and started by `server.js`: rooms, the 20-a-second loop, and a `Session` per player that builds their snapshots.
 - `src/data/` — tunables and pixel-art sources: skills, enemies, icon/sprite maps.
 - `src/phaser/` — Phaser layer: `BootScene` is the loading screen (logo, progress bar) and builds every texture in steps, `GameScene` ticks the sim and renders the world, `PcHudScene` is the Stardew/Terraria-style PC HUD (parchment unit frames, wooden action bar, day dial with gold box), `MobileHudScene` is the one-thumb touch HUD kept for a mobile build. `PLATFORM` in `src/phaser/config.ts` picks one. The canvas fills the window at an integer pixel scale. `audio/` makes and plays the sounds (see Sound).
+- `src/i18n/` — languages: the game is written in English and the browser shows it in English or Spanish (see Languages).
 - `public/` — static site; `public/dist/` is generated.
 - `index.html` — the original single-file prototype the game is seeded from.
 
@@ -254,6 +257,10 @@ The plan, its decisions and where it stands are in `docs/online.md` (in the game
 - **Quests in a room** (`Game.questStatus` / `acceptQuest` / `completeQuest`, `Hero.questLog`): the room keeps quest progress (shared kills and places); each hero keeps their own log (on it, or handed in). Accepting gives the quest to the whole party, and each player hands it in for their own reward, once per character. The first hand-in plays the quest's story effects. The log travels with the character (`Game.toSave` writes the hero's view; `loadHero` brings it into the next room).
 - **Staying connected:** the server pings each browser at the WebSocket level every 10 seconds, which the browser answers even from a background tab, and lets a character go after 45 seconds of silence.
 - **Testing alone:** `npm run bot -- host "Bot room"` opens a room with a bot in it; `npm run bot -- join ABCD` sends one into room ABCD (`--cls archer` for an archer bot); `npm run bot` lists the rooms.
+
+## Languages
+
+English and Spanish. The game starts in Spanish on a computer whose first language the game speaks is Spanish, else in English; **Settings › Language** (and the buttons under the main menu) switches at once, and the choice is kept in this browser. The simulation, the server and the data stay in English: the browser translates whatever it shows (every Phaser text and every text in the HTML windows) by looking it up in `src/i18n/es/*.json`, keyed by the English, with `{0}` templates for text built around names and numbers, so text made by the server translates too. `src/i18n/README.md` explains how to write entries and holds the Spanish glossary; `npm run i18n` lists strings in the source with no translation yet, and in the browser `qfvI18n.missing()` lists what reached the screen untranslated. The design documents (the lore, the act specs) stay in English.
 
 ## License
 

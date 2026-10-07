@@ -4,6 +4,7 @@ import type { CharInfo } from '../../net/protocol';
 import { heroArt } from './NewCharacter';
 import { esc } from './html';
 import { CLASSES } from '../../data/classes';
+import { LANGS, LANG_NAMES, getLang, setLang, onLang } from '../../i18n';
 
 export type MenuPick = 'single' | 'multi';
 
@@ -23,7 +24,10 @@ export class MainMenu {
   private canvases: HTMLCanvasElement[] = [];
   private single: HeroCanvases;
   private party: HeroCanvases[];
+  private offLang: (() => void) | null = null;
   private readonly onKey = (e: KeyboardEvent) => {
+    // Enter on a language button picks that language, not a game
+    if ((e.target as HTMLElement | null)?.closest?.('.mainmenu-lang')) return;
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
       e.preventDefault();
       this.select(1 - this.sel);
@@ -69,9 +73,17 @@ export class MainMenu {
           <small>your characters on this server</small>
         </button>
       </div>
-      <p class="mainmenu-hint">Arrow keys choose · Enter plays</p>`;
+      <p class="mainmenu-hint">Arrow keys choose · Enter plays</p>
+      <div class="mainmenu-lang" role="group" aria-label="Language">${LANGS.map(
+        l => `<button type="button" data-lang="${l}" lang="${l}" translate="no">${LANG_NAMES[l]}</button>`
+      ).join('')}</div>`;
     document.body.append(root);
     this.root = root;
+    const langs = [...root.querySelectorAll<HTMLButtonElement>('.mainmenu-lang button')];
+    const showLang = () => langs.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === getLang())));
+    langs.forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang as (typeof LANGS)[number])));
+    showLang();
+    this.offLang = onLang(showLang);
     this.picks = [...root.querySelectorAll<HTMLButtonElement>('.mainmenu-pick')];
     this.canvases = this.picks.map(b => b.querySelector('canvas')!);
     this.picks.forEach((b, i) => {
@@ -140,6 +152,8 @@ export class MainMenu {
   close(): void {
     cancelAnimationFrame(this.raf);
     window.removeEventListener('keydown', this.onKey);
+    this.offLang?.();
+    this.offLang = null;
     this.root?.remove();
     this.root = null;
   }
