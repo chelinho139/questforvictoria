@@ -70,7 +70,7 @@ function build(dict: Record<string, string>): Table {
         .map((part, i) => (i % 2 ? (holes.push(Number(part)), '(.+?)') : escapeRe(part)))
         .join('');
       const out = v.trim().replace(HOLE, (_, n: string) => `\u0000${holes.indexOf(Number(n))}\u0000`);
-      templates.push({ re: new RegExp(`^${src}$`, 's'), out, lines: key.includes('\n'), weight: /[A-Za-z]/.test(words) ? words.length : 0 });
+      templates.push({ re: new RegExp(`^${src}$`, 's'), out, lines: key.includes('\n'), weight: /[A-Za-z]/.test(words) ? words.length : words.replace(/\s/g, '').length / 100 });
     } else {
       exact.set(key, v);
       lower.set(key.toLowerCase(), v);

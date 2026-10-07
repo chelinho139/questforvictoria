@@ -24,6 +24,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 /** Which source files each dictionary file (src/i18n/<lang>/<area>.json) covers. */
 export const AREAS: Record<string, string[]> = {
   names: [],
+  patterns: [],
   quests: ['src/data/quests.ts'],
   npcs: ['src/data/npcs.ts', 'src/data/companions.ts'],
   story: ['src/data/scenes.ts', 'src/data/docs.ts', 'src/data/story.ts'],

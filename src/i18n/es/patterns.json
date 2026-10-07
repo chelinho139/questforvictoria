@@ -1,0 +1,23 @@
+{
+  "{0}: {1}": "{0}: {1}",
+  "{0}: “{1}”": "{0}: “{1}”",
+  "{0} · {1}": "{0} · {1}",
+  "{0}  [{1}]": "{0}  [{1}]",
+  "{0} ({1})": "{0} ({1})",
+  "{0} × {1}": "{0} × {1}",
+  "+{0} {1}": "+{0} {1}",
+  "? {0}": "? {0}",
+  "! {0}": "! {0}",
+  "✓ {0}": "✓ {0}",
+  "{0}.": "{0}.",
+  "{0}: done! Return to Warden Aldric.": "{0}: ¡hecho! Vuelve con el Guardián Aldric.",
+  "Talk to Warden Aldric to start it.": "Habla con el Guardián Aldric para empezarla.",
+  "{0}: done! Return to Sergeant Pike.": "{0}: ¡hecho! Vuelve con el sargento Pike.",
+  "Talk to Sergeant Pike to start it.": "Habla con el sargento Pike para empezarla.",
+  "{0}: done! Return to Father Odo.": "{0}: ¡hecho! Vuelve con el padre Odo.",
+  "Talk to Father Odo to start it.": "Habla con el padre Odo para empezarla.",
+  "{0}: done! Return to Grandad Pell.": "{0}: ¡hecho! Vuelve con el abuelo Pell.",
+  "Talk to Grandad Pell to start it.": "Habla con el abuelo Pell para empezarla.",
+  "{0}: done! Return to Mother Dunn.": "{0}: ¡hecho! Vuelve con la madre Dunn.",
+  "Talk to Mother Dunn to start it.": "Habla con la madre Dunn para empezarla."
+}
