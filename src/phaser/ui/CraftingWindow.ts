@@ -29,11 +29,11 @@ function blit(target: HTMLCanvasElement, src: CanvasImageSource & { width: numbe
   c.drawImage(src, Math.round((target.width - src.width) / 2), Math.round((target.height - src.height) / 2));
 }
 
-/** The button's word for a recipe: build, cook, smelt, forge or make. */
+/** The button's word for a recipe: build, cook (food), smelt (bars), smith (the rest at the forge) or make. */
 function verb(r: Recipe): string {
   if ('build' in r.makes) return 'Build';
-  if (r.station === 'campfire') return 'Cook';
-  if (r.station === 'forge') return r.makes.item.endsWith('_bar') ? 'Smelt' : 'Forge';
+  if (r.station === 'campfire') return ITEMS[r.makes.item].heal ? 'Cook' : 'Make';
+  if (r.station === 'forge') return r.makes.item.endsWith('_bar') ? 'Smelt' : 'Smith';
   return 'Make';
 }
 
