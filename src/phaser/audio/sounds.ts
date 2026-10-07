@@ -1445,6 +1445,8 @@ export const SOUNDS: Record<SoundId, Recipe> = {
   cowIdle: {
     len: 1.2,
     loud: 0.5,
+    // one moo at a time, however big the herd
+    gap: 6,
     make: s =>
       voice(s, {
         at: 0,

@@ -43,7 +43,7 @@ import type { Hero } from './Hero';
 
 /** Seconds a night creature takes to climb out of the ground. */
 export const RISE_DUR = 0.9;
-/** Seconds, on average, between a wandering creature's idle calls. */
+/** Seconds, on average, between a wandering creature's idle calls (unless its kind says otherwise: `idleEvery`). */
 const IDLE_CALL = 18;
 /** A creature dragged this far from its post gives up the chase and walks back. */
 const LEASH = 380;
@@ -1186,7 +1186,7 @@ export class Region {
     if (e.wx || e.wy) this.moveEntity(e, e.wx, e.wy, e.def.spd * speedK, dt, hw, hh);
     else e.walk = 0;
     // a moo, a blorp, about every IDLE_CALL seconds (only for the ear: the game's dice stay out of it)
-    if (Math.random() < dt / IDLE_CALL) this.cry(e, 'idle');
+    if (Math.random() < dt / (e.def.idleEvery ?? IDLE_CALL)) this.cry(e, 'idle');
   }
 
   /** Set a bear trap at a hero's feet (their old one, if any, is taken up). */
