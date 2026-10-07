@@ -35,7 +35,7 @@ export interface Caption {
   /** Who says it (style 'voice'). */
   who?: string;
   /** Where on the frame. */
-  pos?: 'center' | 'low' | 'high' | 'lowLeft' | 'qTL' | 'qTR' | 'qBL' | 'qBR';
+  pos?: 'center' | 'low' | 'high' | 'lowLeft' | 'topLeft' | 'qTL' | 'qTR' | 'qBL' | 'qBR';
   /** Seconds into the item it appears, and how long it stays (default: the whole item). */
   at?: number;
   dur?: number;
@@ -68,6 +68,7 @@ html, body { margin: 0; width: 1920px; height: 1080px; background: transparent; 
   text-shadow: 0 0 14px rgba(0,0,0,0.95); }
 .voice .line { font-family: 'IM Fell English', serif; font-style: italic; font-size: 48px; line-height: 1.3; color: #efe7d6;
   text-shadow: 0 0 18px rgba(0,0,0,0.95), 0 2px 3px rgba(0,0,0,0.9); }
+.topLeft { justify-content: flex-start; align-items: flex-start; text-align: left; padding: 64px 0 0 76px; }
 .qTL, .qTR, .qBL { justify-content: flex-start; align-items: flex-start; text-align: left; padding: 26px 0 0 30px; }
 .qTR { padding-left: 990px; }
 .qBL { padding-top: 566px; }
@@ -106,8 +107,12 @@ async function chrome(): Promise<Browser> {
 }
 
 export async function closeCards(): Promise<void> {
-  await browser?.close();
+  const b = browser;
   browser = null;
+  if (!b) return;
+  // a Chrome that won't close (it has happened) mustn't hold the run open: give it 5 s, then end it
+  const closed = await Promise.race([b.close().then(() => true), new Promise<boolean>(ok => setTimeout(() => ok(false), 5000))]);
+  if (!closed) b.process()?.kill('SIGKILL');
 }
 
 /** The caption as a transparent PNG (made once, kept by its look). */

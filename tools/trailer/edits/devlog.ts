@@ -1,34 +1,37 @@
 import type { Edit } from './types';
 
 /**
- * Devlog: "One world, three cameras" (about 1:35). The isometric pixel art turns out to be a
+ * Devlog: "One world, three cameras" (about 1:31). The isometric pixel art turns out to be a
  * real 3D world; the diorama (turn, tilt, zoom); the point of view (behind the hero, and through
  * their eyes); one fight in all three cameras at once; night, rain and storm, fights and both
  * acts' places in 3D; switching with V. Under RandomMind's "Medieval: Exploration" (the
  * Greenmarch's own music, CC0), cut on its bars: 110 bpm, a bar 2.18 s, the first downbeat at
  * 2.134 s (its hits fall on them: 28.35, 67.62, 80.71...).
+ *
+ * No title card: it opens on the game at once (people leave before a title ends), the title
+ * over the first shot, and the music comes in on the downbeat of its bar 1 with it.
  */
 const BAR = (4 * 60) / 110.005;
-/** The start of bar k. */
-const T = (k: number) => 2.134 + k * BAR;
+/** Where bar 1 of the track starts: the trailer's first frame. */
+const START = 2.134 + BAR;
+/** The start of bar k on the timeline. */
+const T = (k: number) => (k - 1) * BAR;
 
 export const DEVLOG: Edit = {
   name: 'quest-for-victoria-devlog-cameras',
   title: 'Devlog: One world, three cameras',
   mix: { music: 0.85, fx: 0.7, duck: 0.25 },
   uiSounds: true,
-  music: [{ track: 'exploration', at: 0, from: 0, dur: T(40) + 5.5, fadeIn: 0.05, fadeOut: 5 }],
+  music: [{ track: 'exploration', at: 0, from: START, dur: T(40) + 5.5, fadeIn: 0.02, fadeOut: 5 }],
   items: [
-    { at: 0, card: true, text: [{ text: 'Devlog|One world, three cameras', style: 'dev', at: 0.3, dur: 3.7, fade: 0.4 }] },
-    // the reveal: the pixel art you play in is a 3D world (the diorama takes over 4 s in)
+    // the reveal, from the first frame: the pixel art you play in is a 3D world (the diorama takes over 4 s in)
     {
       at: T(1),
       shot: 'dv_reveal',
       in: 0,
-      t: 'black',
-      td: 0.4,
       text: [
-        { text: 'Isometric|the pixel-art view you play in', style: 'dev', pos: 'lowLeft', at: 0.3, dur: 3.4, fade: 0.35 },
+        { text: 'Quest for Victoria · Devlog|One world, three cameras', style: 'dev', pos: 'topLeft', at: 0, dur: 8.5, fade: 0.25 },
+        { text: 'Isometric|the pixel-art view you play in', style: 'dev', pos: 'lowLeft', at: 0.5, dur: 3.2, fade: 0.35 },
         { text: '…is a real 3D world|every house, tree and hero stands up in it', style: 'dev', pos: 'lowLeft', at: 4.3, dur: 4.2, fade: 0.35 },
       ],
     },
