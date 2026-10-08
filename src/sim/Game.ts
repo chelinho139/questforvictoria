@@ -26,6 +26,7 @@ import { COMPANION_IDS } from '../data/companions';
 import { Region } from './Region';
 import type { RegionMemory } from './Region';
 import { Duels } from './Duel';
+import { Trades } from './Trade';
 import type { RoomEvents, QuestProgress, QuestStatus, Structure } from './types';
 
 /** A goal's count to reach (a place counts once). */
@@ -72,6 +73,8 @@ export class Game {
   difficulty: Difficulty = 'normal';
   /** Who has challenged whom, and the duels being fought (sim/Duel.ts). */
   readonly duels = new Duels(this);
+  /** Who has asked whom to trade, and the trades at the table (sim/Trade.ts). */
+  readonly trades = new Trades(this);
   private readonly lastStatus = new Map<string, QuestStatus>();
 
   /** The live region with this id (built if nobody was in it). */
@@ -95,6 +98,7 @@ export class Game {
 
   removeHero(h: Hero): void {
     this.duels.left(h);
+    this.trades.left(h);
     const from = h.regionId;
     this.heroes = this.heroes.filter(x => x !== h);
     h.regionId = '';
@@ -108,6 +112,7 @@ export class Game {
     const from = h.regionId;
     // walking off to another region walks out of a duel
     if (from && from !== id) this.duels.left(h);
+    if (from && from !== id) this.trades.left(h);
     h.regionId = id;
     if (from && from !== id) this.closeIfEmpty(from);
     const r = this.region(id);
@@ -440,6 +445,7 @@ export class Game {
     this.placeCompanions();
     for (const r of [...this.regions.values()]) if (this.regions.has(r.id)) r.tick(dt);
     this.duels.tick(dt);
+    this.trades.tick(dt);
     this.watchQuests();
   }
 

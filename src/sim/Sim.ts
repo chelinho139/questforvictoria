@@ -21,6 +21,7 @@ import type { Region } from './Region';
 import type { Enemy, Fx, Particle, ButtonId, SimEvents, Stack, Drop, TreeState, RockState, Structure, NpcState, QuestProgress, QuestStatus, ObjectState, PropState, Hazard, WandererState, LogClass, Trap, Work, Snare } from './types';
 import type { Companion } from './Companion';
 import type { Rival, DuelView, DuelFlag } from './Duel';
+import type { TradeView } from './Trade';
 
 export { GCD, WIN, AA_RANGE, JUMP_DUR, JUMP_HEIGHT, FLIP_DUR, FLIP_HEIGHT, FLIP_CHANCE, ATK_ANIM, AA_PERIOD, TALK_REACH } from './Hero';
 export type { KeyInfo } from './Hero';
@@ -614,6 +615,36 @@ export class Sim {
   /** Say no: decline a challenge (or take mine back), back out of the count, or yield the fight. */
   quitDuel(): void {
     this.game.duels.quit(this.hero);
+  }
+
+  // ---------- trading with another hero (sim/Trade.ts) ----------
+  /** My trade, or the request I made or was made (null: none). */
+  get trading(): TradeView | null {
+    return this.game.trades.view(this.hero);
+  }
+  /** Ask another hero here to trade. */
+  askTrade(o: Hero): void {
+    this.game.trades.ask(this.hero, o.id);
+  }
+  /** Take up the request made to me. */
+  acceptTrade(): void {
+    this.game.trades.accept(this.hero);
+  }
+  /** Say no to a request (or take mine back), or call off the trade at the table. */
+  quitTrade(): void {
+    this.game.trades.quit(this.hero);
+  }
+  /** Put `n` of an item on the table (0 takes it off). */
+  tradeItem(id: ItemId, n: number): void {
+    this.game.trades.setItem(this.hero, id, n);
+  }
+  /** Put this much gold on the table. */
+  tradeGold(n: number): void {
+    this.game.trades.setGold(this.hero, n);
+  }
+  /** Accept the table as it stands (or take my accept back). */
+  tradeReady(on: boolean): void {
+    this.game.trades.setReady(this.hero, on);
   }
   setRevEnabled(on: boolean): void {
     this.hero.setRevEnabled(on);
