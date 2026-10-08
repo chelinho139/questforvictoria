@@ -152,3 +152,34 @@ test('single player: take it, do it, hand it in, and it is saved done', () => {
   assert.ok(game.completeQuest(Q, h));
   assert.equal(game.toSave(h).quests[Q].state, 'done');
 });
+
+test('the proclamation The Road North asks you to read has a quest mark until you read it', () => {
+  const { game, heroes } = gameWith('Ana');
+  const h = heroes[0];
+  for (const id of ['slime_meadow', 'warm_meal', 'goblin_raiders', 'hollow_night']) {
+    if (!QUESTS[id]) continue;
+    game.quests[id] = { state: 'done', count: [] };
+    h.questLog.set(id, 'done');
+  }
+  assert.equal(game.objectWanted('proclamation', h), false, 'no mark before the quest');
+  assert.equal(game.questStatus('road_north', h), 'available');
+  game.acceptQuest('road_north', h);
+  assert.equal(game.objectWanted('proclamation', h), true, 'marked while the quest wants it');
+  game.questEvent('interact', 'proclamation');
+  assert.equal(game.objectWanted('proclamation', h), false, 'gone once it is read');
+});
+
+test('Father Odo keeps the tower key until the village speaks for you', () => {
+  const { game, heroes } = gameWith('Ana');
+  const h = heroes[0];
+  game.flags['scene:bell_backwards'] = 1;
+  assert.equal(game.questStatus('bell_tolls', h), 'locked', 'not to a stranger');
+  for (const id of ['nans_pages', 'thorns_fences', 'letters_door', 'steward_bounty']) {
+    game.quests[id] = { state: 'done', count: [] };
+    h.questLog.set(id, 'done');
+  }
+  assert.equal(game.questStatus('bell_tolls', h), 'locked', 'the hounds still run');
+  game.quests.kings_hounds = { state: 'done', count: [] };
+  h.questLog.set('kings_hounds', 'done');
+  assert.equal(game.questStatus('bell_tolls', h), 'available', 'now he gives you the key');
+});

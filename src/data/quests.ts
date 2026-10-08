@@ -248,8 +248,18 @@ export const QUESTS: Record<string, QuestDef> = {
     giver: 'odo',
     turnIn: 'nan',
     main: true,
-    when: { flag: 'scene:bell_backwards' },
+    // Odo won't send a stranger up that stair: the village has to speak for you first (Nan's
+    // thorns and letter, Pike's hounds), so the Bell-Ringer is the end of Act I, not the start
+    when: {
+      all: [
+        { flag: 'scene:bell_backwards' },
+        { quest: 'thorns_fences', is: 'done' },
+        { quest: 'letters_door', is: 'done' },
+        { quest: 'kings_hounds', is: 'done' },
+      ],
+    },
     offer: [
+      'Nan says you burned the thorns out of her fences. Pike says the hounds are quiet. You have earned the village, and I have nobody else.',
       'Every night the bell rings, and every night the graves open. It has to stop. I cannot climb that stair. I have tried.',
       'Here is the key to the tower. Go up to the belfry and find what rings it. And when it is done, go to Nan. She will want to know.',
     ],

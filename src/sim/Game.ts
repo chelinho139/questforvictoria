@@ -315,6 +315,20 @@ export class Game {
     return null;
   }
 
+  /**
+   * Whether a quest this hero is on still asks them to use this object (read the proclamation,
+   * take a notice, search a hollow): it gets a quest mark over it until that goal is done.
+   */
+  objectWanted(id: string, hero?: Hero): boolean {
+    for (const [qid, def] of Object.entries(QUESTS)) {
+      if (this.questStatus(qid, hero) !== 'active') continue;
+      const count = this.quests[qid]?.count ?? [];
+      if (def.goals.some((g, i) => g.kind === 'interact' && 'object' in g && g.object === id && (count[i] ?? 0) < goalTarget(g)))
+        return true;
+    }
+    return false;
+  }
+
   /** Take a quest: the whole party takes it with you (progress is shared; each hands it in for themselves). */
   acceptQuest(id: string, hero: Hero): void {
     if (this.questStatus(id, hero) !== 'available') return;

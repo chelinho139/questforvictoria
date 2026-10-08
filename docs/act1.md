@@ -144,7 +144,7 @@ About 20 × 30 tiles, entered through the chapel door.
 | The Lamp in the Window | Maud | Ask Aldric about Marcian (back in the Greenmarch); tell Maud what he said | Maud's bread and a warm cloak, 50 XP |
 | Letter at the Door | (found) | Find the letter left on a doorstep at night; show it to Nan | Letter 1 (journal), 40 XP |
 | King's Hounds | Sergeant Pike | Slay 6 bone hounds in the fields at night | Hound-leather trousers, 60 XP |
-| ★ **The Bell Tolls Backwards** | Father Odo | Get the tower key; climb the bell tower; defeat the Bell-Ringer; show Nan what he carried | The black lace (journal), the sexton's lantern, 120 XP |
+| ★ **The Bell Tolls Backwards** | Father Odo, once Thorns in the Fences, Letters at the Door and King's Hounds are handed in (until then he won't give a stranger the key) | Get the tower key; climb the bell tower; defeat the Bell-Ringer; show Nan what he carried | The black lace (journal), the sexton's lantern, 120 XP |
 
 **What Maud learns** in *The Lamp in the Window*: Aldric tells you he found Marcian's cloak torn at the Weeping Bridge seven years ago, and that the Wardens were disbanded the same month. Maud hears it, and turns up her lamp. This plants the bridge for Act II.
 

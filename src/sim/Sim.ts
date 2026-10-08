@@ -305,6 +305,10 @@ export class Sim {
   npcMark(npc: NpcId): '?' | '!' | '…' | null {
     return this.game.npcMark(npc, this.hero);
   }
+  /** A quest you're on still wants you to use this object (it gets a mark). */
+  objectWanted(id: string): boolean {
+    return this.game.objectWanted(id, this.hero);
+  }
   acceptQuest(id: string): void {
     this.game.acceptQuest(id, this.hero);
   }

@@ -72,6 +72,8 @@ export class WorldRenderer {
   private readonly dropViews = new Map<Drop, { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image }>();
   private readonly structureViews = new Map<Structure, { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image }>();
   private readonly objectViews = new Map<ObjectState, Phaser.GameObjects.Image>();
+  /** A quest mark over an object a quest still wants you to use (the proclamation, a notice). */
+  private readonly objectMarks = new Map<ObjectState, Phaser.GameObjects.Text>();
   private readonly wandererViews = new Map<WandererState, Phaser.GameObjects.Image>();
   /** The other players' heroes (online). */
   private readonly otherViews = new Map<
@@ -620,6 +622,12 @@ export class WorldRenderer {
       this.pins.delete(img);
       img.destroy();
       this.objectViews.delete(o);
+      const m = this.objectMarks.get(o);
+      if (m) {
+        this.pins.delete(m);
+        m.destroy();
+        this.objectMarks.delete(o);
+      }
     }
     for (const o of this.sim.objects) {
       const key = Tex.object(o.kind);
@@ -631,6 +639,17 @@ export class WorldRenderer {
       }
       const glint = GLINTING_OBJECTS.has(o.kind) && Math.floor(now / 160) % 16 === 0;
       img.setTexture(frameKey(key, glint ? 1 : 0)).setScale(artScale(key));
+      // a quest wants it: a gold mark bobbing over it, like a quest giver's
+      const wanted = this.sim.objectWanted(o.id);
+      let m = this.objectMarks.get(o);
+      if (wanted && !m) {
+        m = this.pin(this.mark('24px', '#f2c14e').setText('!').setOrigin(0.5, 1), o.x, o.y, 7);
+        this.objectMarks.set(o, m);
+      }
+      if (m) {
+        const top = img.y - img.displayHeight;
+        m.setPosition(Math.round(img.x), Math.round(top - 4 + Math.sin(now / 260) * 1.5)).setVisible(wanted);
+      }
     }
   }
 

@@ -361,6 +361,15 @@ export const NPCS: Record<NpcId, NpcDef> = {
         ],
       },
       {
+        ask: 'Give me the key to the tower.',
+        when: { all: [{ flag: 'scene:bell_backwards' }, { quest: 'bell_tolls', is: 'locked' }] },
+        pages: [
+          'To you? Forgive me. I do not know you, and that stair has already killed one good man.',
+          "Help the village first. Nan has work for you: the black thorns in her fences, and the letters left at doors in the night. Sergeant Pike wants the King's hounds put down.",
+          'When Nan and Pike speak for you, come back. Then you shall have the key, and my prayers with it.',
+        ],
+      },
+      {
         ask: 'The churchyard.',
         pages: [
           'I buried most of the people in that churchyard. Now they come knocking on the chapel door at night. I do not open it.',

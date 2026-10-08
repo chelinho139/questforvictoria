@@ -102,6 +102,16 @@ export class Effects {
       g.strokeCircle(goal.x, goal.y, 5 + 2 * k);
     }
 
+    // something a quest wants you to use (the proclamation, a notice): a gold ring pulsing round it
+    for (const o of this.sim.objects) {
+      if (!this.sim.objectWanted(o.id)) continue;
+      const k = (Math.sin(this.scene.time.now / 220) + 1) / 2;
+      g.lineStyle(2, hex('#f2c14e'), 0.45 + 0.4 * k);
+      g.strokeCircle(o.x, o.y, 12 + 4 * k);
+      g.lineStyle(1, hex('#fff2a8'), 0.3 * (1 - k));
+      g.strokeCircle(o.x, o.y, 20 + 6 * k);
+    }
+
     // bear traps: iron jaws open on the ground
     for (const tr of this.sim.traps) {
       g.lineStyle(1, hex('#4a3a2c'), 1);
