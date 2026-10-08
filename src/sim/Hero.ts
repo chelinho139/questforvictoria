@@ -63,7 +63,7 @@ export const AA_RANGE = 48;
  * IN_COMBAT seconds after casting, striking or being struck.
  */
 export const MANA_COMBAT = 0.5;
-export const MANA_REST = 3;
+export const MANA_REST = 5;
 export const IN_COMBAT = 5;
 /**
  * A fallen hero lies where they fell while anyone else in the region is still up, until a
