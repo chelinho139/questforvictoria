@@ -7,6 +7,7 @@ import { isSkill } from '../../data/skills';
 import type { Key, WheelKey } from '../../data/skills';
 import { BAR_KEYS, PC_KEYS } from '../../data/actionBar';
 import type { SpellKey } from '../../data/spells';
+import { SPELLS, spellMeta } from '../../data/spells';
 import { dragSpell } from '../ui/spellDrag';
 import { isoX, isoY, fromIso } from '../../sim/map';
 import { Colors, Fonts, hex, PIXEL_SCALE, TOUCH, logicalSize } from '../config';
@@ -35,6 +36,8 @@ const LOG_LINES = 6;
 const PANEL_H = 64;
 
 // draw order, back to front
+/** How wide a spell's tooltip runs before its description wraps (px). */
+const TIP_WRAP = 260;
 const D = { panel: 10, slot: 11, bars: 12, art: 13, sweep: 14, ring: 15, text: 16, list: 50, tipPanel: 60, tipText: 61, floater: 80, banner: 90, overlay: 100, dead: 110 };
 /** The touch menu button's size. */
 const MENU_BTN = 34;
@@ -135,6 +138,8 @@ export class PcHudScene extends Phaser.Scene {
   private tipPanel!: NineSlice;
   private tipName!: Text;
   private tipDesc!: Text;
+  /** Why a spell can't be cast right now (under its description, in red). */
+  private tipWhy!: Text;
   private hover: WheelKey | null = null;
   private pressed: WheelKey | null = null;
   /** The bar slot under the pointer (it may be empty), and the one a dragged spell is over. */
@@ -171,7 +176,15 @@ export class PcHudScene extends Phaser.Scene {
   private logTexts: Text[] = [];
   private logLines: { text: string; cls: LogClass }[] = [];
   private bannerText!: Text;
+  /** A level reached: the big title and the line under it, and when it began (ms). */
+  private levelTitle!: Text;
+  private levelSub!: Text;
+  private levelAt = -1e9;
+  /** Your level, on a gold badge at the corner of your portrait (it glows a while after a level). */
+  private levelBadge!: Text;
+  private gBadge!: Graphics;
   private deadText!: Text;
+  private downText!: Text;
   private offs: Array<() => void> = [];
   /** Pointer that started a click-to-move and is still held: the goal keeps following it. */
   private steering: { pointer: Phaser.Input.Pointer; lastT: number } | null = null;
@@ -277,10 +290,16 @@ export class PcHudScene extends Phaser.Scene {
     this.tipPanel = panel(this, UI.panel, 0, 0, 10, 10).setDepth(D.tipPanel).setVisible(false);
     this.tipName = this.text(0, 0, '', 12, Ink.dark, { bold: true }).setDepth(D.tipText).setVisible(false);
     this.tipDesc = this.text(0, 0, '', 10, Ink.mid).setDepth(D.tipText).setVisible(false);
+    this.tipWhy = this.text(0, 0, '', 10, Ink.red).setDepth(D.tipText).setVisible(false);
 
     for (let i = 0; i < LOG_LINES; i++) this.logTexts.push(this.text(0, 0, '', 11, '#ffffff', { stroke: true }).setWordWrapWidth(330));
     this.bannerText = this.text(0, 0, '', 26, Colors.gold, { stroke: true, bold: true, font: Fonts.title }).setOrigin(0.5).setDepth(D.banner).setAlpha(0);
     this.deadText = this.text(0, 0, 'YOU DIED', 40, '#e8584a', { stroke: true, bold: true, font: Fonts.title }).setOrigin(0.5).setDepth(D.dead).setVisible(false);
+    this.downText = this.text(0, 0, 'Wait for a friend to revive you', 16, '#f2e08a', { stroke: true }).setOrigin(0.5).setDepth(D.dead).setVisible(false);
+    this.levelTitle = this.text(0, 0, 'LEVEL UP!', 46, '#ffd866', { stroke: true, bold: true, font: Fonts.title }).setOrigin(0.5).setDepth(D.banner).setAlpha(0);
+    this.levelSub = this.text(0, 0, '', 16, '#fff2c8', { stroke: true }).setOrigin(0.5).setDepth(D.banner).setAlpha(0);
+    this.gBadge = this.add.graphics().setDepth(D.text + 0.5);
+    this.levelBadge = this.text(0, 0, '1', 13, '#ffd866', { stroke: true, bold: true, font: Fonts.title }).setOrigin(0.5).setDepth(D.text + 1);
 
     this.layout();
     if (this.registry.get('fadeIn')) this.cameras.main.fadeIn(500, 0, 0, 0);
@@ -401,7 +420,10 @@ export class PcHudScene extends Phaser.Scene {
     this.logBottom = y - 36;
     this.refreshLog();
     this.bannerText.setPosition(w / 2, h * 0.3);
+    this.levelTitle.setPosition(w / 2, h * 0.3);
+    this.levelSub.setPosition(w / 2, h * 0.3 + 40);
     this.deadText.setPosition(w / 2, h * 0.42);
+    this.downText.setPosition(w / 2, h * 0.42 + 38);
   }
 
   private placeFrame(f: UnitFrame, x: number, y: number): void {
@@ -463,7 +485,9 @@ export class PcHudScene extends Phaser.Scene {
       while (this.logLines.length > LOG_LINES) this.logLines.shift();
       this.refreshLog();
     });
-    on('banner', ({ text, cls }) => this.showBanner(text, cls === 'bad' ? '#ff7a6a' : cls === 'cool' ? '#7ae8e4' : '#ffd866'));
+    on('banner', ({ text, cls }) =>
+      cls === 'level' ? this.showLevelUp(text) : this.showBanner(text, cls === 'bad' ? '#ff7a6a' : cls === 'cool' ? '#7ae8e4' : '#ffd866')
+    );
     on('floater', f => {
       const sp = this.worldToHud(f.x, f.y);
       const style = { size: 14, color: '#ffffff', dur: 900 };
@@ -526,6 +550,35 @@ export class PcHudScene extends Phaser.Scene {
 
   /** Bottom edge of the combat log (above the Rev label and the action bar). */
   private logBottom = 0;
+
+  /**
+   * A level reached, the biggest moment on screen: a gold flash and a slow sunburst behind
+   * "LEVEL UP!" punching in, the new level under it, held three seconds; the badge on your
+   * portrait glows on a while after (drawn in drawOverlays and drawPlayerFrame).
+   */
+  private showLevelUp(text: string): void {
+    const level = text.replace(/\D+/g, '');
+    this.levelAt = this.time.now;
+    for (const t of [this.levelTitle, this.levelSub]) this.tweens.killTweensOf(t);
+    this.levelTitle.setAlpha(0).setScale(0.3);
+    this.levelSub.setText(`Level ${level} · a talent point to spend (${PC_KEYS.talents.bind})`).setAlpha(0);
+    this.tweens.chain({
+      targets: this.levelTitle,
+      tweens: [
+        { scale: 1.25, alpha: 1, duration: 260, ease: 'Back.Out' },
+        { scale: 1, duration: 300 },
+        { scale: 1.04, duration: 900, yoyo: true, ease: 'Sine.InOut' },
+        { alpha: 0, scale: 1.1, duration: 500, delay: 200 },
+      ],
+    });
+    this.tweens.chain({
+      targets: this.levelSub,
+      tweens: [
+        { alpha: 1, duration: 300, delay: 350 },
+        { alpha: 0, duration: 500, delay: 2100 },
+      ],
+    });
+  }
 
   private showBanner(text: string, color: string): void {
     const t = this.bannerText;
@@ -967,7 +1020,21 @@ export class PcHudScene extends Phaser.Scene {
   private drawPlayerFrame(): void {
     const s = this.sim;
     const f = this.player;
-    f.sub.setText(`${CLASSES[s.cls].name} · Lv ${s.level}`);
+    f.sub.setText(CLASSES[s.cls].name);
+    // the level, on a gold badge at the portrait's corner; for 6 s after a level it glows and beats
+    const glow = (this.time.now - this.levelAt) / 1000;
+    const hot = glow >= 0 && glow < 6;
+    this.levelBadge
+      .setText(String(s.level))
+      .setPosition(f.slot.x + 44, f.slot.y + 44)
+      .setScale(hot ? 1.25 + 0.25 * Math.abs(Math.sin(glow * 5)) : 1)
+      .setColor(hot ? '#fff2c8' : '#ffd866');
+    const bx = f.slot.x + 44;
+    const by = f.slot.y + 44;
+    const g = this.gBadge.clear();
+    if (hot) g.fillStyle(0xffd866, 0.35 * (1 - glow / 6)).fillCircle(bx, by, 16 + 4 * Math.sin(glow * 5));
+    g.fillStyle(0x4a2410, 1).fillCircle(bx, by, 10);
+    g.lineStyle(2, hot ? 0xfff2c8 : 0xd8a03a, 1).strokeCircle(bx, by, 10);
     f.sub.setX(f.name.x + f.name.width + 6);
     // a narrow frame (a phone held upright) drops the class and level before they spill out
     f.sub.setVisible(f.sub.x + f.sub.width <= f.x + this.panelW - 8);
@@ -1036,7 +1103,7 @@ export class PcHudScene extends Phaser.Scene {
     const tg = s.target;
     if (tg && tg.alive && tg.stunT > 0) chips.push(['Stunned', Ink.mid]);
     if (tg && tg.alive && s.dist(s, tg) >= s.aaReach) chips.push(['Out of range', Ink.mid]);
-    if (s.mounted) chips.push(['Mounted ×1.8', '#6a4ab8']);
+    if (s.mounted) chips.push(['Mounted ×1.4', '#6a4ab8']);
     // under the frames (and under the target's cast bar when its frame is under yours)
     let x = 12;
     const stacked = this.target.y > this.player.y;
@@ -1222,6 +1289,8 @@ export class PcHudScene extends Phaser.Scene {
   }
 
   private drawTooltip(): void {
+    this.tipWhy.setVisible(false);
+    this.tipDesc.setWordWrapWidth(null);
     const k = this.hover;
     if (k === null && this.xpHover) {
       const s = this.sim;
@@ -1301,20 +1370,25 @@ export class PcHudScene extends Phaser.Scene {
       let bind = at ? BAR_KEYS[at.index].bind : '';
       if (at && this.viewMode() === 'pov' && this.turnKey(at.index)) bind = `click · ${bind} turns the view`;
       this.tipName.setText(inf.n + '  [' + bind + ']');
-      this.tipDesc.setText(why ?? inf.desc).setColor(why ? Ink.red : Ink.mid);
+      // what it costs, then what it does in full (the spellbook's words); why not, in red, under it
+      const long = k in SPELLS ? `${spellMeta(k as SpellKey, inf.cd)}\n${SPELLS[k as SpellKey].long}` : inf.desc;
+      this.tipDesc.setWordWrapWidth(TIP_WRAP).setText(long).setColor(Ink.mid);
+      this.tipWhy.setWordWrapWidth(TIP_WRAP).setText(why ?? '').setVisible(!!why);
     }
     const sl = k === 'rev' ? this.revSlot : this.slots.find(x => x.key === k);
     if (sl) this.placeTip(sl);
   }
 
   private placeTip(sl: SlotView): void {
-    const w = Math.ceil(Math.max(this.tipName.width, this.tipDesc.width)) + 22;
-    const h = Math.ceil(this.tipName.height + this.tipDesc.height) + 18;
+    const why = this.tipWhy.visible ? this.tipWhy.height + 4 : 0;
+    const w = Math.ceil(Math.max(this.tipName.width, this.tipDesc.width, why ? this.tipWhy.width : 0)) + 22;
+    const h = Math.ceil(this.tipName.height + this.tipDesc.height + why) + 18;
     const x = Math.round(Math.max(8, Math.min(this.W - w - 8, sl.x + this.slotSize / 2 - w / 2)));
     const y = Math.round(sl.y - 10 - h - 6);
     this.tipPanel.setPosition(x, y).setSize(w, h);
     this.tipName.setPosition(x + 11, y + 8);
     this.tipDesc.setPosition(x + 11, y + 9 + this.tipName.height);
+    this.tipWhy.setPosition(x + 11, y + 13 + this.tipName.height + this.tipDesc.height);
   }
 
   private drawOverlays(): void {
@@ -1324,5 +1398,22 @@ export class PcHudScene extends Phaser.Scene {
     const dead = s.dead > 0;
     if (dead) g.fillStyle(0x500000, 0.55).fillRect(0, 0, this.W, this.H);
     this.deadText.setVisible(dead);
+    this.downText.setVisible(dead && s.down);
+    // a level reached: a gold flash, then a sunburst turning slowly behind the title
+    const lt = (this.time.now - this.levelAt) / 1000;
+    if (lt >= 0 && lt < 3.4) {
+      if (lt < 0.5) g.fillStyle(0xffe08a, 0.3 * (1 - lt / 0.5)).fillRect(0, 0, this.W, this.H);
+      const fade = Math.min(1, lt / 0.3) * Math.min(1, (3.4 - lt) / 0.8);
+      const cx = this.W / 2;
+      const cy = this.levelTitle.y;
+      const R = Math.min(this.W, this.H) * 0.32 * Math.min(1, 0.4 + lt * 1.5);
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2 + lt * 0.35;
+        const w = 0.07;
+        g.fillStyle(0xffd866, 0.26 * fade);
+        g.fillTriangle(cx, cy, cx + Math.cos(a - w) * R, cy + Math.sin(a - w) * R * 0.6, cx + Math.cos(a + w) * R, cy + Math.sin(a + w) * R * 0.6);
+      }
+      g.fillStyle(0xfff2c8, 0.18 * fade).fillCircle(cx, cy, 60 + 10 * Math.sin(lt * 4));
+    }
   }
 }

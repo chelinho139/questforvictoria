@@ -999,7 +999,7 @@ export class View3D {
       g.fillStyle(hex('#0a0d14')).fillRect(Math.round(top.x - w / 2) - 1, top.y - 1, w + 2, 4);
       g.fillStyle(hex(o.id === duel ? '#e0504b' : '#5fc46a')).fillRect(Math.round(top.x - w / 2), top.y, Math.round((w * Math.max(0, o.hp)) / Math.max(1, o.hpMax)), 2);
     }
-    const work = s.mountT > 0 ? { p: 1 - s.mountT, col: '#a78bfa' } : s.work ? { p: s.work.p, col: s.work.kind === 'chop' ? '#c8a070' : s.work.kind === 'mine' ? '#c4cad4' : '#ffa040' } : null;
+    const work = s.mountT > 0 ? { p: 1 - s.mountT, col: '#a78bfa' } : s.work ? { p: s.work.p, col: s.work.kind === 'chop' ? '#c8a070' : s.work.kind === 'mine' ? '#c4cad4' : s.work.kind === 'revive' ? '#f2e08a' : '#ffa040' } : null;
     if (work && !(this.mode === 'pov' && this.dist < 6)) {
       const top = this.toScreen(s.x, s.y, 50);
       g.fillStyle(hex('#0a0d14')).fillRect(top.x - 16, top.y - 6, 32, 6);

@@ -18,41 +18,82 @@ const CLOTH: Tones = ['#a8784a', '#7e552e', '#56381c'];
 const HIDE: Tones = ['#c68a58', '#9a6236', '#6e4222', '#4a2a14'];
 const MANE: Tones = ['#6a4a2e', '#3a2414', '#24160c'];
 
-/** 48×32 horse with a red saddle blanket. 2 gallop frames. */
+/** Frames of the horse's trot (after the standing frame). */
+export const HORSE_TROT = 8;
+
+/**
+ * How far the horse's body rises in each frame (px, frame 0 standing): a trot lifts it twice
+ * a stride, and the rider rises with it (WorldRenderer.ride).
+ */
+export const HORSE_BOB = [0, ...Array.from({ length: HORSE_TROT }, (_, f) => Math.round((1 - Math.cos((4 * Math.PI * f) / HORSE_TROT)) / 2))];
+
+/**
+ * 48×32 horse with a red saddle blanket: a standing frame, then an 8-frame trot. The legs go
+ * in diagonal pairs (near hind with far fore, then the other two), each bending at the knee
+ * as it lifts and swings forward; the body rises twice a stride, the head nods against it,
+ * and the mane and tail stream behind.
+ */
 export function horse(): HTMLCanvasElement[] {
-  const poses: number[][] = [
-    [12, 17, 30, 35],
-    [9, 19, 27, 37],
-  ];
-  return poses.map(legs => {
+  const frames: HTMLCanvasElement[] = [];
+  for (let f = -1; f < HORSE_TROT; f++) {
+    const stand = f < 0;
+    const t = stand ? 0 : f / HORSE_TROT;
+    const bob = HORSE_BOB[f + 1];
+    const nod = stand ? 0 : Math.round(Math.sin(4 * Math.PI * t + 1.2));
     const p = new PixelCanvas(48, 32);
-    legs.forEach((x, i) => {
-      const far = i % 2 === 1;
-      p.rect(x, 19, 3, 9, far ? HIDE[2] : HIDE[1]);
-      p.vline(x, 19, 27, far ? HIDE[2] : HIDE[0]);
-      p.rect(x, 26, 3, 1, '#e8dcc8'); // white socks
-      p.rect(x, 28, 3, 2, '#2e2218');
-    });
-    p.line(10, 11, 5, 22, MANE[1], 2);
-    p.line(9, 12, 6, 19, MANE[0]);
-    p.blob(23, 15, 14, 7, HIDE);
-    p.poly([[31, 13], [35, 3], [40, 3], [38, 15]], HIDE[1]);
-    p.line(35, 3, 31, 12, HIDE[0]);
-    p.blob(41, 6, 6, 3.5, HIDE);
-    p.ellipse(45, 8, 2.5, 2, HIDE[2]);
-    p.px(46, 8, '#241408');
-    p.px(41, 5, '#140c06');
-    p.poly([[37, 3], [38, -1], [40, 2]], HIDE[1]);
-    p.line(36, 1, 31, 12, MANE[1], 2);
-    p.line(37, 1, 33, 8, MANE[0]);
-    p.rect(18, 7, 11, 5, RED[1]);
-    p.hline(18, 28, 7, RED[0]);
-    p.hline(18, 28, 11, RED[3]);
-    p.hline(18, 28, 12, GOLD[1]);
-    p.rect(20, 5, 7, 3, LEATHER[1]);
-    p.hline(20, 26, 5, LEATHER[0]);
-    return p.outline().toCanvas();
-  });
+    // the legs: [hip x, near?, fore?, phase]; near hind and far fore together, then the others
+    const legs: [number, boolean, boolean, number][] = [
+      [16, false, false, 0.5],
+      [34, false, true, 0],
+      [13, true, false, 0],
+      [31, true, true, 0.5],
+    ];
+    for (const [hx, near, fore, ph] of legs) {
+      const a = 2 * Math.PI * (t + ph);
+      const swing = stand ? 0 : Math.cos(a);
+      const lift = stand ? 0 : Math.max(0, -Math.sin(a));
+      const hipY = 19 - bob;
+      const footX = Math.round(hx + 1 + swing * 4);
+      const footY = Math.round(28 - lift * 3);
+      // the knee (the hock, behind) bends as the leg lifts: forward on a foreleg, back on a hind
+      const kneeX = Math.round((hx + 1 + footX) / 2 + (fore ? 1 : -1) * lift * 2);
+      const kneeY = Math.round((hipY + footY) / 2 - lift);
+      const hide = near ? HIDE[1] : HIDE[2];
+      p.line(hx + 1, hipY, kneeX, kneeY, hide, 3);
+      p.line(kneeX, kneeY, footX, footY - 1, hide, 2);
+      if (near) p.line(hx, hipY, kneeX - 1, kneeY, HIDE[0]);
+      p.rect(footX - 1, footY - 2, 3, 1, '#e8dcc8'); // white socks
+      p.rect(footX - 1, footY - 1, 3, 2, '#2e2218');
+    }
+    // tail, streaming back and swinging with the stride
+    const tail = stand ? 0 : Math.round(Math.sin(2 * Math.PI * t) * 1.5);
+    p.line(10, 11 - bob, 5 - tail, 22 - bob, MANE[1], 2);
+    p.line(9, 12 - bob, 6 - tail, 19 - bob, MANE[0]);
+    // body, neck and head (the head nods against the body's rise)
+    const hy = -bob + nod;
+    p.blob(23, 15 - bob, 14, 7, HIDE);
+    p.poly([[31, 13 - bob], [35, 3 + hy], [40, 3 + hy], [38, 15 - bob]], HIDE[1]);
+    p.line(35, 3 + hy, 31, 12 - bob, HIDE[0]);
+    p.blob(41, 6 + hy, 6, 3.5, HIDE);
+    p.ellipse(45, 8 + hy, 2.5, 2, HIDE[2]);
+    p.px(46, 8 + hy, '#241408');
+    p.px(41, 5 + hy, '#140c06');
+    p.poly([[37, 3 + hy], [38, -1 + hy], [40, 2 + hy]], HIDE[1]);
+    // the mane lifts off the neck at the top of each stride
+    const flow = stand ? 0 : bob;
+    p.line(36, 1 + hy, 31 - flow, 12 - bob, MANE[1], 2);
+    p.line(37, 1 + hy, 33 - flow, 8 - bob, MANE[0]);
+    // saddle blanket and saddle
+    const y0 = -bob;
+    p.rect(18, 7 + y0, 11, 5, RED[1]);
+    p.hline(18, 28, 7 + y0, RED[0]);
+    p.hline(18, 28, 11 + y0, RED[3]);
+    p.hline(18, 28, 12 + y0, GOLD[1]);
+    p.rect(20, 5 + y0, 7, 3, LEATHER[1]);
+    p.hline(20, 26, 5 + y0, LEATHER[0]);
+    frames.push(p.outline().toCanvas());
+  }
+  return frames;
 }
 
 // ---------------------------------------------------------------- goblins

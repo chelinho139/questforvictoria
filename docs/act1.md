@@ -144,7 +144,24 @@ About 20 × 30 tiles, entered through the chapel door.
 | The Lamp in the Window | Maud | Ask Aldric about Marcian (back in the Greenmarch); tell Maud what he said | Maud's bread and a warm cloak, 50 XP |
 | Letter at the Door | (found) | Find the letter left on a doorstep at night; show it to Nan | Letter 1 (journal), 40 XP |
 | King's Hounds | Sergeant Pike | Slay 6 bone hounds in the fields at night | Hound-leather trousers, 60 XP |
-| ★ **The Bell Tolls Backwards** | Father Odo | Get the tower key; climb the bell tower; defeat the Bell-Ringer; show Nan what he carried | The black lace (journal), the sexton's lantern, 120 XP |
+| ★ **The Bell Tolls Backwards** | Father Odo, once Thorns in the Fences, Letters at the Door and King's Hounds are handed in (until then he won't give a stranger the key) | Get the tower key; climb the bell tower; defeat the Bell-Ringer; show Nan what he carried | The black lace (journal), the sexton's lantern, 120 XP |
+
+#### Later in October 2026: more to do in Act I
+
+Playtesting found Act I quick to clear and the field north of the square empty, so the village got more to do before the Bell-Ringer (who stays the end of the act). Act I's quests now pay 935 XP (was 460).
+
+| Quest | From | Goals | Reward |
+|---|---|---|---|
+| Thorns in the Fences *(more)* | Nan | Burn 6 shoots; **ask Old Cobb** about them; bring Nan a thorn | Bread, a bandage, 65 XP |
+| Letters at the Door *(more)* | Nan | Find a letter at night; **follow the grey postman's tracks** up the north road at night (they walk into the thorn wall and don't come out) | 75 XP |
+| The King's Hounds *(more)* | Sergeant Pike | Slay 6 bone hounds and **the King's lead hound** (south-east field, at night: it howls and the pack comes running) | Hound-leather trousers, 50 gold, 100 XP |
+| The Walking Hedge *(new)* | **Old Cobb** | Slay 6 thornlings in the ash field north of the square | 2 bandages, 25 gold, 75 XP |
+| Root and Branch *(new)* | Old Cobb, after The Walking Hedge | Bring 5 black thorns; slay **the Old Briar**, who climbs out of the ash by the thorn wall once Cobb asks | Swift boots, 50 gold, 140 XP |
+| Rest for the Restless *(new)* | Father Odo, after the first night, while the bell rings | Lay 5 of the dead to rest | 2 bandages, bread, 20 gold, 70 XP |
+| A Peddler's Larder *(new)* | Tobin | Bring him 4 cooked meat | 45 gold, 55 XP |
+| The Churchyard Gate *(new)* | Bram, after the first night | Bring him 3 iron bars | Iron greaves, 30 gold, 65 XP |
+
+**Old Cobb**, the hedger, stands at the end of the hedge he is laying against the ash field north of the square (a straw hat, a grey beard, a billhook on a long pole). Forty years laying Millbrook's hedges, and this spring the hedges started walking. He knows the thorn wall came up in one night, the night after the bells, "like a forest of sticks all breaking at once", and grew down the Lisle "like it was looking for something".
 
 **What Maud learns** in *The Lamp in the Window*: Aldric tells you he found Marcian's cloak torn at the Weeping Bridge seven years ago, and that the Wardens were disbanded the same month. Maud hears it, and turns up her lamp. This plants the bridge for Act II.
 
@@ -158,6 +175,9 @@ About 20 × 30 tiles, entered through the chapel door.
 | Skeleton | Greenmarch barrows, Millbrook churchyard, at night | Already in the game |
 | Goblin, goblin shaman | Greenmarch, the raiders' camp (east) | Already in the game; the first Greyfang raid |
 | **Bone hound** *(new)* | Millbrook fields, at night | The skeletons of the King's hunting dogs. Fast, in packs of 2–3, weak alone. |
+| **Thornling** *(added later)* | The ash field north of Millbrook's square, under the thorn wall, day and night | A knot of black thorn on root legs with a cold eye in it, the Blackthorn come walking. Slow; roots you where you stand (1.5 s) every 12 s. Drops black thorns. |
+| **The Old Briar** *(added later, a boss)* | Against the thorn wall, once Old Cobb asks (Root and Branch) | The first thornling, as big as a haystack (900 health). Roots you from further off, and below half thornlings tear themselves out of the ground round it. Gone for good once slain. |
+| **The King's lead hound** *(added later)* | Millbrook's south-east field, at night | An old bone hound in the royal kennels' iron collar (300 health). When it sees you it howls, and every bone hound near comes running. |
 | **The grey postman** *(new, not fought yet)* | Millbrook lanes, at night | Fades as you come close; returns in Act III as the Unsent |
 | **The Bell-Ringer** *(new boss)* | The belfry | See below |
 

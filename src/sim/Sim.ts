@@ -169,12 +169,12 @@ export class Sim {
     this.game.setDifficulty(d);
   }
 
-  /** Warrior or archer. */
+  /** Warrior, archer or sorceress. */
   get cls(): ClassId {
     return this.hero.cls;
   }
 
-  /** How far the auto-attack reaches (a bowshot for an archer). */
+  /** How far the auto-attack reaches (a bowshot for an archer or a sorceress). */
   get aaReach(): number {
     return this.hero.aaReach;
   }
@@ -305,6 +305,10 @@ export class Sim {
   npcMark(npc: NpcId): '?' | '!' | '…' | null {
     return this.game.npcMark(npc, this.hero);
   }
+  /** A quest you're on still wants you to use this object (it gets a mark). */
+  objectWanted(id: string): boolean {
+    return this.game.objectWanted(id, this.hero);
+  }
   acceptQuest(id: string): void {
     this.game.acceptQuest(id, this.hero);
   }
@@ -417,6 +421,10 @@ export class Sim {
   }
   get dead(): number {
     return this.hero.dead;
+  }
+  /** Fallen, waiting for a friend's Revive. */
+  get down(): boolean {
+    return this.hero.down;
   }
   get flash(): number {
     return this.hero.flash;

@@ -115,3 +115,60 @@ test('shift-click makes one after another while the ingredients last', () => {
   assert.equal(h.count('meat'), 0);
   assert.equal(h.work, null, 'stops when the meat runs out');
 });
+
+test('two foods back to back, then you are full until one is digested', () => {
+  const { game, h } = alone();
+  h.give('cooked_meat', 5);
+  const eat = () => h.useSlot(h.bag.findIndex(s => s?.id === 'cooked_meat'));
+  h.hp = 10;
+  eat();
+  run(game, 1);
+  eat();
+  const after2 = h.hp;
+  assert.equal(h.count('cooked_meat'), 3, 'two eaten');
+  run(game, 1);
+  h.hp = 10;
+  eat();
+  assert.equal(h.hp, 10, 'too full for a third');
+  assert.equal(h.count('cooked_meat'), 3);
+  assert.ok(h.logHistory.some(l => l.text.startsWith("You're too full to eat.")));
+  assert.ok(after2 > 10);
+  run(game, 44);
+  eat();
+  assert.ok(h.hp > 10, 'room for one more once the first is digested');
+  assert.equal(h.count('cooked_meat'), 2);
+});
+
+test('a bandage is not food: no fuller for it, but one every 30 s', () => {
+  const { game, h } = alone();
+  h.give('bandage', 3);
+  const use = () => h.useSlot(h.bag.findIndex(s => s?.id === 'bandage'));
+  h.hp = 10;
+  use();
+  assert.equal(h.fullT, 0, 'not food');
+  run(game, 1);
+  const hp = h.hp;
+  use();
+  assert.equal(h.hp, hp, 'not yet');
+  assert.equal(h.count('bandage'), 2);
+  run(game, 30);
+  use();
+  assert.equal(h.count('bandage'), 1);
+});
+
+test('mana: slow in a fight, and the fight is over a moment after the last foe falls', () => {
+  const { game, h } = alone();
+  const e = h.region.spawnEnemy('goblin', h.x + 30, h.y, true);
+  h.region.enemies.push(e);
+  e.aggro = true;
+  e.foe = h.id;
+  h.mp = 0;
+  h.hurt(1, 'a test');
+  game.cheats.freezeEnemies = true;
+  run(game, 2);
+  assert.ok(h.mp < 2, 'slow while it is after you');
+  h.dmgEnemy(e, 9999, '');
+  const mp = h.mp;
+  run(game, 2);
+  assert.ok(h.mp - mp > 4, 'fast again within a second of the kill');
+});

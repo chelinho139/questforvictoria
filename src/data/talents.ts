@@ -25,7 +25,16 @@ export function xpToNext(level: number): number {
 export const XP_FOR = { tree: 3, rock: 4, craft: 2, build: 8 };
 
 // ---------------------------------------------------------------- talents
-export type TreeId = 'blade' | 'fury' | 'warden' | 'marksman' | 'hunter' | 'ranger';
+export type TreeId =
+  | 'blade'
+  | 'fury'
+  | 'warden'
+  | 'marksman'
+  | 'hunter'
+  | 'ranger'
+  | 'fire'
+  | 'frost'
+  | 'arcane';
 
 export const TREES: Record<TreeId, { cls: ClassId; name: string; icon: string; blurb: string }> = {
   blade: {
@@ -63,6 +72,24 @@ export const TREES: Record<TreeId, { cls: ClassId; name: string; icon: string; b
     name: 'Ranger',
     icon: 'icon:volley',
     blurb: "The Wardens' scouts: volleys, nimble feet, living off the land, and vanishing.",
+  },
+  fire: {
+    cls: 'sorceress',
+    name: 'Fire',
+    icon: 'icon:firebolt',
+    blurb: 'One foe, burned away: hotter bolts, critical hits, reach, and the great fireball.',
+  },
+  frost: {
+    cls: 'sorceress',
+    name: 'Frost',
+    icon: 'icon:frostbolt',
+    blurb: 'Cold and power: quicker casting, slowing ice, lasting flames, and the frost nova.',
+  },
+  arcane: {
+    cls: 'sorceress',
+    name: 'Arcane',
+    icon: 'icon:arcanepower',
+    blurb: 'The old craft: wards, blinking away, falling fire, the hedge-witch’s lore, and the barrier.',
   },
 };
 export const TREE_IDS = Object.keys(TREES) as TreeId[];
@@ -117,6 +144,7 @@ export interface TalentFx {
   killHeal: number; // health per kill
   food: number;
   regen: number; // health per second
+  manaRegen: number; // mana per second in a fight, over MANA_COMBAT
   intCd: number;
   intStun: number;
   prospect: number; // chance of an extra log or ore
@@ -179,6 +207,7 @@ export const NO_FX: TalentFx = {
   killHeal: 0,
   food: 0,
   regen: 0,
+  manaRegen: 0,
   intCd: 0,
   intStun: 0,
   prospect: 0,
@@ -960,7 +989,7 @@ Object.assign(TALENTS, {
     1,
     1,
     () =>
-      'Teaches Predator: for 10 s your auto-shots come 50% faster and you deal 20% more damage. 45 s cooldown.',
+      'Teaches Predator: for 10 s your auto-shots come 25% faster and you deal 20% more damage. 45 s cooldown.',
     {},
     { grants: 'predator' }
   ),
@@ -976,8 +1005,9 @@ Object.assign(TALENTS, {
     r => `${pct(0.03 * r)} chance to sidestep a blow entirely.`,
     { evade: 0.03 }
   ),
-  endurance: T('ranger', 'Endurance', 'icon:heart', 0, 1, 5, r => `${6 * r} more maximum health.`, {
-    hp: 6,
+  // no shield to hide behind: the scouts' health talent gives more than the Warden's Vitality
+  endurance: T('ranger', 'Endurance', 'icon:heart', 0, 1, 5, r => `${10 * r} more maximum health.`, {
+    hp: 10,
   }),
   forager: T(
     'ranger',
@@ -1041,8 +1071,8 @@ Object.assign(TALENTS, {
     2,
     1,
     2,
-    r => `Regain ${(0.5 * r).toFixed(1)} health every second.`,
-    { regen: 0.5 }
+    r => `Regain ${(0.75 * r).toFixed(2)} health every second.`,
+    { regen: 0.75 }
   ),
   trail_rations: T(
     'ranger',
@@ -1097,6 +1127,436 @@ Object.assign(TALENTS, {
       'Teaches Camouflage: for 6 s creatures lose track of you, you heal 20% of your health, and your next shot is a critical hit. 60 s cooldown.',
     {},
     { grants: 'camouflage' }
+  ),
+} satisfies Record<string, TalentDef>);
+
+/**
+ * The sorceress's trees mirror the archer's in turn: the same shape and points, each talent a
+ * counterpart of one there (Burning Soul ↔ Sharp Arrows, Scorch ↔ Rapid Fire, Pyroblast ↔
+ * Deadeye, Frost Nova ↔ Bear Trap, Icy Veins ↔ Predator, Blink ↔ Disengage, Arcane Barrier ↔
+ * Camouflage). See docs/sorceress.md.
+ */
+Object.assign(TALENTS, {
+  // ------------------------------------------------------------ Fire: one foe, burned away
+  burning_soul: T(
+    'fire',
+    'Burning Soul',
+    'icon:flame',
+    0,
+    0,
+    5,
+    r => `All your attacks deal ${(2.5 * r).toFixed(1).replace('.0', '')}% more damage.`,
+    { dmg: 0.025 }
+  ),
+  bright_spark: T(
+    'fire',
+    'Bright Spark',
+    'icon:spark',
+    0,
+    1,
+    3,
+    r => `Spark deals ${2 * r} more damage.`,
+    { quickDmg: 2 },
+    { spell: 'spark' }
+  ),
+  far_reach: T(
+    'fire',
+    'Far Reach',
+    'item:runed_staff',
+    0,
+    2,
+    3,
+    r => `Your spells reach ${15 * r} farther.`,
+    { shotRange: 15 }
+  ),
+  searing_focus: T(
+    'fire',
+    'Searing Focus',
+    'icon:eye',
+    1,
+    0,
+    5,
+    r => `${pct(0.02 * r)} chance for any attack to be a critical hit (×1.6 damage).`,
+    { crit: 0.02 }
+  ),
+  kindling: T(
+    'fire',
+    'Kindling',
+    'icon:firebolt',
+    1,
+    1,
+    2,
+    r =>
+      `Firebolt right after Spark deals ×${(1.5 + 0.2 * r).toFixed(1)} damage instead of ×1.5.`,
+    { aimedCombo: 0.2 },
+    { spell: 'firebolt' }
+  ),
+  distant_flame: T(
+    'fire',
+    'Distant Flame',
+    'item:ashwood_staff',
+    1,
+    2,
+    2,
+    r => `Bolts at targets more than 150 away deal ${pct(0.05 * r)} more damage.`,
+    { farShot: 0.05 },
+    { requires: 'far_reach' }
+  ),
+  combustion: T(
+    'fire',
+    'Combustion',
+    'icon:flame',
+    2,
+    0,
+    3,
+    r => `Critical hits deal ×${(1.6 + 0.15 * r).toFixed(2)} instead of ×1.6.`,
+    { critDmg: 0.15 },
+    { requires: 'searing_focus' }
+  ),
+  scorch: T(
+    'fire',
+    'Scorch',
+    'icon:scorch',
+    2,
+    1,
+    1,
+    () =>
+      'Teaches Scorch: sear your target for 6; it takes 20% more damage from you for 10 s. 8 mana, 10 s cooldown.',
+    {},
+    { grants: 'scorch' }
+  ),
+  storm_caller: T(
+    'fire',
+    'Storm Caller',
+    'icon:chainlightning',
+    2,
+    2,
+    3,
+    r => `Chain Lightning deals ${4 * r} more damage and is ready ${4 * r} s sooner.`,
+    { pierceDmg: 4, pierceCd: 4 },
+    { spell: 'chainlightning' }
+  ),
+  frostfire: T(
+    'fire',
+    'Frostfire',
+    'icon:frostbolt',
+    3,
+    0,
+    1,
+    () => 'Your critical hits chill the target: it is slowed by half for 4 s.',
+    { critSlow: 4 },
+    { requires: 'combustion' }
+  ),
+  pyre: T(
+    'fire',
+    'Pyre',
+    'icon:incinerate',
+    3,
+    1,
+    2,
+    r => `Incinerate works below ${25 + 5 * r}% health and hits ${pct(0.1 * r)} harder.`,
+    { execThreshold: 0.05, execDmg: 0.1 },
+    { spell: 'incinerate' }
+  ),
+  soul_siphon: T(
+    'fire',
+    'Soul Siphon',
+    'icon:talents',
+    3,
+    2,
+    2,
+    r => `Every kill gives you ${8 * r} mana.`,
+    { killMana: 8 }
+  ),
+  pyroblast: T(
+    'fire',
+    'Pyroblast',
+    'icon:pyroblast',
+    4,
+    1,
+    1,
+    () =>
+      'Teaches Pyroblast: a great ball of fire for 26 damage; if it kills, it is ready again at once. 25 mana, 20 s cooldown.',
+    {},
+    { grants: 'pyroblast' }
+  ),
+
+  // ------------------------------------------------------------ Frost: cold and power
+  staff_lore: T(
+    'frost',
+    'Staff Lore',
+    'item:gnarled_staff',
+    0,
+    0,
+    5,
+    r => `The bolts your staff casts on its own deal ${r} more damage.`,
+    { aaDmg: 1 }
+  ),
+  lingering_power: T(
+    'frost',
+    'Lingering Power',
+    'icon:arcanepower',
+    0,
+    1,
+    2,
+    r => `Arcane Power lasts ${5 * r} s longer.`,
+    { warcryDur: 5 },
+    { spell: 'arcanepower' }
+  ),
+  winters_grasp: T(
+    'frost',
+    "Winter's Grasp",
+    'icon:frostbolt',
+    0,
+    2,
+    3,
+    r => `Frostbolt is ready ${3 * r} s sooner.`,
+    { concCd: 3 },
+    { spell: 'frostbolt' }
+  ),
+  quickened_casting: T(
+    'frost',
+    'Quickened Casting',
+    'icon:spark',
+    1,
+    0,
+    3,
+    r => `Your staff casts its bolts ${pct(0.15 * r)} faster.`,
+    { aaSpeed: 0.15 },
+    { requires: 'staff_lore' }
+  ),
+  empowered: T(
+    'frost',
+    'Empowered',
+    'icon:arcanepower',
+    1,
+    1,
+    3,
+    r => `Arcane Power raises your damage by ${20 + 5 * r}% instead of 20%.`,
+    { warcryBonus: 0.05 },
+    { spell: 'arcanepower', requires: 'lingering_power' }
+  ),
+  deep_freeze: T(
+    'frost',
+    'Deep Freeze',
+    'icon:frostbolt',
+    1,
+    2,
+    2,
+    r => `Frostbolt slows by ${pct(0.5 + 0.15 * r)} instead of half.`,
+    { concSlow: 0.15 },
+    { spell: 'frostbolt', requires: 'winters_grasp' }
+  ),
+  leeching_bolts: T(
+    'frost',
+    'Leeching Bolts',
+    'icon:secondwind',
+    2,
+    0,
+    3,
+    r => `Every bolt that hits heals you for ${r} health.`,
+    { lifeOnHit: 1 }
+  ),
+  frost_nova: T(
+    'frost',
+    'Frost Nova',
+    'icon:frostnova',
+    2,
+    1,
+    1,
+    () =>
+      'Teaches Frost Nova: every enemy within 70 of you takes 4 and is frozen where it stands for 3 s. 10 mana, 20 s cooldown.',
+    {},
+    { grants: 'frostnova' }
+  ),
+  searing_flames: T(
+    'frost',
+    'Searing Flames',
+    'icon:ignite',
+    2,
+    2,
+    3,
+    r => `Ignite's burn deals ${r} more damage every second.`,
+    { rendTick: 1 },
+    { spell: 'ignite' }
+  ),
+  rampant_power: T(
+    'frost',
+    'Rampant Power',
+    'icon:arcanepower',
+    3,
+    0,
+    1,
+    () => 'Every kill fires up Arcane Power for 6 s, or adds 6 s to it.',
+    { rampage: 6 },
+    { spell: 'arcanepower', requires: 'leeching_bolts' }
+  ),
+  permafrost: T(
+    'frost',
+    'Permafrost',
+    'icon:frostnova',
+    3,
+    1,
+    1,
+    () => 'Frost Nova is ready 8 s sooner and holds what it freezes 1 s longer.',
+    { trapCd: 8, trapHold: 1 },
+    { spell: 'frostnova', requires: 'frost_nova' }
+  ),
+  smouldering: T(
+    'frost',
+    'Smouldering',
+    'icon:flame',
+    3,
+    2,
+    2,
+    r => `Ignite burns ${3 * r} s longer.`,
+    { rendDur: 3 },
+    { spell: 'ignite', requires: 'searing_flames' }
+  ),
+  icy_veins: T(
+    'frost',
+    'Icy Veins',
+    'icon:icyveins',
+    4,
+    1,
+    1,
+    () =>
+      'Teaches Icy Veins: for 10 s your staff casts its bolts 25% faster and you deal 20% more damage. 45 s cooldown.',
+    {},
+    { grants: 'icyveins' }
+  ),
+
+  // ------------------------------------------------------------ Arcane: the old craft
+  shimmer: T(
+    'arcane',
+    'Shimmer',
+    'icon:blink',
+    0,
+    0,
+    5,
+    r => `${pct(0.03 * r)} chance for a blow to pass through you.`,
+    { evade: 0.03 }
+  ),
+  fortitude: T('arcane', 'Fortitude', 'icon:heart', 0, 1, 5, r => `${10 * r} more maximum health.`, {
+    hp: 10,
+  }),
+  clarity: T(
+    'arcane',
+    'Clarity',
+    'item:crystal_orb',
+    0,
+    2,
+    3,
+    r => `Regain ${(0.25 * r).toFixed(2)} more mana every second in a fight.`,
+    { manaRegen: 0.25 }
+  ),
+  firestorm: T(
+    'arcane',
+    'Firestorm',
+    'icon:flamestrike',
+    1,
+    0,
+    3,
+    r => `Flamestrike deals ${2 * r} more damage and covers ${5 * r} wider.`,
+    { volleyDmg: 2, volleyReach: 5 },
+    { spell: 'flamestrike' }
+  ),
+  soul_harvest: T(
+    'arcane',
+    'Soul Harvest',
+    'icon:secondwind',
+    1,
+    1,
+    3,
+    r => `Every kill heals you for ${5 * r} health.`,
+    { killHeal: 5 }
+  ),
+  stonereader: T(
+    'arcane',
+    'Stonereader',
+    'item:pickaxe',
+    1,
+    2,
+    2,
+    r =>
+      `Chop and mine ${15 * r}% faster, with a ${20 * r}% chance of an extra log when a tree falls and of extra ore when a rock breaks.`,
+    { prospect: 0.2, gather: 0.15 }
+  ),
+  blink: T(
+    'arcane',
+    'Blink',
+    'icon:blink',
+    2,
+    0,
+    1,
+    () =>
+      'Teaches Blink: vanish and step out a little way back from your target, out of its reach. 5 mana, 12 s cooldown.',
+    {},
+    { grants: 'blink', requires: 'shimmer' }
+  ),
+  meditation: T(
+    'arcane',
+    'Meditation',
+    'item:hedge_grimoire',
+    2,
+    1,
+    2,
+    r => `Regain ${(0.5 * r).toFixed(1)} health every second.`,
+    { regen: 0.5 }
+  ),
+  hearth_witch: T(
+    'arcane',
+    'Hearth Witch',
+    'item:cooked_meat',
+    2,
+    2,
+    2,
+    r => `Food heals ${25 * r}% more.`,
+    { food: 0.25 }
+  ),
+  inferno: T(
+    'arcane',
+    'Inferno',
+    'icon:flamestrike',
+    3,
+    0,
+    1,
+    () => 'Flamestrike is ready 6 s sooner.',
+    { volleyCd: 6 },
+    { spell: 'flamestrike', requires: 'firestorm' }
+  ),
+  spellbreaker: T(
+    'arcane',
+    'Spellbreaker',
+    'icon:counterspell',
+    3,
+    1,
+    2,
+    r => `Counterspell is ready ${4 * r} s sooner and stuns ${(0.5 * r).toFixed(1)} s longer.`,
+    { intCd: 4, intStun: 0.5 },
+    { spell: 'counterspell' }
+  ),
+  wayfarer: T(
+    'arcane',
+    'Wayfarer',
+    'icon:mount',
+    3,
+    2,
+    2,
+    r => `Walk and ride ${5 * r}% faster, and mount ${(0.4 * r).toFixed(1)} s sooner.`,
+    { moveSpeed: 0.05, mountTime: 0.4 }
+  ),
+  arcane_barrier: T(
+    'arcane',
+    'Arcane Barrier',
+    'icon:barrier',
+    4,
+    1,
+    1,
+    () =>
+      'Teaches Arcane Barrier: heal 30% of your maximum health and take 30% less damage for 8 s. 60 s cooldown.',
+    {},
+    { grants: 'barrier' }
   ),
 } satisfies Record<string, TalentDef>);
 

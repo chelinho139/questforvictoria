@@ -41,6 +41,7 @@ const DOC_LINKS: [string, string][] = [
   ['Act II', '/act2.html'],
   ['Online co-op plan', '/online.html'],
   ['The archer', '/archer.html'],
+  ['The sorceress', '/sorceress.html'],
   ['Credits', '/credits.html'],
 ];
 
@@ -107,6 +108,21 @@ const FOLLOW_UPS: Partial<Record<SpellKey, [FollowSound, string][]>> = {
   rapidfire: [['hitArrow', 'lands']],
   deadeye: [['hitDeadeye', 'lands']],
   beartrap: [['trapSnap', 'springs']],
+  spark: [['hitFire', 'lands']],
+  firebolt: [['hitFire', 'lands']],
+  ignite: [['hitFire', 'lands']],
+  frostbolt: [['hitFrost', 'lands']],
+  counterspell: [['hitCounter', 'lands']],
+  incinerate: [['hitPyroblast', 'lands']],
+  flamestrike: [['hitFlamestrike', 'lands']],
+  chainlightning: [['hitLightning', 'strikes']],
+  scorch: [['hitFire', 'lands']],
+  pyroblast: [['hitPyroblast', 'lands']],
+};
+
+/** The sound board's names for an auto-attack landing that no spell shares (listed after it, in World). */
+const AUTO_LANDS: Partial<Record<WorldSound, [FollowSound, string]>> = {
+  autoCast: ['hitBolt', 'Auto-attack: a bolt · lands'],
 };
 
 /** The sound board's names for the interface's sounds. */
@@ -141,6 +157,7 @@ const UI_SOUNDS: Record<UiSound, string> = {
 const WORLD_SOUNDS: Record<WorldSound, string> = {
   autoSwing: 'Auto-attack: a swing',
   autoShot: 'Auto-attack: a shot',
+  autoCast: 'Auto-attack: a bolt',
   heroHurt: 'A blow lands on you',
   chop: 'Chopping',
   treeFall: 'A tree falls',
@@ -482,7 +499,11 @@ export class DevMenu {
     pick.append(ui);
     const outside = el('optgroup');
     outside.label = 'World';
-    for (const [id, label] of Object.entries(WORLD_SOUNDS)) option(outside, id as WorldSound, label);
+    for (const [id, label] of Object.entries(WORLD_SOUNDS)) {
+      option(outside, id as WorldSound, label);
+      const lands = AUTO_LANDS[id as WorldSound];
+      if (lands) option(outside, ...lands);
+    }
     pick.append(outside);
     // each creature's sounds (one that sounds like another, the test boss, adds none)
     const beasts = el('optgroup');

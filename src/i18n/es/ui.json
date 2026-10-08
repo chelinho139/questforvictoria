@@ -278,7 +278,7 @@
   "Stunned": "Aturdido",
   "Out of range": "Fuera de alcance",
   "Rev": "Rev",
-  "Mounted ×1.8": "A caballo ×1.8",
+  "Mounted ×1.4": "A caballo ×1.4",
   "REV AUTO": "REV AUTO",
   "REV ON": "REV SÍ",
   "REV OFF": "REV NO",
@@ -355,5 +355,15 @@
   "Come closer to challenge them.": "Acércate más para desafiar.",
   "Duels won: {0} · lost: {1}": "Duelos ganados: {0} · perdidos: {1}",
   "No duels fought yet.": "Ningún duelo todavía.",
-  "You're stunned": "Te aturdieron"
+  "You're stunned": "Te aturdieron",
+
+  "For sorceresses": "Para hechiceras",
+
+  "Wait for a friend to revive you": "Espera a que un amigo te reviva",
+
+  "Too full: eat again in {0} s": "Sin hambre: vuelve a comer en {0} s",
+
+  "LEVEL UP!": "¡SUBES DE NIVEL!",
+  "Level {0} · a talent point to spend ({1})": "Nivel {0} · un punto de talento para gastar ({1})",
+  "LEVEL UP! · {0}": "¡SUBES DE NIVEL! · {0}"
 }

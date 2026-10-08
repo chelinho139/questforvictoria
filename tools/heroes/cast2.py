@@ -3,6 +3,8 @@
 Every pixel records which part drew it (head, torso, belt, arm, legs, boot, cape, ...),
 so gear can replace a part (helmets), recolour it (armour, trousers, boots) or add to it
 (weapons, shields, amulets). The game composes the bare hero with one layer per item."""
+import math
+
 from tool import G
 
 MX, MY = 16, 10
@@ -120,13 +122,31 @@ GEAR_PAL = {
     'ψ': '#4a2c1a',
     # the silk-strung recurve: black willow limbs, a cold blue tip
     'ό': '#5e5868', 'ύ': '#302c38', 'ώ': '#a8b6c8',
+    # ---- the sorceress's (Cyrillic letters: no hero palette uses them)
+    # the gnarled staff's dark oak (lit, mid, dark) and its pale green witch-light
+    'Б': '#ae845a', 'б': '#7c5636', 'Ъ': '#4a3220', 'я': '#c4ec8a',
+    # grey ash and the amber knot (lit, mid, dark)
+    'Ж': '#d8d0c0', 'ж': '#a49a8a', 'Ь': '#6c655c', 'Ч': '#ffd468', 'ч': '#e0862a', 'ь': '#984c14',
+    # the runed staff's dark wood, its rune marks and the pale blue-white gem (lit, mid, dark)
+    'Ш': '#6e5a50', 'ш': '#433436', 'Щ': '#b4dcff', 'щ': '#eaf6ff', 'Ы': '#94bfea', 'ы': '#5078b4',
+    # the Warden staff's silver owl (shade, dark) and its sea-green light
+    'э': '#a4aec0', 'Э': '#6c7488', 'Й': '#c4f0dc',
+    # the willow staff's cold blue stone (mid, dark)
+    'Ю': '#6c9ee0', 'ю': '#3a62a8',
+    # a spell's light: the warm white just around the core ('+' is the core)
+    'Я': '#fff8dc',
+    # the hedge grimoire's red-brown leather (lit, mid, dark); its pages are δ and its clasp gold
+    'З': '#d0704c', 'з': '#a0402e', 'и': '#62241c',
+    # the crystal orb: pale blue glass (lit, mid, dark) and the violet light inside (light, deep)
+    'Ц': '#e0f0ff', 'ц': '#a4caf0', 'ъ': '#6a8cc8', 'й': '#d0a8ff', 'И': '#9a6ae0',
 }
 
 # ------------------------------------------------------------ items
 ITEMS_BY_SLOT = {
     'weapon': ['rusty_sword', 'iron_sword', 'woodcutter_axe', 'pickaxe', 'worn_shortbow', 'hunting_bow', 'yew_longbow',
-               'warden_blade', 'steel_sword', 'warden_longbow', 'silk_recurve'],
-    'offhand': ['wooden_shield', 'iron_shield', 'leather_quiver', 'hunters_quiver', 'steel_shield'],
+               'warden_blade', 'steel_sword', 'warden_longbow', 'silk_recurve',
+               'gnarled_staff', 'ashwood_staff', 'runed_staff', 'warden_staff', 'willow_staff'],
+    'offhand': ['wooden_shield', 'iron_shield', 'leather_quiver', 'hunters_quiver', 'steel_shield', 'hedge_grimoire', 'crystal_orb'],
     'head': ['leather_cap', 'iron_helm', 'warden_hood', 'steel_helm', 'bonespine_mantle'],
     'body': ['leather_tunic', 'chainmail', 'warden_cloak', 'thornback_jerkin'],
     'legs': ['cloth_trousers', 'leather_trousers', 'iron_greaves', 'broodsilk_leggings', 'royal_greaves'],
@@ -450,11 +470,147 @@ def quiver(v, hero, item, x, y):
         v.at(x, y + i, r)
 
 
+# ------------------------------------------------------------ the sorceress's staves and foci
+# Each staff: shaft tones (lit above the hand, mid below, dark at the butt), its head drawn upright
+# above the shaft's tip (`ax` is the shaft's column in the head's rows, `c` the head's light), and
+# the colour its light glows when she casts.
+STAVES = {
+    # crooked dark oak, the top curled back into a crook
+    'gnarled_staff': dict(tones='БбЪ', head=['.ББб', 'Б..б', 'б..Ъ', '.Ъ.Ъ'], ax=3, c=(1, 2), glow='я', crook=True, size=0),
+    # straight grey ash, swelling round an amber knot
+    'ashwood_staff': dict(tones='ЖжЬ', head=['.Ж.', 'ЖЧж', 'жчЬ', '.ж.'], ax=1, c=(1, 1), glow='Ч', size=0),
+    # dark wood shod in iron at both ends, rune marks down the shaft, a pale blue-white gem in an iron cup
+    'runed_staff': dict(tones='Шшш', head=['.щ.', 'щЫы', '.ы.', 'OUV'], ax=1, c=(1, 1), glow='Щ', runes='Щ', butt='UV', size=0),
+    # the Wardens' grey-green stain, a silver owl's head with gold eyes
+    'warden_staff': dict(tones='στυ', head=['φ..Э', 'φθφθ', 'φφэЭ', '.эЭ.', '.э..'], ax=1, c=(2, 1), glow='Й', band='φ', size=1,
+                         small=dict(head=['φ.Э', 'θφθ', 'φэЭ', '.э.'], ax=1, c=(1, 1))),
+    # black weepwood willow, forked round a cold blue stone, bound in silk at the grip
+    'willow_staff': dict(tones='όύύ', head=['ό...ύ', 'όώЮюύ', '.όюύ.', '..ύ..'], ax=2, c=(2, 1), glow='Ю', wrap='ά', size=1,
+                         small=dict(head=['ό.ύ', 'όЮύ', '.ύ.'], ax=1, c=(1, 1))),
+}
+# how each pose holds the staff: 'v' upright (sheared forward by s per row) or 'h' level (sheared down)
+STAFF_POSE = {
+    'rest': ('v', 0), 'up': ('v', 0), 'raise': ('v', 0), 'back': ('v', -1), 'forward': ('h', 0), 'low': ('h', 0.5),
+    'nock': ('v', 0.15), 'draw': ('v', 0.3), 'loose': ('v', 0.5), 'lower': ('v', 0.1),
+}
+# casting, her hand slides down the staff by a pixel or two
+STAFF_SLIDE = {'draw': 1, 'loose': 1}
+
+
+def _rnd(x):
+    return math.floor(x + 0.5)
+
+
+def item_staff(v, gx, gy, mode, art, fore, aft, bottom=99):
+    """A staff gripped at (gx, gy) (the hand just left of it): `fore` pixels of shaft toward the head,
+    `aft` toward the butt. Casting ('nock', 'draw', 'loose', 'lower') raises it forward with its head
+    alight; the other poses carry or swing it. Nothing is drawn below `bottom` (the feet)."""
+    fam, s = STAFF_POSE.get(mode, ('v', 0))
+
+    def pos(t, w):
+        return (gx + w + _rnd(t * s), gy - t) if fam == 'v' else (gx + t, gy + w + _rnd(t * s))
+
+    drawn = {}
+
+    def put(x, y, ch, over=True):
+        if y > bottom or (not over and (x, y) in drawn):
+            return
+        drawn[(x, y)] = ch
+        v.at(x, y, ch)
+
+    lit, mid, dark = art['tones']
+    for t in range(-aft, fore + 1):
+        w = 0
+        if art.get('crook'):  # gnarled: kinks in the shaft above and below the hand
+            w = 1 if 3 <= t <= 5 else -1 if -8 <= t <= -5 else 0
+        ch = lit if t > 0 else mid
+        if t == -aft:
+            ch = dark
+        if art.get('crook') and t in (4, -6):
+            ch = dark  # a knot
+        if art.get('runes') and t > 0 and t < fore - 1 and t % 3 == 1:
+            ch = art['runes']
+        if art.get('butt') and t <= -aft + len(art['butt']) - 1:
+            ch = art['butt'][t + aft]
+        if art.get('band') and t == fore:
+            ch = art['band']
+        if art.get('wrap') and t in (1, -1):
+            ch = art['wrap']
+        put(*pos(t, w), ch)
+    head, ax = art['head'], art['ax']
+    ay = len(head) - 1
+    hw = 1 if art.get('crook') and fore >= 3 and fore <= 5 else 0
+    for r, row in enumerate(head):
+        for c, ch in enumerate(row):
+            if ch != '.':
+                put(*pos(fore + ay - r, c - ax + hw), ch)
+    if mode not in ('nock', 'draw', 'loose', 'lower'):
+        return
+    cx, cy = art['c']
+    px, py = pos(fore + ay - cy, cx - ax + hw)
+    g = art['glow']
+    if mode == 'nock':
+        put(px, py, g)
+    elif mode == 'lower':
+        put(px, py, g)
+        put(px + 1, py - 2, 'Я', over=False)
+    elif mode == 'draw':
+        put(px, py, '+')
+        for dx, dy in ((-2, 0), (2, 0), (0, -2)):
+            put(px + dx, py + dy, g, over=False)
+        put(px - 1, py - 1, 'Я', over=False); put(px + 1, py - 1, 'Я', over=False)
+    else:  # loose: a flash
+        put(px, py, '+')
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            put(px + dx, py + dy, 'Я')
+        for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2), (-1, -1), (1, -1), (-1, 1), (1, 1)):
+            put(px + dx, py + dy, g, over=False)
+        for dx, dy in ((-3, 0), (3, 0), (0, -3), (0, 3), (-2, -2), (2, -2), (2, 2), (-2, 2)):
+            put(px + dx, py + dy, 'Я' if abs(dx) + abs(dy) == 3 else g, over=False)
+
+
+def floating_staff(v, bx, y0, mode, art):
+    """The masked hero's staff hovers beside it, and lights itself."""
+    grip = {'up': (bx + 1, y0 + 14, 8, 6), 'raise': (bx + 1, y0 + 10, 8, 6), 'back': (bx - 1, y0 + 16, 10, 2),
+            'forward': (bx, y0 + 12, 9, 2), 'low': (bx, y0 + 12, 8, 2),
+            'nock': (bx + 2, y0 + 11, 8, 7), 'draw': (bx + 3, y0 + 10, 8, 7), 'loose': (bx + 3, y0 + 11, 8, 6),
+            'lower': (bx + 2, y0 + 13, 8, 7)}
+    gx, gy, fore, aft = grip.get(mode, grip['up'])
+    item_staff(v, gx, gy, mode, art, fore + art['size'], aft)
+
+
+# a book at the belt and a glass orb on the palm (small heroes get smaller ones)
+FOCI = {
+    # the cover lit from the top left, a gold boss, the clasp's strap over the fore-edge, the pages below
+    'hedge_grimoire': (['ЗЗЗЗз.', 'ЗзYззи', 'ЗзззZY', 'Зззззи', 'зззззи', 'δδδδи.'],
+                       ['ЗЗЗз.', 'ЗзYзи', 'ЗззZY', 'δδδи.']),
+    'crystal_orb': (['.ЦЦц.', 'Ц+Ццъ', 'ЦцйИъ', 'цйИцъ', '.ъъъ.'],
+                    ['.Цц.', 'Ц+йъ', 'цйИъ', '.ъъ.']),
+}
+
+
+def focus(v, hero, item, x, y):
+    """The sorceress's off hand: drawn where a shield would be, but smaller."""
+    v.tag('offhand')
+    rows = FOCI[item][1 if hero.small else 0]
+    if item == 'crystal_orb':
+        for i, r in enumerate(rows):
+            v.at(x + 1, y + 1 + i, r)
+        if hero.legs:  # her palm under it
+            v.at(x + 1, y + 1 + len(rows), '/::,' if not hero.small else '/:,')
+    else:
+        for i, r in enumerate(rows):
+            v.at(x + 1, y + 2 + i, r)
+
+
 def floating(v, bx, hy, mode, b, item='sig'):
     """The masked hero's weapon hovers beside it (3-wide blade, guard below), or a floating axe."""
     y0 = 3 - b
     if item in BOWS:
         floating_bow(v, bx, y0, mode, BOWS[item])
+        return
+    if item in STAVES:
+        floating_staff(v, bx, y0, mode, STAVES[item])
         return
     if item == 'woodcutter_axe':
         floating_axe(v, bx, y0, mode)
@@ -789,6 +945,15 @@ def weapon_spec(hero, item):
         half = max(4, min(9, round(L0 * 0.7) + 1 + BOWS[item]['size']))
         feet = hero.legs['y0'] + hero.legs['n'] if hero.legs else 99
         return dict(base, kind='bow', up=half, down=half, feet=feet, art=BOWS[item], rest='rest')
+    if item in STAVES:
+        # a staff stands from the feet to about the shoulder (plus its head); swung, it is as long as a sword
+        art = STAVES[item]
+        if hero.small and 'small' in art:
+            art = {**art, **art['small']}
+        feet = hero.legs['y0'] + hero.legs['n'] + 1
+        up = max(3, _rnd(0.22 * (feet - W['shoulder'][1]))) + art['size']
+        shin = hero.legs['x0'] + 2 * hero.legs['w'] + hero.legs['gap']  # just right of the front leg
+        return dict(base, kind='staff', art=art, up=up, down=feet - W['hy'], feet=feet, shin=shin, L=L0, rest='rest')
     if item == 'woodcutter_axe':
         return dict(base, kind='axe', L=max(6, L0), rest='up')
     if item == 'pickaxe':
@@ -801,6 +966,20 @@ def draw_weapon(v, spec, mode, hx, hy, b):
     k = spec['kind']
     if k == 'sword':
         sword(v, hx, hy, mode, spec.get('low_L', spec['L']) if mode == 'low' else spec['L'], guard=spec.get('guard', 'gGGg'), grip=spec.get('grip', 'd'), pommel=spec.get('pommel'), blade=spec.get('blade', 'Bb'))
+    elif k == 'staff' and 'art' in spec:
+        L, ft = spec['L'], spec['feet']  # swung, it reaches about as far as a sword
+        if mode == 'rest':
+            item_staff(v, hx, hy, mode, spec['art'], spec['up'], min(spec['down'], ft - hy), ft)
+        elif mode in ('nock', 'draw', 'loose', 'lower'):
+            # leaning forward, the butt stays clear of her legs
+            k = STAFF_SLIDE.get(mode, 0)
+            s = STAFF_POSE[mode][1]
+            aft = min(spec['down'] - k, int((hx - spec['shin']) / s) if s else 99)
+            item_staff(v, hx, hy, mode, spec['art'], spec['up'] + k, aft, ft)
+        elif mode in ('back', 'low'):
+            item_staff(v, hx, hy, mode, spec['art'], max(3, L - 4), 2, ft)
+        else:
+            item_staff(v, hx, hy, mode, spec['art'], max(4, L - 2), 3, ft)
     elif k == 'staff':
         staff(v, hx, hy, mode)
     elif k == 'axe':
@@ -880,6 +1059,8 @@ def compose(hero, gear, *, b=0, sway=0, legs_mode='stand', weapon=None, hand=(0,
     wid = gear.get('weapon')
     spec = weapon_spec(hero, wid) if wid else None
     floats = W['kind'] == 'float'
+    if spec and spec['kind'] == 'staff' and legs_mode == 'tuck':
+        spec = dict(spec, feet=hero.legs['y0'] + 2 + b)
     if floats:
         mode = weapon or 'up'
         hx = hy = 0
@@ -920,7 +1101,7 @@ def compose(hero, gear, *, b=0, sway=0, legs_mode='stand', weapon=None, hand=(0,
         amulet(v, ax, oy + ay, size)
     if gear.get('offhand') and gear['offhand'] not in QUIVERS and item_layer('offhand'):
         sx, sy = hero.shield
-        shield(v, hero, gear['offhand'], sx - arm, oy + sy)
+        (focus if gear['offhand'] in FOCI else shield)(v, hero, gear['offhand'], sx - arm, oy + sy)
     if not floats and only in (None, 'weapon'):
         if only is None:
             v.tag('arm')

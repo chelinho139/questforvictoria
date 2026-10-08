@@ -11,6 +11,10 @@ export type EnemyKind =
   | 'dev_boss'
   | 'bonehound'
   | 'bellringer'
+  // Act I, later: the north field under the thorn wall, and the King's lead hound
+  | 'thornling'
+  | 'old_briar'
+  | 'leadhound'
   // Act II: the wild of the Weepwood
   | 'wolf'
   | 'thornback'
@@ -48,7 +52,8 @@ export type EnemyKind =
 export type Behavior = 'hostile' | 'neutral' | 'passive' | 'inert';
 
 /** What holds a hero still: a spider's web, a goblin's net or snare, roots out of the ground. */
-export type HeldKind = 'web' | 'net' | 'snare' | 'roots';
+/** What holds a hero still: a web, a net, a snare, roots, or (a sorceress's Frost Nova, in a duel) ice. */
+export type HeldKind = 'web' | 'net' | 'snare' | 'roots' | 'ice';
 
 /**
  * A spell a creature casts: a cast bar you can interrupt (Interrupt, Silence, Shield Bash or
@@ -125,7 +130,11 @@ export type CreatureSound =
   | 'wispChime'
   | 'guardShout'
   | 'barrowGroan'
-  | 'knightHalt';
+  | 'knightHalt'
+  // Act I: the thornlings
+  | 'thornRustle'
+  | 'thornSnap'
+  | 'thornDie';
 
 /**
  * What a creature sounds like: noticing you, attacking (the swing or bite; the blow landing
@@ -173,8 +182,11 @@ export interface EnemyDef {
   rider?: EnemyKind;
   /** An egg: once a hero comes within `aggro` it starts to hatch, and `t` seconds later it is `n` of `into`. */
   hatch?: { into: EnemyKind; n: number; t: number };
-  /** Howls when it notices a foe, and every creature that howls within `r` comes running. */
-  howl?: { r: number };
+  /**
+   * Howls when it notices a foe, and every creature that howls within `r` comes running (and
+   * every one of the `calls` kinds: the King's lead hound brings its pack).
+   */
+  howl?: { r: number; calls?: EnemyKind[] };
   /**
    * Calls up help while it fights: `n` of `kind` every `every` seconds (never more than `max`
    * of them at once), from boss phase `from` on (default the first). Several kinds take turns;
@@ -441,6 +453,73 @@ export const KINDS: Record<EnemyKind, EnemyDef> = {
     gold: [30, 30],
     xp: 150,
     boss: { title: 'Old Hamm, sexton of Millbrook', flag: 'bellringer_down', phases: [0.66, 0.33], onDeath: { scene: 'bellringer_down' } },
+  },
+  // the Blackthorn come walking: knots of black thorn that crawl out of the ash field under the
+  // thorn wall, north of the square, and root you where you stand
+  thornling: {
+    n: 'Thornling',
+    sounds: { notice: 'thornRustle', attack: 'thornRustle', hurt: 'thornSnap', die: 'thornDie' },
+    hp: 150,
+    atk: 12,
+    per: 2.2,
+    spd: 46,
+    range: 38,
+    aggro: 110,
+    casts: [{ what: 'web', time: 1.1, cd: 12, range: 150, hold: 1.5, by: 'roots' }],
+    firstCast: 2,
+    scale: 1.9,
+    tex: 'thornling',
+    behavior: 'hostile',
+    hitSay: '*snap*',
+    gold: [0, 0],
+    xp: 20,
+    loot: [['black_thorn', 1, 1, 0.5]],
+  },
+  // the first of them, as big as a haystack, up against the thorn wall (Old Cobb's quest)
+  old_briar: {
+    n: 'The Old Briar',
+    sounds: { notice: 'thornRustle', attack: 'thornRustle', hurt: 'thornSnap', die: 'thornDie' },
+    hp: 900,
+    atk: 17,
+    per: 2.6,
+    spd: 34,
+    range: 52,
+    aggro: 170,
+    casts: [{ what: 'web', time: 1.2, cd: 10, range: 220, hold: 2, by: 'roots' }],
+    firstCast: 2,
+    // below half, thornlings tear themselves out of the ground round it
+    summon: { kind: 'thornling', n: 1, every: 12, max: 2, from: 1 },
+    scale: 2.6,
+    tex: 'old_briar',
+    behavior: 'hostile',
+    calls: ['*the whole hedge leans toward you*'],
+    gold: [10, 10],
+    xp: 120,
+    loot: [['black_thorn', 3, 3, 1]],
+    boss: { title: 'The first of the walking thorns', flag: 'briar_down', phases: [0.5] },
+  },
+  // the old King's lead hound, collar and all: it howls the pack in (The King's Hounds)
+  leadhound: {
+    n: "The King's Lead Hound",
+    sounds: { rise: 'boneRise', notice: 'houndNotice', attack: 'houndAttack', hurt: 'houndHurt', die: 'houndDie' },
+    hp: 300,
+    atk: 16,
+    per: 1.6,
+    spd: 100,
+    range: 32,
+    aggro: 200,
+    howl: { r: 260, calls: ['bonehound'] },
+    scale: 1.8,
+    tex: 'leadhound',
+    behavior: 'hostile',
+    dead: true,
+    nightOnly: true,
+    gold: [3, 6],
+    xp: 60,
+    loot: [
+      ['bone_fang', 2, 2, 1],
+      ['hound_trousers', 1, 1, 0.08],
+    ],
   },
   // ---- Act II (docs/act2.md, "Enemies"): the wood hits harder than the fields
   // grey and lean, in threes and fours at the edge of the wood: the last ordinary danger

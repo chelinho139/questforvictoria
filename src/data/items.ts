@@ -73,7 +73,15 @@ export type ItemId =
   | 'hunting_bow'
   | 'yew_longbow'
   | 'leather_quiver'
-  | 'hunters_quiver';
+  | 'hunters_quiver'
+  // the sorceress's
+  | 'gnarled_staff'
+  | 'ashwood_staff'
+  | 'runed_staff'
+  | 'warden_staff'
+  | 'willow_staff'
+  | 'hedge_grimoire'
+  | 'crystal_orb';
 
 export type Slot = 'head' | 'body' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'trinket';
 
@@ -286,6 +294,58 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     col: FINE_COL,
     price: 210,
     cls: 'archer',
+  },
+  gnarled_staff: {
+    name: 'Gnarled staff',
+    desc: 'A crooked branch of blackthorn-free oak. The old women swear by them.',
+    stack: 1,
+    slot: 'weapon',
+    stats: { atk: 2 },
+    col: GEAR_COL,
+    price: 12,
+    cls: 'sorceress',
+  },
+  ashwood_staff: {
+    name: 'Ashwood staff',
+    desc: 'Straight grey ash, a knot of amber at the head. Sparks come easier through it.',
+    stack: 1,
+    slot: 'weapon',
+    stats: { atk: 3 },
+    col: GEAR_COL,
+    price: 55,
+    cls: 'sorceress',
+  },
+  runed_staff: {
+    name: 'Runed staff',
+    desc: 'Iron-shod at both ends, with old marks cut down its length. It hums when it is cold.',
+    stack: 1,
+    slot: 'weapon',
+    stats: { atk: 6 },
+    fine: true,
+    col: FINE_COL,
+    price: 190,
+    cls: 'sorceress',
+  },
+  hedge_grimoire: {
+    name: 'Hedge grimoire',
+    desc: 'A hedge-witch’s book of charms, bound in leather, worn on the belt: your spells bite a little harder.',
+    stack: 1,
+    slot: 'offhand',
+    stats: { atk: 1 },
+    col: GEAR_COL,
+    price: 40,
+    cls: 'sorceress',
+  },
+  crystal_orb: {
+    name: 'Crystal orb',
+    desc: 'Clear as lake ice, with a light that wakes inside it when you hold it up. It keeps you, a little, as well.',
+    stack: 1,
+    slot: 'offhand',
+    stats: { atk: 1, hp: 15 },
+    fine: true,
+    col: FINE_COL,
+    price: 210,
+    cls: 'sorceress',
   },
   leather_cap: {
     name: 'Leather cap',
@@ -578,6 +638,17 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     col: FINE_COL,
     cls: 'archer',
   },
+  warden_staff: {
+    name: "Warden's staff",
+    desc: "A tall grey-green staff from the lodge's rack, an owl cut into its head. The Wardens had their wise women too.",
+    stack: 1,
+    slot: 'weapon',
+    stats: { atk: 10 },
+    unique: true,
+    fine: true,
+    col: FINE_COL,
+    cls: 'sorceress',
+  },
   steel_sword: {
     name: 'Steel sword',
     desc: 'Bright steel with a gilded guard. It keeps an edge through a night of skeletons.',
@@ -620,6 +691,17 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     col: FINE_COL,
     price: 420,
     cls: 'archer',
+  },
+  willow_staff: {
+    name: 'Black willow staff',
+    desc: 'Black Weepwood willow bound in spider silk, a cold blue stone in its fork. Frost gathers on it at dusk.',
+    stack: 1,
+    slot: 'weapon',
+    stats: { atk: 9 },
+    fine: true,
+    col: FINE_COL,
+    price: 420,
+    cls: 'sorceress',
   },
   thornback_jerkin: {
     name: 'Thornback jerkin',
@@ -714,32 +796,30 @@ export type Loot = [ItemId, number, number, number?][];
  * night, ogres and shamans. Plate is a future tier.
  */
 /**
- * The same piece of loot for the other class: a sword drops as a bow for an archer, a shield
- * as a quiver (and back), so personal loot is always something you can use.
+ * The same piece of loot for each class, as [warrior's, archer's, sorceress's]: a sword drops
+ * as a bow for an archer and a staff for a sorceress, a shield as a quiver or a book (and
+ * back), so personal loot is always something you can use.
  */
-export const CLASS_TWIN: Partial<Record<ItemId, ItemId>> = {
-  rusty_sword: 'worn_shortbow',
-  worn_shortbow: 'rusty_sword',
-  iron_sword: 'yew_longbow',
-  yew_longbow: 'iron_sword',
-  wooden_shield: 'leather_quiver',
-  leather_quiver: 'wooden_shield',
-  iron_shield: 'hunters_quiver',
-  hunters_quiver: 'iron_shield',
-  // the hunting bow's warrior counterpart is the axe (which stays an axe: it's a tool for anyone)
-  hunting_bow: 'woodcutter_axe',
-  warden_blade: 'warden_longbow',
-  warden_longbow: 'warden_blade',
-  steel_sword: 'silk_recurve',
-  silk_recurve: 'steel_sword',
-  // there is no steel quiver: an archer finds the hunter's quiver instead
-  steel_shield: 'hunters_quiver',
-};
+const CLASS_KIN: [ItemId, ItemId, ItemId][] = [
+  ['rusty_sword', 'worn_shortbow', 'gnarled_staff'],
+  ['iron_sword', 'yew_longbow', 'runed_staff'],
+  ['wooden_shield', 'leather_quiver', 'hedge_grimoire'],
+  ['iron_shield', 'hunters_quiver', 'crystal_orb'],
+  // the axe stays an axe (it's a tool for anyone): it is the hunting bow's and the ash staff's twin
+  ['woodcutter_axe', 'hunting_bow', 'ashwood_staff'],
+  ['warden_blade', 'warden_longbow', 'warden_staff'],
+  ['steel_sword', 'silk_recurve', 'willow_staff'],
+  // there is no steel quiver or orb: an archer finds the hunter's quiver, a sorceress the crystal orb
+  ['steel_shield', 'hunters_quiver', 'crystal_orb'],
+];
+const KIN_COL: Record<ClassId, number> = { warrior: 0, archer: 1, sorceress: 2 };
 
 /** Loot as a hero of this class finds it. */
 export function lootFor(id: ItemId, cls: ClassId): ItemId {
   const d = ITEMS[id];
-  return d.cls && d.cls !== cls ? (CLASS_TWIN[id] ?? id) : id;
+  if (!d.cls || d.cls === cls) return id;
+  const kin = CLASS_KIN.find(k => k[KIN_COL[d.cls!]] === id);
+  return kin ? kin[KIN_COL[cls]] : id;
 }
 
 /** Whether a hero of this class can wear or wield it. */

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Game } from '../src/sim/Game';
+import type { ClassId } from '../src/data/classes';
 import { Session } from '../src/server/Session';
 import { SPELLS, SPELL_ORDER } from '../src/data/spells';
 import type { SpellKey } from '../src/data/spells';
@@ -52,12 +53,17 @@ function caster(k: SpellKey) {
   h.applyGear();
   h.hp = h.hpMax;
   h.mp = h.mpMax;
-  const e = h.region.spawnEnemy('ogre', h.x + (cls === 'archer' ? 120 : 30), h.y, true);
+  const e = h.region.spawnEnemy('ogre', h.x + (cls === 'warrior' ? 30 : 120), h.y, true);
   h.region.enemies.push(e);
   h.setTarget(e);
   // the spells that need their moment: a wounded target, a spell to cut short
-  if (k === 'execute' || k === 'killshot') e.hp = Math.round(e.hpMax * 0.1);
-  if (k === 'interrupt' || k === 'silence') e.castT = 1;
+  if (k === 'execute' || k === 'killshot' || k === 'incinerate') e.hp = Math.round(e.hpMax * 0.1);
+  if (k === 'interrupt' || k === 'silence' || k === 'counterspell') e.castT = 1;
+  // Revive needs a friend lying at your feet
+  if (k === 'revive') {
+    const f = game.addHero('f', 'Friend');
+    Object.assign(f, { x: h.x + 10, y: h.y, dead: 0.05, down: true });
+  }
   const heard: SoundId[] = [];
   // the ogre's own cries are another test's business
   h.region.events.on('sound', p => {
@@ -66,7 +72,7 @@ function caster(k: SpellKey) {
   return { game, h, e, heard };
 }
 
-/** The sound of each spell's arrow landing. */
+/** The sound of each spell's arrow (or bolt) landing. */
 const LANDS: Partial<Record<SpellKey, SoundId>> = {
   quickshot: 'hitArrow',
   aimedshot: 'hitAimed',
@@ -78,6 +84,17 @@ const LANDS: Partial<Record<SpellKey, SoundId>> = {
   pierce: 'hitPierce',
   rapidfire: 'hitArrow',
   deadeye: 'hitDeadeye',
+  // the sorceress's bolts
+  spark: 'hitFire',
+  firebolt: 'hitFire',
+  ignite: 'hitFire',
+  frostbolt: 'hitFrost',
+  counterspell: 'hitCounter',
+  incinerate: 'hitPyroblast',
+  flamestrike: 'hitFlamestrike',
+  chainlightning: 'hitLightning',
+  scorch: 'hitFire',
+  pyroblast: 'hitPyroblast',
 };
 
 test('every spell sounds when cast, and its arrows when they land', () => {
@@ -210,6 +227,11 @@ test('dying and coming back; only you hear your level; a save loads in silence',
   const hb = ears(b);
   a.hurt(9999, 'a test');
   run(game, 3);
+  // Bo is up, so Ana lies there until he revives her
+  b.x = a.x + 10;
+  b.y = a.y;
+  assert.ok(b.castKey('revive'));
+  run(game, 9);
   a.gainXp(xpToNext(a.level));
   assert.deepEqual(ha, ['died', 'respawn', 'levelUp']);
   assert.deepEqual(hb, []);
@@ -236,7 +258,7 @@ test('online, your own sounds reach you and nobody else', () => {
 });
 
 /** A warrior alone in the meadow (the creatures cleared away), and everything heard there. */
-function meadow(cls: 'warrior' | 'archer' = 'warrior') {
+function meadow(cls: ClassId = 'warrior') {
   const game = new Game();
   const h = game.addHero('h', 'Test');
   h.cls = cls;
@@ -302,7 +324,7 @@ test('the Bell-Ringer tolls, and the dead rise; at dawn they fall apart', () => 
   assert.equal(heard.at(-1), 'skeletonDie');
 });
 
-test('auto-attacks: a swing; a shot, and the arrow landing', () => {
+test('auto-attacks: a swing; a shot, and the arrow landing; a bolt, and its landing', () => {
   const w = meadow();
   const slime = w.spawn('slime', 20);
   w.h.setTarget(slime);
@@ -316,6 +338,14 @@ test('auto-attacks: a swing; a shot, and the arrow landing', () => {
   run(a.game, 3);
   assert.ok(a.heard.includes('autoShot'));
   assert.ok(a.heard.indexOf('autoShot') < a.heard.indexOf('hitArrow'));
+
+  const s = meadow('sorceress');
+  const cow2 = s.spawn('cow', 150);
+  s.game.cheats.freezeEnemies = true;
+  s.h.setTarget(cow2);
+  run(s.game, 3);
+  assert.ok(s.heard.includes('autoCast'));
+  assert.ok(s.heard.indexOf('autoCast') < s.heard.indexOf('hitBolt'));
 });
 
 test('felling a tree and breaking a rock', () => {

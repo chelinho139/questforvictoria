@@ -4,9 +4,10 @@ import { Biquad, RATE, Track, master } from './synth';
 
 /**
  * Every sound in the game, as a recipe for the synthesizer (synth.ts). A spell's key is the
- * sound of casting it; arrows add the sound of landing (`hit…`). Sounds are built from a
- * few shared pieces (a whoosh, a thump, a bowstring, a voice…), so the warrior's blows, the
- * archer's arrows, the goblins and the dead each sound like one family.
+ * sound of casting it; arrows and bolts add the sound of landing (`hit…`). Sounds are built
+ * from a few shared pieces (a whoosh, a thump, a bowstring, a flame, ice, a voice…), so the
+ * warrior's blows, the archer's arrows, the sorceress's fire, frost and lightning, the
+ * goblins and the dead each sound like one family.
  *
  * `loud` sets how loud a sound is against the others (1: the biggest finishing blows);
  * the renderer brings each one to it, so levels inside a recipe only balance its parts.
@@ -117,6 +118,45 @@ function thunk(s: Track, at: number, v: number, f = 150): void {
   s.noise({ at, v: v * 0.8, d: 0.05, filter: 'bandpass', f: 900, q: 1.4 });
   s.noise({ at, v: v * 0.4, d: 0.012, filter: 'highpass', f: 3000 });
   s.tone({ at, f: f * 1.6, f1: f, slide: 0.025, v, a: 0.001, d: 0.09 });
+}
+
+/** Fire: a low roar flickering as it burns, and its crackle (the corner sweeping f to f1). */
+function flame(s: Track, at: number, d: number, v: number, f = 900, f1 = f): void {
+  s.noise({ at, v, a: d * 0.3, d: d * 0.7, filter: 'lowpass', f, f1, q: 0.9, am: [17, 0.45] });
+  crackle(s, at, d, v * 0.45, 110, 3200, 1800, 2);
+}
+
+/** Magic in the air: two bright, wavering voices beating together, gliding from f0 to f1. */
+function shimmer(s: Track, at: number, d: number, f0: number, f1: number, v: number): void {
+  for (const det of [1, 1.007])
+    s.tone({ at, f: f0 * det, f1: f1 * det, v: v / 2, a: d * 0.4, d: d * 0.6, wave: 'tri', vib: [9, 0.012] });
+  s.noise({ at, v: v * 0.15, a: d * 0.4, d: d * 0.6, filter: 'bandpass', f: f0 * 3, f1: f1 * 3, q: 5 });
+}
+
+/** A bolt leaving the staff: a soft rush of air (around `fq`) and the bolt's own note falling to f. */
+function bolt(s: Track, at: number, d: number, f: number, v: number, fq = 1500): void {
+  whoosh(s, at, d, fq * 0.5, fq * 1.6, v, 1.4);
+  s.tone({ at, f: f * 1.5, f1: f, v: v * 0.3, a: 0.005, d, wave: 'tri' });
+}
+
+/** Ice: `n` glassy, inharmonic tinkles high up, scattered over `d`, crowded at the start. */
+function ice(s: Track, at: number, d: number, v: number, n: number): void {
+  for (let i = 0; i < n; i++) {
+    const p = s.random();
+    s.metal({
+      at: at + p * p * d,
+      f: 2400 + 3000 * s.random(),
+      v: v * (1 - 0.6 * p) * (0.5 + 0.5 * s.random()),
+      d: 0.12 + 0.15 * s.random(),
+      ratios: [1, 1.53, 2.37],
+    });
+  }
+}
+
+/** Lightning: a buzzing arc (a square, shaken) and its crackle. */
+function zap(s: Track, at: number, d: number, v: number, f = 110): void {
+  s.tone({ at, f, f1: f * 0.8, v: v * 0.5, a: 0.002, d, wave: 'square', lp: 3500, vib: [43, 0.25] });
+  crackle(s, at, d, v, 500, 6000, 3500, 1.2);
 }
 
 /** A hoof on hard ground: a hollow knock. */
@@ -382,6 +422,8 @@ const SPEAKERS: Record<NpcId | 'bellringer' | 'thane', Speaker> = {
   tobin: { f: 165, mouth: 1.05, syl: 0.068, lilt: 0.2, breath: 0.18 },
   // Bram the smith: big, deep, few words
   bram: { f: 84, mouth: 0.94, syl: 0.1, lilt: 0.05, rough: 0.35, breath: 0.25, drive: 1.5 },
+  // Old Cobb the hedger: slow, warm, an old country drawl
+  cobb: { f: 108, mouth: 0.99, syl: 0.12, lilt: 0.11, rough: 0.2, breath: 0.32, fall: 0.1 },
   // Wren Ashdown: young, quick, clipped, a temper under it
   wren: { f: 232, mouth: 1.17, syl: 0.075, lilt: 0.1, breath: 0.22, fall: 0.16 },
   // Hesketh Coll: slow, low, as if every word costs charcoal
@@ -480,6 +522,19 @@ export const SOUNDS: Record<SoundId, Recipe> = {
       // calling the horse: fweet, fwee-oo
       whistle(s, 0, 0.12, 1400, 2300, 0.8);
       whistle(s, 0.2, 0.35, 2300, 1600, 0.8);
+    },
+  },
+  revive: {
+    len: 1.6,
+    loud: 0.5,
+    make: s => {
+      // a hand on the shoulder: a low hum, and a slow warm chord rising over it
+      s.tone({ f: hz(-24), v: 0.25, a: 0.3, d: 1.1, wave: 'tri', lp: 900 });
+      [hz(-5), hz(0), hz(4), hz(7)].forEach((f, i) =>
+        s.tone({ at: 0.1 + i * 0.12, f, v: 0.18, a: 0.25, d: 1, wave: 'tri', lp: 3000 })
+      );
+      s.metal({ at: 0.55, f: 1760, v: 0.2, d: 0.7, ratios: [1, 2, 3.01] });
+      s.reverb(0.25);
     },
   },
   warcry: {
@@ -813,6 +868,183 @@ export const SOUNDS: Record<SoundId, Recipe> = {
       s.reverb(0.12);
     },
   },
+  // ------------------------------------------------------------ the sorceress's
+  // Fire roars and crackles, frost tinkles like glass, lightning buzzes; the arcane shimmers.
+  spark: {
+    len: 0.35,
+    loud: 0.5,
+    make: s => {
+      // a snap off the staff's tip, and a quick crackle-zap
+      s.noise({ v: 0.6, d: 0.01, filter: 'highpass', f: 3000 });
+      zap(s, 0, 0.12, 0.9, 150);
+      bolt(s, 0.01, 0.12, hz(19), 0.4, 2400);
+    },
+  },
+  firebolt: {
+    len: 0.6,
+    loud: 0.6,
+    make: s => {
+      // a deeper bolt, burning as it goes
+      bolt(s, 0, 0.18, hz(-5), 0.7, 900);
+      flame(s, 0, 0.4, 0.8, 1200, 500);
+      s.tone({ f: 95, f1: 60, v: 0.35, a: 0.01, d: 0.3, wave: 'tri' });
+    },
+  },
+  ignite: {
+    len: 0.7,
+    loud: 0.5,
+    make: s => {
+      // the air drawn in, then the flame catching: whump
+      s.noise({ v: 0.5, a: 0.06, d: 0.2, filter: 'lowpass', f: 300, f1: 1000 });
+      thump(s, 0.05, 70, 0.7, 0.2);
+      flame(s, 0.06, 0.5, 0.5, 1400, 700);
+    },
+  },
+  frostbolt: {
+    len: 0.7,
+    loud: 0.58,
+    make: s => {
+      // a cold, crystalline whoosh
+      bolt(s, 0, 0.2, hz(19), 0.6, 2600);
+      shimmer(s, 0, 0.45, hz(24), hz(19), 0.35);
+      ice(s, 0.03, 0.35, 0.25, 6);
+    },
+  },
+  arcanepower: {
+    len: 1.5,
+    loud: 0.7,
+    make: s => {
+      // the old power rising: a violet shimmer climbing into a strange chord
+      shimmer(s, 0, 0.55, hz(-12), hz(12), 0.4);
+      s.noise({ v: 0.12, a: 0.4, d: 0.2, filter: 'bandpass', f: 600, f1: 4500, q: 2 });
+      [hz(-9), hz(-5), hz(-2), hz(3)].forEach((f, i) =>
+        s.tone({ at: 0.3 + i * 0.05, f, v: 0.2, a: 0.1, d: 0.85, wave: 'tri', vib: [6, 0.008], lp: 3000 })
+      );
+      chime(s, 0.45, [hz(15), hz(22)], 0.07, 0.15, 0.6);
+      s.reverb(0.3, 1.2);
+    },
+  },
+  flamestrike: {
+    len: 0.9,
+    loud: 0.65,
+    make: s => {
+      // fire gathering in the hands, and thrown up high
+      s.noise({ v: 0.8, a: 0.35, d: 0.2, filter: 'lowpass', f: 400, f1: 2200, q: 1, am: [15, 0.4] });
+      crackle(s, 0.1, 0.45, 0.45, 150, 2000, 3800, 2);
+      s.tone({ f: hz(-31), f1: hz(-19), slide: 0.4, v: 0.25, a: 0.3, d: 0.25, wave: 'saw', lp: 900 });
+      whoosh(s, 0.38, 0.22, 700, 2600, 0.6);
+    },
+  },
+  counterspell: {
+    len: 0.65,
+    loud: 0.65,
+    make: s => {
+      // a sharp snap, and two glassy notes a semitone apart, grating
+      s.noise({ v: 0.9, d: 0.012, filter: 'highpass', f: 2800 });
+      s.metal({ f: hz(18), v: 0.5, d: 0.45, ratios: [1, 2.13, 3.4] });
+      s.metal({ at: 0.01, f: hz(19), v: 0.4, d: 0.4, ratios: [1, 2.13, 3.4] });
+      shimmer(s, 0.02, 0.25, hz(24), hz(12), 0.2);
+    },
+  },
+  incinerate: {
+    len: 0.8,
+    loud: 0.7,
+    make: s => {
+      // a hot, fierce roar
+      flame(s, 0, 0.6, 1, 2000, 700);
+      whoosh(s, 0, 0.2, 600, 1800, 0.6, 0.9);
+      s.tone({ f: 120, f1: 70, v: 0.3, a: 0.02, d: 0.45, wave: 'saw', lp: 500 });
+      s.drive(1.6);
+    },
+  },
+  chainlightning: {
+    len: 0.75,
+    loud: 0.75,
+    make: s => {
+      // the crack, and the arc sizzling on as it leaps
+      s.noise({ v: 1, d: 0.012, filter: 'highpass', f: 2000 });
+      zap(s, 0, 0.45, 1, 95);
+      zap(s, 0.12, 0.3, 0.6, 130);
+      s.drive(1.5);
+      s.reverb(0.12);
+    },
+  },
+  scorch: {
+    len: 0.55,
+    loud: 0.55,
+    make: s => {
+      // a sizzle, like fat on a griddle
+      s.noise({ v: 0.6, a: 0.01, d: 0.35, filter: 'bandpass', f: 5500, f1: 3000, q: 1, am: [60, 0.5] });
+      crackle(s, 0, 0.4, 0.7, 400, 5000, 3000, 2);
+      flame(s, 0.02, 0.3, 0.3, 1600, 900);
+    },
+  },
+  pyroblast: {
+    len: 1.4,
+    loud: 0.8,
+    make: s => {
+      // a great ball of fire swelling in the hands, then hurled
+      s.noise({ v: 1, a: 0.5, d: 0.25, filter: 'lowpass', f: 300, f1: 2400, q: 1.1, am: [12, 0.45] });
+      s.tone({ f: hz(-36), f1: hz(-22), slide: 0.55, v: 0.35, a: 0.45, d: 0.35, wave: 'saw', lp: 700 });
+      crackle(s, 0.1, 0.65, 0.5, 160, 1800, 3500, 2);
+      whoosh(s, 0.5, 0.3, 500, 2000, 0.8, 1);
+      flame(s, 0.5, 0.6, 0.5, 1500, 500);
+      s.drive(1.4);
+      s.reverb(0.2, 1.1);
+    },
+  },
+  frostnova: {
+    len: 1.1,
+    loud: 0.75,
+    make: s => {
+      // a burst of cold outward, the ground icing over with a crackle
+      s.noise({ v: 0.8, d: 0.015, filter: 'highpass', f: 3500 });
+      s.noise({ v: 0.7, a: 0.01, d: 0.35, filter: 'bandpass', f: 4000, f1: 900, q: 1.2 });
+      ice(s, 0, 0.5, 0.6, 14);
+      crackle(s, 0.02, 0.6, 0.5, 220, 7000, 4500, 2.5);
+      s.reverb(0.22, 1.1);
+    },
+  },
+  icyveins: {
+    len: 1.3,
+    loud: 0.6,
+    make: s => {
+      // cold running through the veins: a glassy tone rising, and a frosty glint at the top
+      shimmer(s, 0, 0.7, hz(5), hz(29), 0.5);
+      s.noise({ v: 0.1, a: 0.5, d: 0.2, filter: 'bandpass', f: 3000, f1: 8000, q: 3 });
+      s.metal({ at: 0.6, f: hz(29), v: 0.3, d: 0.6, ratios: [1, 2.01, 3.02] });
+      ice(s, 0.6, 0.3, 0.15, 4);
+      s.reverb(0.25, 1.1);
+    },
+  },
+  blink: {
+    len: 0.5,
+    loud: 0.5,
+    make: s => {
+      // out (a pop and a shimmer up), and in again (down, and a pop)
+      s.noise({ v: 0.5, d: 0.01, filter: 'bandpass', f: 2500, q: 1.5 });
+      s.tone({ f: hz(12), f1: hz(36), v: 0.4, a: 0.004, d: 0.1, wave: 'tri' });
+      whoosh(s, 0.04, 0.16, 1500, 5000, 0.35, 1.5);
+      s.tone({ at: 0.18, f: hz(36), f1: hz(12), v: 0.4, a: 0.004, d: 0.1, wave: 'tri' });
+      s.noise({ at: 0.27, v: 0.5, d: 0.01, filter: 'bandpass', f: 2000, q: 1.5 });
+      s.reverb(0.12);
+    },
+  },
+  barrier: {
+    len: 1.6,
+    loud: 0.7,
+    make: s => {
+      // a warm hum swelling round you, the cold shell closing over it, sealed with a ring
+      for (const det of [1, 1.005])
+        s.tone({ f: hz(-24) * det, v: 0.3, a: 0.25, d: 1, wave: 'tri', lp: 1200, vib: [4, 0.004] });
+      [hz(-12), hz(-8), hz(-5), hz(0)].forEach((f, i) =>
+        s.tone({ at: 0.05 + i * 0.06, f, v: 0.18, a: 0.15, d: 0.9, wave: 'tri', lp: 2500 })
+      );
+      shimmer(s, 0.05, 0.4, hz(31), hz(12), 0.25);
+      bell(s, 0.42, hz(12), 0.25, 0.8);
+      s.reverb(0.25, 1.1);
+    },
+  },
   // ------------------------------------------------------------ what follows
   mounted: {
     len: 1,
@@ -933,19 +1165,116 @@ export const SOUNDS: Record<SoundId, Recipe> = {
       s.metal({ at: 0.035, f: 1420, v: 0.35, d: 0.2 });
     },
   },
+  hitBolt: {
+    len: 0.25,
+    loud: 0.4,
+    make: s => {
+      // the staff's bolt bursting: a soft arcane pop
+      s.noise({ v: 0.5, d: 0.04, filter: 'bandpass', f: 1600, q: 1.2 });
+      s.tone({ f: hz(10), f1: hz(-2), slide: 0.05, v: 0.45, a: 0.002, d: 0.1, wave: 'tri' });
+      thump(s, 0, 160, 0.5, 0.06);
+    },
+  },
+  hitFire: {
+    len: 0.5,
+    loud: 0.5,
+    make: s => {
+      // a burst of flame
+      thump(s, 0, 90, 0.6, 0.12);
+      s.noise({ v: 0.8, a: 0.004, d: 0.3, filter: 'lowpass', f: 2500, f1: 600, am: [18, 0.35] });
+      crackle(s, 0, 0.3, 0.45, 140, 3000, 1600, 2);
+    },
+  },
+  hitFrost: {
+    len: 0.5,
+    loud: 0.55,
+    make: s => {
+      // ice shattering
+      s.noise({ v: 0.9, d: 0.012, filter: 'highpass', f: 3000 });
+      thump(s, 0, 140, 0.4, 0.06);
+      ice(s, 0, 0.25, 0.7, 12);
+      crackle(s, 0.005, 0.2, 0.4, 260, 6000, 4000, 2);
+    },
+  },
+  hitCounter: {
+    len: 0.6,
+    loud: 0.55,
+    make: s => {
+      // the spell breaking like glass, and dying away
+      s.noise({ v: 0.9, d: 0.01, filter: 'highpass', f: 3500 });
+      s.metal({ f: 2200, v: 0.45, d: 0.3, ratios: [1, 1.47, 2.09, 2.83] });
+      crackle(s, 0.005, 0.12, 0.5, 300, 5000, 3000, 2);
+      fizzle(s, 0.03, 0.3, 0.4);
+    },
+  },
+  hitFlamestrike: {
+    len: 1.3,
+    loud: 0.8,
+    make: s => {
+      // a pillar of flame bursting from the ground: roar
+      thump(s, 0, 55, 0.7, 0.35);
+      s.noise({ v: 1, a: 0.03, d: 0.85, filter: 'lowpass', f: 3000, f1: 700, q: 0.9, am: [14, 0.4] });
+      crackle(s, 0.02, 0.8, 0.5, 160, 3500, 1500, 2);
+      whoosh(s, 0, 0.3, 400, 1800, 0.6, 0.8);
+      s.drive(1.4);
+      s.reverb(0.25, 1.2);
+    },
+  },
+  hitLightning: {
+    len: 0.3,
+    loud: 0.5,
+    make: s => {
+      // a crack of lightning, short (it leaps three times)
+      s.noise({ v: 1, d: 0.015, filter: 'highpass', f: 2000 });
+      zap(s, 0, 0.1, 0.7, 120);
+      thump(s, 0, 100, 0.4, 0.06);
+    },
+  },
+  hitPyroblast: {
+    len: 1.6,
+    loud: 0.92,
+    make: s => {
+      // a great fiery explosion
+      thump(s, 0, 45, 0.8, 0.5);
+      s.noise({ v: 1, a: 0.005, d: 0.9, filter: 'lowpass', f: 2500, f1: 300, am: [10, 0.3] });
+      crunch(s, 0, 0.7, 0.15, 900);
+      crackle(s, 0.02, 0.9, 0.6, 140, 3500, 1200, 2);
+      s.tone({ f: hz(-14), f1: hz(-33), slide: 0.5, v: 0.25, a: 0.005, d: 0.5, wave: 'tri' });
+      s.drive(1.8);
+      s.reverb(0.3, 1.3);
+    },
+  },
   // ------------------------------------------------------------ the interface
   // Tuned to D major, so the jingles sit together; these are only heard by you.
   levelUp: {
-    len: 2.2,
-    loud: 0.8,
+    len: 3.4,
+    loud: 1,
     make: s => {
-      // a harp runs up two octaves, then a bright chord rings out and sparkles
-      [-7, -3, 0, 5, 9, 12].forEach((n, i) => note(s, i * 0.055, hz(n), 0.6, 0.6));
-      for (const n of [-7, 5, 9, 12]) brass(s, 0.33, hz(n), 0.22, 1.1);
-      for (const n of [17, 21, 24])
-        s.tone({ at: 0.33, f: hz(n), v: 0.07, a: 0.02, d: 1.2, vib: [6, 0.004] });
-      crackle(s, 0.33, 1, 0.25, 60, 7000, 9000, 3);
-      s.reverb(0.25);
+      // the biggest moment there is: a timpani roll swells, the brass calls da-da-da-DAAA over
+      // a harp running up two octaves, bells ring, and the chord holds and rings out
+      for (let i = 0; i < 12; i++) drum(s, i * 0.04, 52 + (i % 2) * 6, 0.25 + i * 0.05, 0.3);
+      drum(s, 0.5, 46, 1, 0.9);
+      for (const [at, n] of [
+        [0.5, 0],
+        [0.64, 0],
+        [0.78, 4],
+      ]) {
+        brass(s, at, hz(n), 0.45, 0.11);
+        brass(s, at, hz(n - 12), 0.3, 0.11);
+      }
+      for (const n of [-12, -5, 0, 4, 7, 12]) brass(s, 0.94, hz(n), 0.28, 1.9);
+      [-12, -8, -5, 0, 4, 7, 12, 16, 19, 24].forEach((n, i) => note(s, 0.94 + i * 0.04, hz(n), 0.35, 0.9));
+      for (const [at, n] of [
+        [1.0, 24],
+        [1.12, 28],
+        [1.24, 31],
+        [1.36, 36],
+      ])
+        bell(s, at, hz(n), 0.18, 1.4);
+      for (const n of [0, 4, 7])
+        s.tone({ at: 0.94, f: hz(n), v: 0.1, a: 0.3, d: 2.2, wave: 'tri', vib: [5, 0.006], lp: 2600 });
+      crackle(s, 0.94, 1.4, 0.2, 80, 7000, 10000, 3);
+      s.reverb(0.35);
     },
   },
   talent: {
@@ -1266,6 +1595,15 @@ export const SOUNDS: Record<SoundId, Recipe> = {
     len: 0.3,
     loud: 0.36,
     make: s => twang(s, 0, 178, 0.7, 0.15),
+  },
+  autoCast: {
+    len: 0.3,
+    loud: 0.36,
+    make: s => {
+      // the staff's bolt leaving, with a faint fizz
+      bolt(s, 0, 0.12, hz(14), 0.8, 1800);
+      crackle(s, 0, 0.08, 0.25, 200, 6000, 4000, 2);
+    },
   },
   heroHurt: {
     len: 0.35,
@@ -2204,6 +2542,40 @@ export const SOUNDS: Record<SoundId, Recipe> = {
       voice(s, { at: 0, d: 0.45, f: 96, peak: 104, f1: 82, mouth: AH, v: 1.4, rough: 0.35, roughHz: 28, breath: 0.4, a: 0.02 });
       for (let i = 0; i < 5; i++) clack(s, 0.5 + i * 0.05, 0.3, 700 + 300 * s.random());
       s.reverb(0.45, 1.4);
+    },
+  },
+  // the thornlings of Millbrook's north field: the Blackthorn, walking
+  thornRustle: {
+    len: 0.8,
+    loud: 0.5,
+    takes: 2,
+    make: s => {
+      // dry stems dragging over each other, and a creak like a branch bent too far
+      crackle(s, 0, 0.6, 0.55, 90, 2600, 1400, 0.8);
+      s.tone({ at: 0.08, f: 190, f1: 120, v: 0.35, a: 0.05, d: 0.45, wave: 'saw', vib: [11, 0.04] });
+      s.noise({ at: 0.05, v: 0.3, a: 0.1, d: 0.4, filter: 'bandpass', f: 900, f1: 500, q: 2 });
+    },
+  },
+  thornSnap: {
+    len: 0.35,
+    loud: 0.5,
+    gap: 0.2,
+    make: s => {
+      // a green stick snapping
+      s.noise({ v: 0.8, a: 0.001, d: 0.04, filter: 'highpass', f: 2200 });
+      crunch(s, 0.01, 0.5, 0.08, 1700);
+      crackle(s, 0.02, 0.2, 0.3, 120, 3000, 1800, 0.6);
+    },
+  },
+  thornDie: {
+    len: 1.1,
+    loud: 0.6,
+    make: s => {
+      // the tangle tearing itself apart and settling into a heap
+      crackle(s, 0, 0.9, 0.8, 110, 2400, 900, 0.9);
+      for (let i = 0; i < 4; i++) crunch(s, 0.05 + i * 0.12, 0.45 - i * 0.07, 0.07, 1500 - i * 200);
+      s.tone({ at: 0.1, f: 160, f1: 70, v: 0.3, a: 0.02, d: 0.7, wave: 'saw' });
+      s.reverb(0.25, 0.8);
     },
   },
   // ------------------------------------------------------------ the weather

@@ -46,6 +46,9 @@ export const belltower: RegionDef = {
     '&&&&&&&&#++#&&&&&&&&',
   ],
   spots: { start: [10, 28], door: [10, 28], belfry: [10, 11] },
+  // fall in the tower and you wake on the road into Millbrook, not at the foot of his stair
+  // (a friend still standing up here can revive you first)
+  wake: [{ spot: 'start', region: 'millbrook', say: 'You wake on the south road into Millbrook, a long walk from the chapel.' }],
   exits: [{ area: [9, 31, 10, 31], to: 'millbrook', at: 'chapelDoor' }],
   spawns: [{ kind: 'bellringer', at: [10, 8], when: { not: 'bellringer_down' } }],
   npcs: [],

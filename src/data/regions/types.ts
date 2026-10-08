@@ -19,6 +19,8 @@ export interface RegionSpawn {
   when?: Cond;
   /** A lure (EnemyDef.lure): where it drifts to when someone comes near. */
   to?: At;
+  /** `when` is watched as you play, not only on arrival: it appears the moment it holds. */
+  live?: boolean;
 }
 
 export interface RegionNpc {

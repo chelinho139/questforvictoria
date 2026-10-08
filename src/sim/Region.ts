@@ -1,8 +1,8 @@
 import { FLAT_OBJECTS } from '../data/regions/types';
-import type { ObjectKind } from '../data/regions/types';
+import type { ObjectKind, RegionSpawn } from '../data/regions/types';
 import { KINDS, RESPAWN } from '../data/enemies';
 import type { EnemyDef, EnemyKind, CreatureSounds, CastDef } from '../data/enemies';
-import { DIFFICULTIES } from '../data/difficulty';
+import { DIFFICULTIES, partyScale } from '../data/difficulty';
 import { T, Tile, rockCentre, RegionMap, parseLayout, isoX, isoSpeedFactor, faceToward } from './map';
 import { findPath } from './pathfind';
 import { propSolidTiles } from '../data/props';
@@ -47,9 +47,9 @@ export const RISE_DUR = 0.9;
 /** Seconds, on average, between a wandering creature's idle calls (unless its kind says otherwise: `idleEvery`). */
 const IDLE_CALL = 18;
 /** A creature dragged this far from its post gives up the chase and walks back. */
-const LEASH = 380;
+const LEASH = 600;
 /** One that loses its foe (dead, gone, hidden) this far from its post walks back too. */
-const STRAY = 150;
+const STRAY = 240;
 /** The walk home: how much faster than a stroll, and how long before it is simply there. */
 const HOME_SPEED = 1.4;
 const HOME_MAX = 8;
@@ -142,6 +142,8 @@ export class Region {
   } | null = null;
   private sceneQueue: string[] = [];
   private storyT = 0;
+  /** The `live` spawns already out (by index in `def.spawns`). */
+  private livePlaced = new Set<number>();
   private wasNight = false;
   /** A night being held (RegionDef.hold): under way, and seconds to the next one out of the dark. */
   private holdOn = false;
@@ -416,16 +418,32 @@ export class Region {
 
   /** The creatures this region starts with (those whose condition holds). */
   spawns(): Enemy[] {
-    return this.def.spawns
-      .filter(sp => this.game.check(sp.when))
-      .map(sp => {
-        const e = this.spawnEnemy(sp.kind, sp.at[0] * T + T / 2, sp.at[1] * T + T / 2);
-        if (sp.to) {
-          e.lx = sp.to[0] * T + T / 2;
-          e.ly = sp.to[1] * T + T / 2;
-        }
-        return e;
-      });
+    this.livePlaced.clear();
+    return this.def.spawns.flatMap((sp, i) => {
+      if (!this.game.check(sp.when)) return [];
+      if (sp.live) this.livePlaced.add(i);
+      return [this.placeSpawn(sp)];
+    });
+  }
+
+  private placeSpawn(sp: RegionSpawn): Enemy {
+    const e = this.spawnEnemy(sp.kind, sp.at[0] * T + T / 2, sp.at[1] * T + T / 2);
+    if (sp.to) {
+      e.lx = sp.to[0] * T + T / 2;
+      e.ly = sp.to[1] * T + T / 2;
+    }
+    return e;
+  }
+
+  /** A `live` spawn whose condition has come to hold climbs out of the ground now (the Old Briar once Cobb asks). */
+  private syncSpawns(): void {
+    this.def.spawns.forEach((sp, i) => {
+      if (!sp.live || this.livePlaced.has(i) || !this.game.check(sp.when)) return;
+      this.livePlaced.add(i);
+      const e = this.placeSpawn(sp);
+      this.enemies.push(e);
+      this.burst(e.x, e.y + 2, 14, '#3e3236', 70, 0.6, 3, -20);
+    });
   }
 
   // ---------- drops ----------
@@ -673,6 +691,7 @@ export class Region {
     this.syncFixed();
     this.syncNpcs();
     this.syncProps();
+    this.syncSpawns();
     const heroes = this.heroes();
     for (const on of this.def.onEnter ?? [])
       if (!this.game.flags['scene:' + on.scene] && this.game.check(on.when, heroes[0], this))
@@ -1255,12 +1274,39 @@ export class Region {
 
   /** A creature's blow (a hit, a bolt, a leap, a fireball, the toll) lands: as hard as the game's difficulty makes it. */
   private strike(f: Foe, v: number, src: string): void {
-    f.hurt(v * DIFFICULTIES[this.game.difficulty].dmg, src);
+    f.hurt(v * DIFFICULTIES[this.game.difficulty].dmg * partyScale(this.party).dmg, src);
   }
 
-  /** A creature of this kind's health at the game's difficulty (cows and deer are as they are). */
+  /**
+   * A creature of this kind's health at the game's difficulty and for the heroes here (cows
+   * and deer are as they are).
+   */
   private maxHp(k: EnemyDef): number {
-    return k.behavior === 'passive' ? k.hp : Math.round(k.hp * DIFFICULTIES[this.game.difficulty].hp);
+    if (k.behavior === 'passive') return k.hp;
+    return Math.round(k.hp * DIFFICULTIES[this.game.difficulty].hp * partyScale(this.party).hp);
+  }
+
+  /**
+   * How many heroes the creatures here are made for: counted every tick, and when it changes
+   * (someone arrives, leaves or drops out) the creatures already out take their new health,
+   * and everyone here is told.
+   */
+  party = 1;
+  private updateParty(): void {
+    const n = Math.max(1, this.heroes().length);
+    if (n === this.party) return;
+    const more = n > this.party;
+    this.party = n;
+    this.rescaleEnemies();
+    const k = partyScale(n);
+    this.logAll(
+      n === 1
+        ? 'Alone here: the creatures are as they are.'
+        : more
+          ? `${n} heroes here: the creatures grow tougher (×${k.hp.toFixed(1)} health, ×${k.dmg.toFixed(1)} damage).`
+          : `${n} heroes here: the creatures are tougher (×${k.hp.toFixed(1)} health, ×${k.dmg.toFixed(1)} damage).`,
+      more ? 'h' : ''
+    );
   }
 
   /** The difficulty changed: every creature here takes its new health, as hurt as it was. */
@@ -1311,12 +1357,12 @@ export class Region {
     for (const c of this.game.companionsIn(this.id)) c.bark('ambush');
   }
 
-  /** It noticed `f` (or was hit by them): every creature that howls within reach comes too. */
+  /** It noticed `f` (or was hit by them): every creature that howls (or that it calls) within reach comes too. */
   private howl(e: Enemy, f: Foe): void {
     const hw = e.def.howl;
     if (!hw) return;
     for (const o of this.enemies) {
-      if (o === e || !o.alive || o.aggro || o.hid || !o.def.howl || o.homeT > 0) continue;
+      if (o === e || !o.alive || o.aggro || o.hid || !(o.def.howl || hw.calls?.includes(o.kind)) || o.homeT > 0) continue;
       if (Math.hypot(o.x - e.x, o.y - e.y) > hw.r) continue;
       o.aggro = true;
       o.foe = f.id;
@@ -1936,6 +1982,7 @@ export class Region {
 
   // ---------- the region's tick ----------
   tick(dt: number): void {
+    this.updateParty();
     const heroes = this.heroes();
     for (const h of heroes) h.tick(dt);
     // heroes may have left (an exit, a respawn elsewhere): the rest runs for those still here

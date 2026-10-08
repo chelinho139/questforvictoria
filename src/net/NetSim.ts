@@ -164,6 +164,7 @@ export class NetSim extends Sim {
       mpMax: me.mpMax,
       t: me.t,
       dead: me.dead,
+      down: me.down,
       buffT: me.buffT,
       invT: me.invT,
       bleedT: me.bleedT,
@@ -191,6 +192,7 @@ export class NetSim extends Sim {
       slowK: me.slowK,
       stunT: me.stunT,
       itemCd: me.itemCd,
+      fullT: me.fullT,
     });
     // holding still to shoot is this browser's to keep, so the ping can't stretch it: a cast's
     // hold starts here as the key goes down (the server's copy of it comes back a round trip
@@ -463,6 +465,7 @@ export class NetSim extends Sim {
         cls,
         hiddenT: flags & 8 ? 1 : 0,
         stunT: flags & 16 ? 1 : 0,
+        down: !!(flags & 32),
         heldBy: heldBy as HeldKind | '',
         heldT: heldBy ? 1 : 0,
         duelsWon: won,
@@ -787,15 +790,16 @@ export class NetSim extends Sim {
   }
 
   /**
-   * An archer's shot: like single player, the feet must be planted (a click-walk stops; keys
-   * held down refuse), and the hero holds still for the draw. The server takes our word on it.
+   * An archer's shot (or a sorceress's bolt): like single player, the feet must be planted (a
+   * click-walk stops; keys held down refuse), and the hero holds still for the draw. The
+   * server takes our word on it.
    */
   private readyToShoot(k: Key): boolean {
     const h = this.hero;
-    if (h.cls !== 'archer' || !isShot(k)) return true;
+    if (h.cls === 'warrior' || !isShot(k)) return true;
     if (h.path) h.stopMoving();
     if (h.moving) {
-      h.log('Stand still to shoot.', 'h');
+      h.log(h.cls === 'sorceress' ? 'Stand still to cast.' : 'Stand still to shoot.', 'h');
       return false;
     }
     h.aimT = AIM_HOLD;

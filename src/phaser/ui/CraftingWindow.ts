@@ -1,3 +1,4 @@
+import { CLASSES } from '../../data/classes';
 import type Phaser from 'phaser';
 import type { Sim } from '../../sim/Sim';
 import { ITEMS, statLines } from '../../data/items';
@@ -213,7 +214,7 @@ export class CraftingWindow {
     } else {
       const d = ITEMS[r.makes.item];
       const lines = statLines(d.stats).map(l => `<li>${l}</li>`).join('');
-      const other = canWield(r.makes.item, this.sim.cls) ? '' : `<em>For ${d.cls === 'archer' ? 'archers' : 'warriors'}</em>`;
+      const other = canWield(r.makes.item, this.sim.cls) ? '' : `<em>For ${CLASSES[d.cls!].many}</em>`;
       this.tip.innerHTML = `<b class="${d.fine ? 'fine' : ''}">${d.name}</b>${lines ? `<ul>${lines}</ul>` : ''}<p>${d.desc}</p>${other}`;
     }
     this.tip.hidden = false;

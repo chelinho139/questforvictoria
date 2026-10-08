@@ -23,7 +23,9 @@ def trim(im):
 
 names = sys.argv[1:] or list(HEROES)
 mode = 'items'
-if names and names[0] in ('anim',):
+STAVES_ = ['gnarled_staff', 'ashwood_staff', 'runed_staff', 'warden_staff', 'willow_staff']
+SORC_KITS = [dict(weapon=w, offhand=o) for w, o in zip(STAVES_, ['hedge_grimoire', 'crystal_orb', None, 'hedge_grimoire', 'crystal_orb'])]
+if names and names[0] in ('anim', 'sorc'):
     mode = names.pop(0)
     names = names or list(HEROES)
 strips = []
@@ -35,6 +37,13 @@ for n in names:
         ims = [img(h, {'weapon': 'sig'}, **idle), img(h, {}, **idle)]
         ims += [img(h, {SLOT_OF[it]: it}, **idle) for it in ALL_ITEMS]
         ims += [img(h, LEATHER_KIT, **idle), img(h, IRON_KIT, **idle), img(h, AXE_KIT, **idle)]
+    elif mode == 'sorc':
+        # each staff: idle, two walk frames, the swing, the cast, a jump; the last kit also in full gear
+        ims = []
+        for kit in SORC_KITS:
+            kit = {k: v for k, v in kit.items() if v}
+            ims += [img(h, kit, **p) for p in [idle] + P['walk'][:2] + P['attack'] + P['shoot'] + P['jump'][1:2]]
+        ims += [img(h, {**IRON_KIT, 'weapon': 'willow_staff', 'offhand': o}, **p) for o in ('hedge_grimoire', 'crystal_orb') for p in (idle, P['shoot'][2])]
     else:
         ims = []
         for kit in (LEATHER_KIT, IRON_KIT, AXE_KIT):

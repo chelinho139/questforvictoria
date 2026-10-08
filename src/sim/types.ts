@@ -203,7 +203,11 @@ export interface Fx {
     | 'fireball'
     | 'hit'
     | 'swing'
-    | 'arrow';
+    | 'arrow'
+    | 'orb'
+    | 'zap'
+    | 'pillar'
+    | 'levelup';
   t: number;
   dur: number;
   x?: number;
@@ -284,7 +288,7 @@ export interface Structure {
 
 /** What a hero is busy with, for the progress bar over their head. */
 export interface Work {
-  kind: 'chop' | 'mine' | 'make';
+  kind: 'chop' | 'mine' | 'make' | 'revive';
   /** How far along: the tree felled, the rock broken, the thing made (0–1). */
   p: number;
   /** The recipe being made. */
@@ -362,7 +366,8 @@ export interface TreeState {
 }
 
 export type LogClass = '' | 'c' | 'h' | 't';
-export type BannerClass = '' | 'bad' | 'cool';
+/** A banner's look: plain, bad news, good news, or (a level reached) the big one. */
+export type BannerClass = '' | 'bad' | 'cool' | 'level';
 export type FloaterClass = '' | 'crit' | 'heal' | 'hurt' | 'dot' | 'aa' | 'name';
 
 /** What one hero hears: their own messages, bag, cooldowns, level, travel. */
@@ -397,6 +402,7 @@ export type SoundId = SpellKey | FollowSound | WorldSound | CreatureSound | UiSo
 export type WorldSound =
   | 'autoSwing'
   | 'autoShot'
+  | 'autoCast'
   | 'heroHurt'
   | 'chop'
   | 'treeFall'
@@ -424,6 +430,13 @@ export type FollowSound =
   | 'hitVolley'
   | 'hitPierce'
   | 'hitDeadeye'
+  | 'hitBolt'
+  | 'hitFire'
+  | 'hitFrost'
+  | 'hitCounter'
+  | 'hitFlamestrike'
+  | 'hitLightning'
+  | 'hitPyroblast'
   | 'trapSnap';
 /** What only the hero it happens to hears: the game telling them something. */
 export type UiSound =

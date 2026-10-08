@@ -23,7 +23,7 @@ export interface LocalChar {
   name: string;
   /** Which hero they look like (an HD hero id). */
   look: string;
-  /** Warrior or archer (characters from before classes: warriors). */
+  /** Warrior, archer or sorceress (characters from before classes: warriors). */
   cls?: ClassId;
   /** How hard their adventure is, until it is first saved (the save keeps it from then on). */
   difficulty?: Difficulty;

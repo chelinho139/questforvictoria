@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Game } from '../src/sim/Game';
 import type { Hero } from '../src/sim/Hero';
 import { CLASSES, CLASS_IDS } from '../src/data/classes';
+import type { ClassId } from '../src/data/classes';
 import { TALENTS, TREES, treesOf, TIERS, COLS, MAX_LEVEL, xpToNext } from '../src/data/talents';
 import { SPELLS, SPELL_ORDER, HOME_SLOT } from '../src/data/spells';
 import { ITEMS, lootFor, canWield } from '../src/data/items';
@@ -13,7 +14,7 @@ import type { Enemy } from '../src/sim/types';
 import { skipScenes, run, make } from './helpers';
 
 /** A hero of a class, alone in a quiet meadow (the region's creatures cleared away). */
-function hero(cls: 'warrior' | 'archer', level = 1): { game: Game; h: Hero } {
+function hero(cls: ClassId, level = 1): { game: Game; h: Hero } {
   const game = new Game();
   const h = game.addHero('h', 'Test');
   h.cls = cls;
@@ -164,13 +165,14 @@ test('loot is something your class can use', () => {
   assert.equal(lootFor('iron_shield', 'archer'), 'hunters_quiver');
   assert.equal(lootFor('yew_longbow', 'warrior'), 'iron_sword');
   assert.equal(lootFor('chainmail', 'archer'), 'chainmail');
+  assert.equal(lootFor('iron_sword', 'sorceress'), 'runed_staff');
+  assert.equal(lootFor('hunters_quiver', 'sorceress'), 'crystal_orb');
+  assert.equal(lootFor('warden_staff', 'archer'), 'warden_longbow');
+  assert.equal(lootFor('willow_staff', 'warrior'), 'steel_sword');
+  assert.equal(lootFor('ashwood_staff', 'warrior'), 'woodcutter_axe');
   for (const id of Object.keys(ITEMS) as (keyof typeof ITEMS)[]) {
-    const d = ITEMS[id];
-    if (d.cls)
-      assert.ok(
-        canWield(lootFor(id, 'archer'), 'archer') && canWield(lootFor(id, 'warrior'), 'warrior'),
-        id
-      );
+    if (ITEMS[id].cls)
+      for (const cls of CLASS_IDS) assert.ok(canWield(lootFor(id, cls), cls), `${id} for ${cls}`);
   }
 });
 
@@ -352,4 +354,201 @@ test('a new game hears its region: arrows and numbers reach the screen', async (
   );
   s.tick(0.5);
   assert.ok(floaters.length > 0, 'the damage shows');
+});
+
+// ------------------------------------------------------------ the sorceress
+
+test('a sorceress starts with a staff, the lightest of the three', () => {
+  const { h } = hero('sorceress');
+  assert.equal(h.equip.weapon, 'gnarled_staff');
+  assert.ok(h.hasStaff && h.ranged && !h.hasBow);
+  assert.equal(h.hpMax, CLASSES.sorceress.hp);
+  assert.ok(CLASSES.sorceress.hp < CLASSES.archer.hp);
+  assert.ok(h.knows('spark') && h.knows('firebolt') && !h.knows('quickshot'));
+  assert.equal(h.aaReach, CLASSES.sorceress.aa.range);
+  assert.equal(canWield('runed_staff', 'archer'), false);
+  assert.equal(canWield('yew_longbow', 'sorceress'), false);
+});
+
+test('a sorceress stands still to cast, and her bolts fly', () => {
+  const { game, h } = hero('sorceress');
+  const e = foe(h, 'cow', 180);
+  h.setTarget(e);
+  h.inputMove = { x: 1, y: 0 };
+  assert.equal(h.castKey('spark'), false, 'not on the move');
+  h.inputMove = { x: 0, y: 0 };
+  const hp = e.hp;
+  const drawn: string[] = [];
+  h.region.events.on('fx', f => void drawn.push(f.type));
+  assert.ok(h.castKey('spark'));
+  assert.ok(h.aimT > 0, 'holds still to cast');
+  assert.ok(drawn.includes('orb'), 'a bolt is drawn');
+  assert.equal(e.hp, hp, 'not yet');
+  run(game, 0.6);
+  assert.ok(e.hp < hp, 'now');
+});
+
+test('Clarity: more mana back in a fight, open from the first tier', () => {
+  const regain = (ranks: number) => {
+    const { game, h } = hero('sorceress', 4);
+    for (let i = 0; i < ranks; i++) assert.ok(h.learnTalent('clarity'), 'no points in Arcane needed');
+    game.cheats.freezeEnemies = true;
+    const e = foe(h, 'ogre', 150);
+    h.setTarget(e);
+    // it is after her (so the fight goes on), and no staff bolts: only the regen of a fight
+    e.aggro = true;
+    e.foe = h.id;
+    h.aaT = 99;
+    h.combatT = 99;
+    h.mp = 0;
+    run(game, 4);
+    return h.mp;
+  };
+  const none = regain(0);
+  const three = regain(3);
+  assert.ok(Math.abs(three - none - 4 * 0.75) < 0.05, `${none} → ${three}`);
+});
+
+test('without a staff she cannot cast', () => {
+  const { h } = hero('sorceress');
+  const e = foe(h, 'cow', 150);
+  h.setTarget(e);
+  h.unequip('weapon');
+  assert.equal(h.castKey('spark'), false);
+  assert.match(h.canDo('spark')!, /staff/);
+  assert.equal(h.aaReach, 48, 'she can only punch');
+});
+
+test('Firebolt burns hotter after a Spark; Ignite burns on', () => {
+  const hit = (spark: boolean) => {
+    const { game, h } = hero('sorceress', 2);
+    game.cheats.freezeEnemies = true;
+    const e = foe(h, 'ogre', 150);
+    h.setTarget(e);
+    // no bolts of her staff's own in the count
+    h.aaT = 99;
+    if (spark) {
+      h.castKey('spark');
+      run(game, 0.6);
+      h.t = 9;
+    }
+    const hp = e.hp;
+    h.castKey('firebolt');
+    run(game, 0.5);
+    return hp - e.hp;
+  };
+  assert.ok(hit(true) > hit(false), 'kindled');
+
+  const { game, h } = hero('sorceress', 2);
+  game.cheats.freezeEnemies = true;
+  const e = foe(h, 'ogre', 150);
+  h.setTarget(e);
+  h.castKey('ignite');
+  run(game, 0.5);
+  assert.ok(h.bleedT > 0, 'burning');
+  const hp = e.hp;
+  run(game, 3);
+  assert.ok(e.hp < hp, 'and it hurts');
+});
+
+test('Frostbolt slows; Frost Nova freezes everything near', () => {
+  const { game, h } = hero('sorceress', 3);
+  const e = foe(h, 'goblin', 180);
+  h.setTarget(e);
+  h.castKey('frostbolt');
+  run(game, 0.6);
+  assert.ok(e.slowT > 0 && e.slowK >= 0.5, 'slowed');
+
+  const t = hero('sorceress', 25);
+  t.h.talents.frost_nova = 1;
+  t.h.applyTalents();
+  const near = [foe(t.h, 'goblin', 30), foe(t.h, 'goblin', 50)];
+  const far = foe(t.h, 'goblin', 150);
+  const hp = near.map(g => g.hp);
+  assert.ok(t.h.doAction('frostnova', false, 2, true));
+  assert.ok(
+    near.every((g, i) => g.rootT > 0 && g.hp < hp[i]),
+    'frozen and hurt'
+  );
+  assert.equal(far.rootT, 0, 'out of reach');
+});
+
+test('Flamestrike burns a group; Chain Lightning leaps', () => {
+  const { game, h } = hero('sorceress', 11);
+  game.cheats.freezeEnemies = true;
+  const group = [foe(h, 'ogre', 180), foe(h, 'ogre', 195)];
+  group[1].y += 20;
+  h.setTarget(group[0]);
+  const hp = group.map(e => e.hp);
+  h.castKey('flamestrike');
+  run(game, 0.7);
+  assert.ok(
+    group.every((e, i) => e.hp < hp[i]),
+    'both in the flames'
+  );
+
+  const c = hero('sorceress', 11);
+  c.game.cheats.freezeEnemies = true;
+  const chain = [foe(c.h, 'ogre', 120), foe(c.h, 'ogre', 180), foe(c.h, 'ogre', 240)];
+  const lone = foe(c.h, 'ogre', 120);
+  lone.y += 200;
+  c.h.setTarget(chain[0]);
+  const chp = chain.map(e => e.hp);
+  assert.ok(c.h.castKey('chainlightning'));
+  run(c.game, 0.5);
+  assert.ok(
+    chain.every((e, i) => e.hp < chp[i]),
+    'leaps from one to the next'
+  );
+  assert.equal(lone.hp, lone.hpMax, 'not to one far away');
+});
+
+test('Counterspell cuts a cast short from afar', () => {
+  const { game, h } = hero('sorceress', 6);
+  const e = foe(h, 'shaman', 180);
+  h.setTarget(e);
+  assert.match(h.canDo('counterspell')!, /Nothing to counter/);
+  e.castT = 1;
+  assert.ok(h.castKey('counterspell'));
+  run(game, 0.6);
+  assert.ok(e.castT < 0 && e.stunT > 0, 'countered and stunned');
+});
+
+test('Blink steps back; Arcane Barrier heals and shields', () => {
+  const { h } = hero('sorceress', 25);
+  h.talents.blink = 1;
+  h.talents.arcane_barrier = 1;
+  h.applyTalents();
+  const e = foe(h, 'goblin', 30);
+  h.setTarget(e);
+  const d0 = h.dist(h, e);
+  assert.ok(h.doAction('blink', false, 2, true));
+  assert.ok(h.dist(h, e) > d0 + 40);
+  h.hp = 20;
+  assert.ok(h.doAction('barrier', false, 2, true));
+  assert.ok(h.hp > 20 && h.lastStandT > 0);
+});
+
+test('Pyroblast is ready again when it kills', () => {
+  const { game, h } = hero('sorceress', 25);
+  h.talents.pyroblast = 1;
+  h.applyTalents();
+  const e = foe(h, 'slime', 150);
+  e.hp = 5;
+  h.setTarget(e);
+  assert.ok(h.doAction('pyroblast', false, 2, true));
+  run(game, 0.5);
+  assert.equal(e.alive, false);
+  assert.equal(h.cdRemaining('pyroblast'), 0);
+});
+
+test('a sorceress is saved as one', () => {
+  const { game, h } = hero('sorceress', 4);
+  const save = game.toSave(h);
+  assert.equal(save.cls, 'sorceress');
+  const g2 = new Game();
+  const h2 = g2.addHero('h', 'Test');
+  g2.loadSave(save, h2);
+  assert.equal(h2.cls, 'sorceress');
+  assert.ok(h2.knows('frostbolt'));
 });

@@ -67,11 +67,15 @@ export const RECIPES: Recipe[] = [
   { id: 'yew_longbow', station: 'campfire', makes: { item: 'yew_longbow' }, needs: [['log', 6], ['iron_bar', 2]], time: 6 },
   { id: 'leather_quiver', station: 'forge', makes: { item: 'leather_quiver' }, needs: [['log', 3], ['iron_bar', 1]], time: 4 },
   { id: 'hunters_quiver', station: 'forge', makes: { item: 'hunters_quiver' }, needs: [['iron_bar', 4], ['log', 1]], time: 5 },
+  // the sorceress's: staves seasoned over a fire, the runed one shod at the forge
+  { id: 'ashwood_staff', station: 'campfire', makes: { item: 'ashwood_staff' }, needs: [['log', 4]], time: 4 },
+  { id: 'runed_staff', station: 'forge', makes: { item: 'runed_staff' }, needs: [['log', 4], ['iron_bar', 2]], time: 6 },
   { id: 'iron_helm', station: 'forge', makes: { item: 'iron_helm' }, needs: [['iron_bar', 3]], time: 5 },
   { id: 'vigour_amulet', station: 'forge', makes: { item: 'vigour_amulet' }, needs: [['gold_bar', 2]], time: 6 },
   // Act II: the Weepwood's game, its wood and silk, and steel once Bram has taught it
   { id: 'roast_venison', station: 'campfire', makes: { item: 'roast_venison' }, needs: [['venison', 1]], time: 2 },
   { id: 'silk_recurve', station: 'campfire', makes: { item: 'silk_recurve' }, needs: [['black_willow', 3], ['spider_silk', 2]], time: 6 },
+  { id: 'willow_staff', station: 'campfire', makes: { item: 'willow_staff' }, needs: [['black_willow', 3], ['spider_silk', 2]], time: 6 },
   { id: 'thornback_jerkin', station: 'forge', makes: { item: 'thornback_jerkin' }, needs: [['thornback_pelt', 3], ['spider_silk', 1]], time: 6 },
   { id: 'fang_necklace', station: 'forge', makes: { item: 'fang_necklace' }, needs: [['bone_fang', 6], ['gold_bar', 1]], time: 5 },
   { id: 'steel_bar', station: 'forge', makes: { item: 'steel_bar' }, needs: [['iron_bar', 1], ['charcoal', 2]], time: 4, when: { flag: 'steel_taught' } },

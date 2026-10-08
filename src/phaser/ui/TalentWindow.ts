@@ -23,7 +23,9 @@ export class TalentWindow {
   private readonly root: HTMLDivElement;
   private readonly tip: HTMLDivElement;
   private readonly cells = new Map<string, { el: HTMLButtonElement; rank: HTMLElement }>();
-  private readonly arrows: { el: HTMLElement; req: string }[] = [];
+  private arrows: { el: HTMLElement; req: string }[] = [];
+  /** The class the trees on show belong to. */
+  private builtFor = '';
   private readonly spentEls = new Map<TreeId, HTMLElement>();
   private readonly pointsEl: HTMLElement;
   private readonly levelEl: HTMLElement;
@@ -55,8 +57,7 @@ export class TalentWindow {
     });
     root.querySelector('.inv-x')!.addEventListener('click', () => this.toggle(false));
     root.addEventListener('pointerdown', e => e.stopPropagation());
-    const trees = root.querySelector('.tal-trees')!;
-    for (const t of treesOf(this.sim.cls)) trees.append(this.tree(t));
+    this.build();
     this.tip = document.createElement('div');
     this.tip.className = 'inv-tip tal-tip';
     this.tip.hidden = true;
@@ -64,6 +65,17 @@ export class TalentWindow {
     this.offs.push(this.sim.events.on('talents', () => this.render()));
     this.offs.push(this.sim.events.on('level', () => this.render()));
     window.addEventListener('keydown', this.onKey);
+  }
+
+  /** The hero's three trees, built again if their class has changed since (the trailer director dresses a hero as another class). */
+  private build(): void {
+    if (this.builtFor === this.sim.cls) return;
+    this.builtFor = this.sim.cls;
+    this.cells.clear();
+    this.spentEls.clear();
+    this.arrows = [];
+    const trees = this.root.querySelector('.tal-trees')!;
+    trees.replaceChildren(...treesOf(this.sim.cls).map(t => this.tree(t)));
   }
 
   private icon(icon: string, size: number): HTMLCanvasElement {
@@ -146,6 +158,7 @@ export class TalentWindow {
 
   private render(): void {
     if (!this.open) return;
+    this.build();
     const s = this.sim;
     const pts = s.talentPoints;
     this.levelEl.textContent = s.level >= MAX_LEVEL ? `Level ${s.level} (max)` : `Level ${s.level} · ${s.xp} / ${xpToNext(s.level)} XP`;

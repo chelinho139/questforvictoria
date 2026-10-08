@@ -1,3 +1,4 @@
+import { HORSE_BOB } from './hdSprites';
 import { FLAT_OBJECTS, GLINTING_OBJECTS } from '../../data/regions/types';
 import { KILN_OUT } from './structureArt';
 import Phaser from 'phaser';
@@ -21,7 +22,7 @@ import { keepAsIs } from '../../i18n/dom';
 const OVERLAY_DEPTH = 1e5;
 
 /** The progress bar over the hero, by what they are doing: wood, stone, the forge's glow. */
-const WORK_COL: Record<Work['kind'], string> = { chop: '#c8a070', mine: '#c4cad4', make: '#ffa040' };
+const WORK_COL: Record<Work['kind'], string> = { chop: '#c8a070', mine: '#c4cad4', make: '#ffa040', revive: '#f2e08a' };
 
 /** A building's ground box (world px), its depth, and the screen box its art covers. */
 interface PropBox {
@@ -72,6 +73,8 @@ export class WorldRenderer {
   private readonly dropViews = new Map<Drop, { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image }>();
   private readonly structureViews = new Map<Structure, { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image }>();
   private readonly objectViews = new Map<ObjectState, Phaser.GameObjects.Image>();
+  /** A quest mark over an object a quest still wants you to use (the proclamation, a notice). */
+  private readonly objectMarks = new Map<ObjectState, Phaser.GameObjects.Text>();
   private readonly wandererViews = new Map<WandererState, Phaser.GameObjects.Image>();
   /** The other players' heroes (online). */
   private readonly otherViews = new Map<
@@ -489,8 +492,9 @@ export class WorldRenderer {
         .setPosition(Math.round(qx), Math.round(qy + 8 - z))
         .setFlipX(o.face < 0)
         .setDepth(depth)
-        .setAlpha(o.dead ? 0.35 : o.hiddenT > 0 ? 0.45 : 1)
-        .setRotation(o.dead ? 0.6 : 0);
+        // a friend down and waiting for a Revive stays plain to see; one gone back to camp fades
+        .setAlpha(o.dead ? (o.down ? 0.9 : 0.35) : o.hiddenT > 0 ? 0.45 : 1)
+        .setRotation(o.dead ? 1.3 : 0);
       if (o.flash > 0) v.img.setTintFill(0xffffff);
       else v.img.clearTint();
       v.shadow.setPosition(qx, qy + 5).setDisplaySize(26, 13).setDepth(depth - 0.5);
@@ -620,6 +624,12 @@ export class WorldRenderer {
       this.pins.delete(img);
       img.destroy();
       this.objectViews.delete(o);
+      const m = this.objectMarks.get(o);
+      if (m) {
+        this.pins.delete(m);
+        m.destroy();
+        this.objectMarks.delete(o);
+      }
     }
     for (const o of this.sim.objects) {
       const key = Tex.object(o.kind);
@@ -631,6 +641,17 @@ export class WorldRenderer {
       }
       const glint = GLINTING_OBJECTS.has(o.kind) && Math.floor(now / 160) % 16 === 0;
       img.setTexture(frameKey(key, glint ? 1 : 0)).setScale(artScale(key));
+      // a quest wants it: a gold mark bobbing over it, like a quest giver's
+      const wanted = this.sim.objectWanted(o.id);
+      let m = this.objectMarks.get(o);
+      if (wanted && !m) {
+        m = this.pin(this.mark('24px', '#f2c14e').setText('!').setOrigin(0.5, 1), o.x, o.y, 7);
+        this.objectMarks.set(o, m);
+      }
+      if (m) {
+        const top = img.y - img.displayHeight;
+        m.setPosition(Math.round(img.x), Math.round(top - 4 + Math.sin(now / 260) * 1.5)).setVisible(wanted);
+      }
     }
   }
 
@@ -1005,7 +1026,8 @@ export class WorldRenderer {
       this.knight.setOrigin(0.5, 0.5).setPosition(qx, qy + 8 - lift - kh / 2).setRotation(0);
       this.knight.setScale(ks);
     } else {
-      this.knight.setOrigin(0.5, 1).setPosition(qx, qy + 8 - lift).setRotation(0);
+      // fallen: lying where you fell
+      this.knight.setOrigin(0.5, 1).setPosition(qx, qy + 8 - lift).setRotation(s.dead > 0 ? 1.3 : 0);
       this.knight.setScale(ks / stretch, ks * stretch);
     }
     // behind a house: a faint silhouette shows where you are
@@ -1021,8 +1043,12 @@ export class WorldRenderer {
     this.buffMark.setPosition(qx + 14, y - 4);
   }
 
-  /** How high a trotting horse lifts its rider this frame. */
+  /**
+   * How high a trotting horse lifts its rider this frame: nothing for a horse drawn with its
+   * own trot (the rider rises with its body in ride()); a bounce for the older two-frame ones.
+   */
   private trot(walking: boolean, now: number): number {
+    if (artFrames(Tex.horse) === HORSE_BOB.length) return 0;
     return walking ? Math.round(Math.abs(Math.sin(now / 70)) * 3) : 0;
   }
 
@@ -1046,8 +1072,12 @@ export class WorldRenderer {
   ): number {
     const hs = artScale(Tex.horse);
     const hf = artFrames(Tex.horse);
+    // a horse with its own trot: frame 0 standing, the rest the stride (an older two-frame one cycles both)
+    const trotting = hf === HORSE_BOB.length;
+    const fi = !walking || hf < 2 ? 0 : trotting ? 1 + (Math.floor(now / 75) % (hf - 1)) : Math.floor(now / 110) % hf;
+    const bob = trotting ? HORSE_BOB[fi] * hs : 0;
     horse
-      .setTexture(frameKey(Tex.horse, walking && hf > 1 ? Math.floor(now / 110) % hf : 0))
+      .setTexture(frameKey(Tex.horse, fi))
       .setVisible(true)
       .setPosition(qx, qy + 4)
       .setFlipX(face < 0)
@@ -1056,7 +1086,7 @@ export class WorldRenderer {
     // put the bottom of the cropped rider slice just below the horse's top edge
     const horseTop = qy + 4 - horse.frame.height * hs;
     const hiddenBelow = (rider.frame.height - rc.rows) * ks;
-    const y = horseTop + rc.below + hiddenBelow;
+    const y = horseTop + rc.below + hiddenBelow - bob;
     rider
       .setVisible(true)
       .setPosition(qx + rc.dx * face, y)
@@ -1088,7 +1118,7 @@ export class WorldRenderer {
   }
 }
 
-/** The animation a hero attacks with: an archer with a bow shoots, everyone else swings. */
-function hitAnim(h: { hasBow: boolean }): 'shoot' | 'attack' {
-  return h.hasBow ? 'shoot' : 'attack';
+/** The animation a hero attacks with: an archer with a bow shoots, a sorceress with a staff casts (her 'shoot' frames), everyone else swings. */
+function hitAnim(h: { ranged: boolean }): 'shoot' | 'attack' {
+  return h.ranged ? 'shoot' : 'attack';
 }

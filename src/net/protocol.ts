@@ -36,7 +36,7 @@ import type { DuelView, DuelFlag } from '../sim/Duel';
 import type { TradeView } from '../sim/Trade';
 
 /** Bump when a message changes shape: the server turns away a browser that speaks another. */
-export const PROTOCOL = 8;
+export const PROTOCOL = 9;
 
 /** Players a room takes. */
 export const ROOM_MAX = 8;
@@ -56,7 +56,7 @@ export interface CharInfo {
   name: string;
   /** Which hero they look like (an HD hero id). */
   look: string;
-  /** Warrior or archer. */
+  /** Warrior, archer or sorceress. */
   cls: ClassId;
   level: number;
   /** What they wear, by slot (to draw them). */
@@ -184,12 +184,16 @@ export interface MeSnap {
   stunT: number;
   /** Keepsakes waiting before they can be used again (by item id). */
   itemCd: Record<string, number>;
+  /** Seconds until the last meal is digested. */
+  fullT: number;
   hp: number;
   hpMax: number;
   mp: number;
   mpMax: number;
   t: number;
   dead: number;
+  /** Fallen, waiting for a friend's Revive. */
+  down: boolean;
   flash: number;
   shake: number;
   buffT: number;

@@ -14,6 +14,8 @@ export type NpcId =
   | 'odo'
   | 'tobin'
   | 'bram'
+  // Act I, later: the hedger of the north field
+  | 'cobb'
   // Act II
   | 'wren'
   | 'hesketh'
@@ -361,6 +363,15 @@ export const NPCS: Record<NpcId, NpcDef> = {
         ],
       },
       {
+        ask: 'Give me the key to the tower.',
+        when: { all: [{ flag: 'scene:bell_backwards' }, { quest: 'bell_tolls', is: 'locked' }] },
+        pages: [
+          'To you? Forgive me. I do not know you, and that stair has already killed one good man.',
+          "Help the village first. Nan has work for you: the black thorns in her fences, and the letters left at doors in the night. Sergeant Pike wants the King's hounds put down.",
+          'When Nan and Pike speak for you, come back. Then you shall have the key, and my prayers with it.',
+        ],
+      },
+      {
         ask: 'The churchyard.',
         pages: [
           'I buried most of the people in that churchyard. Now they come knocking on the chapel door at night. I do not open it.',
@@ -379,8 +390,8 @@ export const NPCS: Record<NpcId, NpcDef> = {
     greeting: 'Buying or selling? Both, I hope.',
     shop: {
       name: "Tobin's stall",
-      sells: ['bread', 'bandage', 'cooked_meat', 'leather_cap', 'leather_tunic', 'leather_trousers', 'leather_boots', 'wooden_shield', 'woodcutter_axe', 'pickaxe', 'hunting_bow', 'leather_quiver'],
-      more: [{ when: { flag: 'silk_sold' }, sells: ['smoked_venison', 'silk_recurve'] }],
+      sells: ['bread', 'bandage', 'cooked_meat', 'leather_cap', 'leather_tunic', 'leather_trousers', 'leather_boots', 'wooden_shield', 'woodcutter_axe', 'pickaxe', 'hunting_bow', 'leather_quiver', 'ashwood_staff', 'hedge_grimoire'],
+      more: [{ when: { flag: 'silk_sold' }, sells: ['smoked_venison', 'silk_recurve', 'willow_staff'] }],
     },
     topics: [
       {
@@ -399,7 +410,7 @@ export const NPCS: Record<NpcId, NpcDef> = {
     greeting: 'Hm.',
     shop: {
       name: "Bram's smithy",
-      sells: ['iron_bar', 'iron_sword', 'iron_shield', 'yew_longbow', 'hunters_quiver', 'iron_helm', 'chainmail', 'iron_greaves'],
+      sells: ['iron_bar', 'iron_sword', 'iron_shield', 'yew_longbow', 'hunters_quiver', 'runed_staff', 'crystal_orb', 'iron_helm', 'chainmail', 'iron_greaves'],
       more: [{ when: { flag: 'steel_taught' }, sells: ['steel_bar', 'steel_sword', 'steel_shield', 'steel_helm', 'thornback_jerkin'] }],
     },
     greetings: [{ when: { flag: 'steel_taught' }, text: 'Steel. Good charcoal makes good steel. Hm.' }],
@@ -407,6 +418,48 @@ export const NPCS: Record<NpcId, NpcDef> = {
       {
         ask: 'Tell me about Millbrook.',
         pages: ['Mill. River. Chapel. Thorns in the fields this spring. Dead in the churchyard every night.', "Used to be a good place. Still is, in the day."],
+      },
+    ],
+  },
+  // Old Cobb lays the hedges north of the square, and this spring the hedges started walking
+  cobb: {
+    name: 'Old Cobb',
+    title: 'Hedger',
+    intro: [
+      "Mind the bill, it's sharper than it looks. Cobb. I lay the hedges round Millbrook. Forty years, man and boy, and my father before me.",
+      "That field behind me used to be barley. Now look at it. Ash, and the thorns coming down off that wall like they own the place.",
+      "And some of them don't stay put. I've seen them get up and walk.",
+    ],
+    greeting: 'Keep your boots out of the ash. It gets in everything.',
+    greetings: [
+      { when: { flag: 'briar_down' }, text: "The field's quiet, near enough. Barley next spring, you see if it isn't." },
+      { when: { quest: 'root_branch', is: ['active', 'ready'] }, text: 'Against the wall, where the ash is thickest. You will hear it before you see it.' },
+    ],
+    topics: [
+      {
+        ask: 'What are the walking thorns?',
+        pages: [
+          "Thornlings, I call them. A knot of black thorn the size of a dog, and something cold looking out of the middle of it.",
+          "They come off the wall, out of the ash, and they wander. They don't eat. They don't sleep. They just want everything to be thorn.",
+          "And they'll root you where you stand if you let them. Keep moving, and cut low.",
+        ],
+      },
+      {
+        ask: 'Where did the thorns come from?',
+        when: { quest: 'thorns_fences', is: ['active', 'ready', 'done'] },
+        pages: [
+          "Nan sent you? Then I'll tell you what I told her. That wall came up in a night, the night after the bells. I heard it. Like a forest of sticks all breaking at once.",
+          "It's not a hedge. A hedge you lay. This thing grew down out of the north, along the river, like it was looking for something.",
+          "Whatever's at the top of the Lisle, it's rotten, and it's coming down to us.",
+        ],
+      },
+      {
+        ask: 'Is there one bigger than the rest?',
+        when: { quest: 'walking_hedge', is: 'done' },
+        pages: [
+          "There's an old one. The first one, I reckon. It came off the wall the very first night and it never went back.",
+          "Big as a haystack. When it moves the whole field leans. The little ones come up out of the ground round it like mushrooms.",
+        ],
       },
     ],
   },
