@@ -118,3 +118,33 @@ test('Revive is broken by a step or a blow', () => {
   assert.equal(b.reviveT, 0, 'a blow breaks it');
   assert.ok(a.down, 'still down');
 });
+
+test('more heroes, tougher creatures: health and blows scale with the heroes in the region, both ways', async () => {
+  const { DIFFICULTIES } = await import('../src/data/difficulty');
+  const { game, heroes } = gameWith('Ana');
+  const [a] = heroes;
+  run(game, 0.1);
+  const R = a.region;
+  const e = R.spawnEnemy('goblin', a.x + 200, a.y, true);
+  R.enemies.push(e);
+  const solo = Math.round(e.def.hp * DIFFICULTIES.normal.hp);
+  assert.equal(e.hpMax, solo, 'one hero: as it is');
+  e.hp = Math.round(solo / 2);
+  const b = game.addHero('h1', 'Bo');
+  run(game, 0.1);
+  assert.equal(R.party, 2);
+  assert.equal(e.hpMax, Math.round(e.def.hp * DIFFICULTIES.normal.hp * 1.6), 'two heroes: 1.6× health');
+  assert.ok(Math.abs(e.hp / e.hpMax - 0.5) < 0.02, 'as hurt as it was');
+  assert.ok(a.logHistory.some(l => l.text.startsWith('2 heroes here')), 'everyone is told');
+  // a blow lands 10% harder (on a hero with no armour)
+  const full = b.hp;
+  (R as unknown as { strike(f: unknown, v: number, s: string): void }).strike(b, 20, 'a test');
+  const two = full - b.hp;
+  game.removeHero(b);
+  run(game, 0.1);
+  assert.equal(R.party, 1);
+  assert.equal(e.hpMax, solo, 'alone again');
+  const full2 = a.hp;
+  (R as unknown as { strike(f: unknown, v: number, s: string): void }).strike(a, 20, 'a test');
+  assert.ok(two > full2 - a.hp, 'two heroes take harder blows than one');
+});

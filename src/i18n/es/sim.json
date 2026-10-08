@@ -337,5 +337,9 @@
   "You can use another bandage in {0} s.": "Puedes usar otra venda en {0} s.",
   "You're too full to eat. You can eat again in {0} s.": "No te cabe nada más. Podrás volver a comer en {0} s.",
   "You bind your wounds. +{0} health.": "Te vendas las heridas. +{0} de salud.",
-  "You're full.": "Ya no te cabe nada más."
+  "You're full.": "Ya no te cabe nada más.",
+
+  "Alone here: the creatures are as they are.": "A solas aquí: las criaturas son como son.",
+  "{0} heroes here: the creatures grow tougher (×{1} health, ×{2} damage).": "{0} héroes aquí: las criaturas se vuelven más duras (salud ×{1}, daño ×{2}).",
+  "{0} heroes here: the creatures are tougher (×{1} health, ×{2} damage).": "{0} héroes aquí: las criaturas son más duras (salud ×{1}, daño ×{2})."
 }

@@ -31,3 +31,18 @@ export const DIFFICULTY_IDS = Object.keys(DIFFICULTIES) as Difficulty[];
 export function isDifficulty(v: unknown): v is Difficulty {
   return typeof v === 'string' && Object.prototype.hasOwnProperty.call(DIFFICULTIES, v);
 }
+
+/**
+ * More heroes, tougher creatures (in the manner of Diablo 2's players setting): for every
+ * hero in a region beyond the first, its creatures have PARTY_HP more health and hit PARTY_DMG
+ * harder (their blows are spread over more of you, so damage needs only a light touch).
+ * Cows and deer stay as they are.
+ */
+export const PARTY_HP = 0.6;
+export const PARTY_DMG = 0.1;
+
+/** How much tougher creatures are with `n` heroes in their region. */
+export function partyScale(n: number): { hp: number; dmg: number } {
+  const more = Math.max(0, n - 1);
+  return { hp: 1 + PARTY_HP * more, dmg: 1 + PARTY_DMG * more };
+}

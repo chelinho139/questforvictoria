@@ -2,7 +2,7 @@ import { FLAT_OBJECTS } from '../data/regions/types';
 import type { ObjectKind } from '../data/regions/types';
 import { KINDS, RESPAWN } from '../data/enemies';
 import type { EnemyDef, EnemyKind, CreatureSounds, CastDef } from '../data/enemies';
-import { DIFFICULTIES } from '../data/difficulty';
+import { DIFFICULTIES, partyScale } from '../data/difficulty';
 import { T, Tile, rockCentre, RegionMap, parseLayout, isoX, isoSpeedFactor, faceToward } from './map';
 import { findPath } from './pathfind';
 import { propSolidTiles } from '../data/props';
@@ -1255,12 +1255,39 @@ export class Region {
 
   /** A creature's blow (a hit, a bolt, a leap, a fireball, the toll) lands: as hard as the game's difficulty makes it. */
   private strike(f: Foe, v: number, src: string): void {
-    f.hurt(v * DIFFICULTIES[this.game.difficulty].dmg, src);
+    f.hurt(v * DIFFICULTIES[this.game.difficulty].dmg * partyScale(this.party).dmg, src);
   }
 
-  /** A creature of this kind's health at the game's difficulty (cows and deer are as they are). */
+  /**
+   * A creature of this kind's health at the game's difficulty and for the heroes here (cows
+   * and deer are as they are).
+   */
   private maxHp(k: EnemyDef): number {
-    return k.behavior === 'passive' ? k.hp : Math.round(k.hp * DIFFICULTIES[this.game.difficulty].hp);
+    if (k.behavior === 'passive') return k.hp;
+    return Math.round(k.hp * DIFFICULTIES[this.game.difficulty].hp * partyScale(this.party).hp);
+  }
+
+  /**
+   * How many heroes the creatures here are made for: counted every tick, and when it changes
+   * (someone arrives, leaves or drops out) the creatures already out take their new health,
+   * and everyone here is told.
+   */
+  party = 1;
+  private updateParty(): void {
+    const n = Math.max(1, this.heroes().length);
+    if (n === this.party) return;
+    const more = n > this.party;
+    this.party = n;
+    this.rescaleEnemies();
+    const k = partyScale(n);
+    this.logAll(
+      n === 1
+        ? 'Alone here: the creatures are as they are.'
+        : more
+          ? `${n} heroes here: the creatures grow tougher (×${k.hp.toFixed(1)} health, ×${k.dmg.toFixed(1)} damage).`
+          : `${n} heroes here: the creatures are tougher (×${k.hp.toFixed(1)} health, ×${k.dmg.toFixed(1)} damage).`,
+      more ? 'h' : ''
+    );
   }
 
   /** The difficulty changed: every creature here takes its new health, as hurt as it was. */
@@ -1936,6 +1963,7 @@ export class Region {
 
   // ---------- the region's tick ----------
   tick(dt: number): void {
+    this.updateParty();
     const heroes = this.heroes();
     for (const h of heroes) h.tick(dt);
     // heroes may have left (an exit, a respawn elsewhere): the rest runs for those still here
