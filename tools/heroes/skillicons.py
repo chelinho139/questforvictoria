@@ -1231,6 +1231,29 @@ def barrier():
     arc(g, 10.0, 10.0, 8.0, 0, 90, lambda t: 1.0, '%', under=True)
     return g
 
+def revive():
+    """A fallen friend lying on the ground in a red cloak, and a narrow shaft of warm gold light
+    coming down on them, motes rising: the Revive everyone knows."""
+    g = G(20, 20)
+    # the shaft: white at its heart, gold at its edges
+    for y in range(0, 12):
+        w = 1 if y < 6 else 2
+        g.at(10 - w, y, 'G' + 'Y' * (2 * w - 1) + 'G')
+        g.at(10, y, 'W')
+    # the friend, lying on their back across the light: head to the left, red cloak, boots
+    g.at(3, 12, '.FFb..........')
+    g.at(2, 13, 'FFFFbRRRRRRRRmn.')
+    g.at(2, 14, 'FFFFbrrrrrrrrnnD')
+    g.at(3, 15, 'FFb.qqqqqqqq.nD')
+    # the light pooling round them on the ground
+    g.at(1, 16, 'gGGYYYYYYYYYYGGg')
+    g.at(3, 17, 'ggGGGGGGGGGgg')
+    # motes rising out of them
+    for x, y, c in ((6, 9, '2'), (14, 8, '2'), (7, 5, '1'), (13, 4, '1'), (5, 3, '2'), (15, 11, '2'), (8, 10, '1')):
+        g.at(x, y, c)
+    return g
+
+
 ICONS = {
     'thrust': thrust, 'slash': slash, 'rend': rend, 'whirlwind': whirlwind, 'warcry': warcry,
     'charge': charge, 'interrupt': interrupt, 'mortal': mortal, 'mount': mount,
@@ -1244,6 +1267,7 @@ ICONS = {
     'flamestrike': flamestrike, 'counterspell': counterspell, 'incinerate': incinerate,
     'chainlightning': chainlightning, 'scorch': scorch, 'pyroblast': pyroblast, 'frostnova': frostnova,
     'icyveins': icyveins, 'blink': blink, 'barrier': barrier,
+    'revive': revive,
 }
 
 if __name__ == '__main__':

@@ -16,6 +16,7 @@ import type { ItemId, Slot } from '../src/data/items';
 import type { Key } from '../src/data/skills';
 import { isSkill } from '../src/data/skills';
 import { skipScenes } from './helpers';
+import { DIFFICULTIES } from '../src/data/difficulty';
 
 export type Tier = 0 | 1 | 2 | 3;
 
@@ -294,8 +295,28 @@ const WARRIOR_INSTANT: Key[] = [
 const ARCHER_INSTANT: Key[] = ['killshot', 'pierce', 'deadeye', 'rapidfire', 'predator'];
 const SORCERESS_INSTANT: Key[] = ['incinerate', 'chainlightning', 'pyroblast', 'scorch', 'icyveins'];
 
-/** One fight: the hero against these creatures, which wait `gap` px away in a loose group. */
+/**
+ * One fight: the hero against these creatures, which wait `gap` px away in a loose group.
+ * Fairness between the classes is measured on the creatures' own numbers (data/enemies.ts);
+ * `atNormal` fights them as Normal makes them (30% harder hits, 15% more health), to see how
+ * hard the game is rather than whether the classes are even.
+ */
 export function fight(
+  s: Setup,
+  foes: EnemyKind[],
+  opts: { gap?: number; seed?: number; maxT?: number; atNormal?: boolean } = {}
+): FightResult {
+  if (opts.atNormal) return fightNow(s, foes, opts);
+  const normal = { ...DIFFICULTIES.normal };
+  Object.assign(DIFFICULTIES.normal, { dmg: 1, hp: 1 });
+  try {
+    return fightNow(s, foes, opts);
+  } finally {
+    Object.assign(DIFFICULTIES.normal, normal);
+  }
+}
+
+function fightNow(
   s: Setup,
   foes: EnemyKind[],
   opts: { gap?: number; seed?: number; maxT?: number } = {}

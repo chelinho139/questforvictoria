@@ -49,6 +49,11 @@ export const SPELLS: Record<SpellKey, SpellInfo> = {
     instant: true,
     long: 'Call your horse: stand still for a second, then ride 1.8× as fast. Attacking knocks you out of the saddle.',
   },
+  revive: {
+    level: 1,
+    instant: true,
+    long: 'Kneel by a fallen friend and bring them back: stand still beside them for 8 s. A blow or a step breaks it. They get up with 40% of their health.',
+  },
   warcry: { cls: 'warrior', level: 5, long: 'A battle shout: you deal 20% more damage for 15 s.' },
   interrupt: {
     cls: 'warrior',
@@ -288,6 +293,7 @@ export const SPELL_ORDER: SpellKey[] = [
   'rend',
   'charge',
   'mount',
+  'revive',
   'warcry',
   'interrupt',
   'execute',
@@ -343,6 +349,7 @@ export const HOME_SLOT: Partial<Record<SpellKey, number>> = {
   execute: 7,
   mortal: 9,
   mount: 11,
+  revive: 10,
   quickshot: 0,
   aimedshot: 1,
   barbed: 2,

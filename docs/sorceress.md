@@ -101,17 +101,22 @@ Measured exactly as the archer was (see `docs/archer.md`): `tests/fight.ts` runs
 
 | Mirrored builds | Average time × | Average cost × | Deaths |
 |---|---|---|---|
-| Blade warrior / Fire sorceress | 0.96 | 0.92 | none |
+| Blade warrior / Fire sorceress | 0.96 | 0.95 | none |
 | Fury warrior / Frost sorceress | 0.98 | 0.92 | none |
-| Warden warrior / Arcane sorceress | 0.96 | 1.03 | none |
+| Warden warrior / Arcane sorceress | 0.96 | 1.08 | none |
 
 The bands: for each pair, average time between 0.95 and 1.10 and average cost between 0.90 and 1.10; no single fight outside 0.75–1.35 in time; nobody dies.
 
 **What the numbers say.**
 - She kills a little faster than the warrior and the archer (0.96–0.98×), mostly in groups: three skeletons go down in 0.79× the time, and an ogre with two goblins in 0.98×. Flamestrike and Chain Lightning are why.
-- Against one tough creature (an ogre, two ogres) she pays for it: the Arcane build loses more health than the Warden (cost 1.18–1.44× there). She is the lightest of the three and has no shield.
+- Against one tough creature (an ogre, two ogres) she pays for it: the Arcane build loses more health than the Warden (cost 1.24–1.63× there; against two ogres she ends the fight with little health left). She is the lightest of the three and has no shield.
 - Frost is the safest build (bone hounds cost her nothing: Frostbolt and Frost Nova keep them off her).
 - Her health was set at 125 from the start ("the lightest of the three"), and the first measurement already sat inside every band, so nothing else was tuned.
+
+**Mana, Execute and a harder Normal** (8 October 2026, from playtesting: mana never ran short, Execute was too strong, Normal too easy):
+- Mana comes back at 1.5 a second in a fight and 4 out of one (it was 3 always). At 1 a second the Ranger and Arcane bots ran dry in the 90-second fight with two ogres and died, so 1.5 it is: half what it was.
+- Incinerate (like Execute and Kill Shot) have a 20 s cooldown (they had none).
+- Normal now hits 30% harder and has 15% more health than the creatures' own numbers. Fairness between the classes is still measured on the creatures' own numbers (`fight` in `tests/fight.ts`), since the difficulty scales every class's fights; `npx tsx tests/balance-report.ts --normal` fights them at Normal. There, only the Blade warrior falls (two goblins at level 6, an ogre and two goblins at 21): it has no healing and the bot never eats or steps back. The ranged builds get through everything.
 
 **What the simulation doesn't capture:** player skill (perfect-timed crits, kiting with Frostbolt, Blink), the Bell-Ringer's rings, and friends in multi player. The numbers to adjust are in `src/data/classes.ts`, `skills.ts`, `talents.ts` and `items.ts`.
 

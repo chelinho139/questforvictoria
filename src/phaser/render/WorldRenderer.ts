@@ -21,7 +21,7 @@ import { keepAsIs } from '../../i18n/dom';
 const OVERLAY_DEPTH = 1e5;
 
 /** The progress bar over the hero, by what they are doing: wood, stone, the forge's glow. */
-const WORK_COL: Record<Work['kind'], string> = { chop: '#c8a070', mine: '#c4cad4', make: '#ffa040' };
+const WORK_COL: Record<Work['kind'], string> = { chop: '#c8a070', mine: '#c4cad4', make: '#ffa040', revive: '#f2e08a' };
 
 /** A building's ground box (world px), its depth, and the screen box its art covers. */
 interface PropBox {
@@ -490,7 +490,7 @@ export class WorldRenderer {
         .setFlipX(o.face < 0)
         .setDepth(depth)
         .setAlpha(o.dead ? 0.35 : o.hiddenT > 0 ? 0.45 : 1)
-        .setRotation(o.dead ? 0.6 : 0);
+        .setRotation(o.dead ? 1.3 : 0);
       if (o.flash > 0) v.img.setTintFill(0xffffff);
       else v.img.clearTint();
       v.shadow.setPosition(qx, qy + 5).setDisplaySize(26, 13).setDepth(depth - 0.5);
@@ -1005,7 +1005,8 @@ export class WorldRenderer {
       this.knight.setOrigin(0.5, 0.5).setPosition(qx, qy + 8 - lift - kh / 2).setRotation(0);
       this.knight.setScale(ks);
     } else {
-      this.knight.setOrigin(0.5, 1).setPosition(qx, qy + 8 - lift).setRotation(0);
+      // fallen: lying where you fell
+      this.knight.setOrigin(0.5, 1).setPosition(qx, qy + 8 - lift).setRotation(s.dead > 0 ? 1.3 : 0);
       this.knight.setScale(ks / stretch, ks * stretch);
     }
     // behind a house: a faint silhouette shows where you are

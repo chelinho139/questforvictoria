@@ -16,6 +16,7 @@ test('shields up: a blow from in front glances off, one from behind lands, and a
   const kind = testKind('t_guard', { shield: { every: 6, up: 2, cut: 0.25 }, hp: 1000 });
   const { h } = heroesIn('t_field');
   const e = spawnBy(h, kind, 40);
+  e.hp = 1000;
   e.shieldT = 2;
   e.face = faceToward(e.x, e.y, h.x, h.y, 1);
   h.region.hurtEnemy(e, 100, '', h);
@@ -294,6 +295,8 @@ test('a smotherer goes for the fire before the hero, and puts it out unless it d
   run(game, 6);
   assert.equal(h.hp, h.hpMax, 'it never touched the hero');
   assert.ok(west.out, 'the fire is out');
+  // (done with it, before it goes looking for the other fire)
+  h.dmgEnemy(a, 9999, '');
   // the other one: killed while it lies on the fire, and the fire lives
   const b = spawnBy(h, kind, 150 - 60);
   run(game, 2.5);
@@ -304,7 +307,6 @@ test('a smotherer goes for the fire before the hero, and puts it out unless it d
   assert.ok(R.burning(east), 'still burning');
   assert.equal(east.smother, 0);
   // a campfire someone built goes for good
-  h.dmgEnemy(a, 9999, '');
   const built = R.build('campfire', 15, 18);
   const c = spawnBy(h, kind, 0, 60);
   run(game, 5);

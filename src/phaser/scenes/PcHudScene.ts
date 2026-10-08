@@ -172,6 +172,7 @@ export class PcHudScene extends Phaser.Scene {
   private logLines: { text: string; cls: LogClass }[] = [];
   private bannerText!: Text;
   private deadText!: Text;
+  private downText!: Text;
   private offs: Array<() => void> = [];
   /** Pointer that started a click-to-move and is still held: the goal keeps following it. */
   private steering: { pointer: Phaser.Input.Pointer; lastT: number } | null = null;
@@ -281,6 +282,7 @@ export class PcHudScene extends Phaser.Scene {
     for (let i = 0; i < LOG_LINES; i++) this.logTexts.push(this.text(0, 0, '', 11, '#ffffff', { stroke: true }).setWordWrapWidth(330));
     this.bannerText = this.text(0, 0, '', 26, Colors.gold, { stroke: true, bold: true, font: Fonts.title }).setOrigin(0.5).setDepth(D.banner).setAlpha(0);
     this.deadText = this.text(0, 0, 'YOU DIED', 40, '#e8584a', { stroke: true, bold: true, font: Fonts.title }).setOrigin(0.5).setDepth(D.dead).setVisible(false);
+    this.downText = this.text(0, 0, 'Wait for a friend to revive you', 16, '#f2e08a', { stroke: true }).setOrigin(0.5).setDepth(D.dead).setVisible(false);
 
     this.layout();
     if (this.registry.get('fadeIn')) this.cameras.main.fadeIn(500, 0, 0, 0);
@@ -402,6 +404,7 @@ export class PcHudScene extends Phaser.Scene {
     this.refreshLog();
     this.bannerText.setPosition(w / 2, h * 0.3);
     this.deadText.setPosition(w / 2, h * 0.42);
+    this.downText.setPosition(w / 2, h * 0.42 + 38);
   }
 
   private placeFrame(f: UnitFrame, x: number, y: number): void {
@@ -1324,5 +1327,6 @@ export class PcHudScene extends Phaser.Scene {
     const dead = s.dead > 0;
     if (dead) g.fillStyle(0x500000, 0.55).fillRect(0, 0, this.W, this.H);
     this.deadText.setVisible(dead);
+    this.downText.setVisible(dead && s.down);
   }
 }

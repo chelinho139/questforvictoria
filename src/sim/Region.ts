@@ -47,9 +47,9 @@ export const RISE_DUR = 0.9;
 /** Seconds, on average, between a wandering creature's idle calls (unless its kind says otherwise: `idleEvery`). */
 const IDLE_CALL = 18;
 /** A creature dragged this far from its post gives up the chase and walks back. */
-const LEASH = 380;
+const LEASH = 600;
 /** One that loses its foe (dead, gone, hidden) this far from its post walks back too. */
-const STRAY = 150;
+const STRAY = 240;
 /** The walk home: how much faster than a stroll, and how long before it is simply there. */
 const HOME_SPEED = 1.4;
 const HOME_MAX = 8;

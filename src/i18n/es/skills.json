@@ -377,5 +377,11 @@
   "12, leaps to 2 more · 30 s": "12, salta a 2 más · 30 s",
   "4 around you + frozen 3 s · 20 s": "4 a tu alrededor + congelado 3 s · 20 s",
   "+50% bolts, +20% dmg 10 s · 45 s": "+50% saetas, +20% daño 10 s · 45 s",
-  "vanish and step back · 12 s": "desaparece y retrocede · 12 s"
+  "vanish and step back · 12 s": "desaparece y retrocede · 12 s",
+
+  "Kneel by a fallen friend and bring them back: stand still beside them for 8 s. A blow or a step breaks it. They get up with 40% of their health.": "Arrodíllate junto a un amigo caído y tráelo de vuelta: quédate quieto a su lado durante 8 s. Un golpe o un paso lo interrumpe. Se levanta con el 40% de su salud.",
+  "target < 25% and close · 20 s": "objetivo < 25% y cerca · 20 s",
+  "Revive": "Revivir",
+  "a fallen friend · 8 s still": "un amigo caído · 8 s quieto",
+  "target < 25% · far · 20 s": "objetivo < 25% · a distancia · 20 s"
 }

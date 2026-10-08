@@ -522,6 +522,19 @@ export const SOUNDS: Record<SoundId, Recipe> = {
       whistle(s, 0.2, 0.35, 2300, 1600, 0.8);
     },
   },
+  revive: {
+    len: 1.6,
+    loud: 0.5,
+    make: s => {
+      // a hand on the shoulder: a low hum, and a slow warm chord rising over it
+      s.tone({ f: hz(-24), v: 0.25, a: 0.3, d: 1.1, wave: 'tri', lp: 900 });
+      [hz(-5), hz(0), hz(4), hz(7)].forEach((f, i) =>
+        s.tone({ at: 0.1 + i * 0.12, f, v: 0.18, a: 0.25, d: 1, wave: 'tri', lp: 3000 })
+      );
+      s.metal({ at: 0.55, f: 1760, v: 0.2, d: 0.7, ratios: [1, 2, 3.01] });
+      s.reverb(0.25);
+    },
+  },
   warcry: {
     len: 1.3,
     loud: 0.85,

@@ -190,6 +190,8 @@ export interface MeSnap {
   mpMax: number;
   t: number;
   dead: number;
+  /** Fallen, waiting for a friend's Revive. */
+  down: boolean;
   flash: number;
   shake: number;
   buffT: number;

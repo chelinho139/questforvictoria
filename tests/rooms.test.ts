@@ -55,12 +55,66 @@ test('loot is personal: only its owner can pick it up', () => {
   assert.equal(b.count('meat'), meatB + 1);
 });
 
-test('a hero dying in a room comes back on their own', () => {
-  const { game, heroes } = gameWith('Ana', 'Bo');
+test('alone, a fallen hero comes back on their own', () => {
+  const { game, heroes } = gameWith('Ana');
   heroes[0].hurt(10_000, 'test');
   assert.ok(heroes[0].dead > 0);
-  assert.equal(heroes[1].dead, 0);
-  run(game, 15);
+  run(game, 3);
   assert.equal(heroes[0].dead, 0);
   assert.equal(heroes[0].hp, heroes[0].hpMax);
+});
+
+test('with a friend up, a fallen hero lies there; once nobody is standing, all wake at camp', () => {
+  const { game, heroes } = gameWith('Ana', 'Bo');
+  const [a, b] = heroes;
+  a.hurt(10_000, 'test');
+  run(game, 15);
+  assert.ok(a.dead > 0 && a.down, 'still down, waiting');
+  assert.equal(b.dead, 0);
+  b.x = a.x + 120;
+  assert.match(b.canDo('revive')!, /fallen friend/, 'too far to revive');
+  b.hurt(10_000, 'test');
+  run(game, 3);
+  assert.deepEqual([a.dead, b.dead, a.down, b.down], [0, 0, false, false], 'both back');
+  assert.equal(a.hp, a.hpMax);
+});
+
+test('Revive: a long cast by the fallen friend brings them back with some health', () => {
+  const { game, heroes } = gameWith('Ana', 'Bo');
+  const [a, b] = heroes;
+  a.hurt(10_000, 'test');
+  run(game, 3);
+  b.x = a.x + 20;
+  b.y = a.y;
+  assert.ok(b.castKey('revive'));
+  assert.equal(b.work?.kind, 'revive', 'a progress bar');
+  run(game, 5);
+  assert.ok(a.down, 'not yet');
+  run(game, 3.5);
+  assert.equal(a.down, false);
+  assert.equal(a.dead, 0);
+  assert.equal(a.hp, Math.round(a.hpMax * 0.4));
+});
+
+test('Revive is broken by a step or a blow', () => {
+  const { game, heroes } = gameWith('Ana', 'Bo');
+  const [a, b] = heroes;
+  a.hurt(10_000, 'test');
+  run(game, 3);
+  b.x = a.x + 20;
+  b.y = a.y;
+  assert.ok(b.castKey('revive'));
+  run(game, 2);
+  b.moveTo(b.x + 60, b.y, false);
+  run(game, 0.3);
+  assert.equal(b.reviveT, 0, 'a step breaks it');
+  b.stopMoving();
+  b.x = a.x + 20;
+  b.y = a.y;
+  run(game, 0.3);
+  assert.ok(b.castKey('revive'));
+  run(game, 2);
+  b.hurt(5, 'a goblin');
+  assert.equal(b.reviveT, 0, 'a blow breaks it');
+  assert.ok(a.down, 'still down');
 });

@@ -418,6 +418,10 @@ export class Sim {
   get dead(): number {
     return this.hero.dead;
   }
+  /** Fallen, waiting for a friend's Revive. */
+  get down(): boolean {
+    return this.hero.down;
+  }
   get flash(): number {
     return this.hero.flash;
   }

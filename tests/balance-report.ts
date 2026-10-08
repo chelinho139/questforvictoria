@@ -28,12 +28,17 @@ export function cost(m: { time: number; lost: number }): number {
   return m.time * (1 + 2 * m.lost);
 }
 
-export function measure(cls: ClassId, build: string, sc: (typeof SCENARIOS)[number]) {
+export function measure(
+  cls: ClassId,
+  build: string,
+  sc: (typeof SCENARIOS)[number],
+  atNormal = false
+) {
   let time = 0;
   let lost = 0;
   let deaths = 0;
   for (const seed of SEEDS) {
-    const r = fight({ cls, level: sc.level, tier: sc.tier, build }, sc.foes, { seed });
+    const r = fight({ cls, level: sc.level, tier: sc.tier, build }, sc.foes, { seed, atNormal });
     time += r.time;
     lost += r.hpLost;
     if (!r.won) deaths++;
@@ -43,7 +48,9 @@ export function measure(cls: ClassId, build: string, sc: (typeof SCENARIOS)[numb
 
 if (process.argv[1]?.endsWith('balance-report.ts')) {
   const pad = (v: string, w: number) => v.padEnd(w);
-  const only = process.argv[2] as ClassId | undefined;
+  // npx tsx tests/balance-report.ts [archer|sorceress] [--normal]
+  const atNormal = process.argv.includes('--normal');
+  const only = process.argv.slice(2).find(a => !a.startsWith('--')) as ClassId | undefined;
   for (const [cls, col] of [['archer', 1], ['sorceress', 2]] as [ClassId, 1 | 2][]) {
     if (only && only !== cls) continue;
     for (const pair of MIRROR) {
@@ -63,8 +70,8 @@ if (process.argv[1]?.endsWith('balance-report.ts')) {
         'deaths w/r'
       );
       for (const sc of SCENARIOS) {
-        const w = measure('warrior', wb, sc);
-        const a = measure(cls, rb, sc);
+        const w = measure('warrior', wb, sc, atNormal);
+        const a = measure(cls, rb, sc, atNormal);
         console.log(
           pad(sc.name, 22),
           pad(w.time.toFixed(1), 10),

@@ -46,7 +46,7 @@ function goblinFrom(h: Hero, far: number): Enemy {
 
 test('a creature dragged too far from its post walks home, untouchable, and is whole again there', () => {
   const { game, h } = alone();
-  const e = goblinFrom(h, 420);
+  const e = goblinFrom(h, 640);
   e.hp = 40;
   run(game, 0.1);
   assert.ok(e.homeT > 0, 'it gives up the chase');
@@ -68,7 +68,7 @@ test('a creature dragged too far from its post walks home, untouchable, and is w
 
 test('a creature left far from its post when its foe dies goes home too', () => {
   const { game, h } = alone();
-  const e = goblinFrom(h, 220);
+  const e = goblinFrom(h, 320);
   run(game, 0.1);
   assert.equal(e.homeT, 0, 'within its leash it keeps fighting');
   h.hurt(9999, 'a test');

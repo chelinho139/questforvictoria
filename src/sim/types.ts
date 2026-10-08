@@ -287,7 +287,7 @@ export interface Structure {
 
 /** What a hero is busy with, for the progress bar over their head. */
 export interface Work {
-  kind: 'chop' | 'mine' | 'make';
+  kind: 'chop' | 'mine' | 'make' | 'revive';
   /** How far along: the tree felled, the rock broken, the thing made (0–1). */
   p: number;
   /** The recipe being made. */

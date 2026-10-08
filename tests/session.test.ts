@@ -69,3 +69,14 @@ test('a new region starts a fresh picture, and hears the arrival scene', () => {
   assert.ok((t.ev ?? []).some(e => e[0] === 'r' && e[1] === 'scene'));
   s.dispose();
 });
+
+test('a fallen hero’s browser hears that they are down, waiting for a Revive', () => {
+  const { game, heroes } = gameWith('Ana', 'Bo');
+  const s = new Session(heroes[0]);
+  s.build(0.05);
+  heroes[0].hurt(10_000, 'test');
+  run(game, 3);
+  let down = false;
+  for (let i = 0; i < 5 && !down; i++) down = !!s.build(0.05).me?.down;
+  assert.ok(down, 'down in the snapshot');
+});

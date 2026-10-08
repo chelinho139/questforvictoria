@@ -314,5 +314,23 @@
   "You are frozen!": "¡El hielo te atrapa!",
   "{0} is a sorceress's spell.": "{0} es un hechizo de hechicera.",
   "That's for sorceresses.": "Eso es para hechiceras.",
-  "Only a sorceress can use the {0}.": "Solo una hechicera puede usar esto: {0}."
+  "Only a sorceress can use the {0}.": "Solo una hechicera puede usar esto: {0}.",
+
+  "You are already reviving someone.": "Ya estás reviviendo a alguien.",
+  "Stand by a fallen friend to revive them.": "Ponte junto a un amigo caído para revivirlo.",
+  "The blow breaks your Revive.": "El golpe interrumpe tu Revivir.",
+  "You dismount to revive.": "Desmontas para revivir.",
+  "REVIVE": "REVIVIR",
+  "You kneel by {0}. Stand still for {1} s to revive them.": "Te arrodillas junto a {0}. Quédate quieto {1} s para revivirlo.",
+  "{0} is reviving you.": "{0} te está reviviendo.",
+  "{0} stopped reviving you.": "{0} dejó de revivirte.",
+  "You fall before you finish the Revive.": "Caes antes de terminar de revivir.",
+  "There is nobody there to revive now.": "Ya no hay nadie a quien revivir.",
+  "You move, and the Revive is broken.": "Te mueves y Revivir se interrumpe.",
+  "Too far away to revive them.": "Demasiado lejos para revivirlo.",
+  "REVIVED": "REVIVIDO",
+  "{0} brings you back on your feet.": "{0} te pone de pie otra vez.",
+  "You revive {0}.": "Revives a {0}.",
+  "You are down. A friend can revive you.": "Has caído. Un amigo puede revivirte.",
+  "Nobody is left standing to revive you.": "No queda nadie en pie para revivirte."
 }

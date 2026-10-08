@@ -164,6 +164,7 @@ export class NetSim extends Sim {
       mpMax: me.mpMax,
       t: me.t,
       dead: me.dead,
+      down: me.down,
       buffT: me.buffT,
       invT: me.invT,
       bleedT: me.bleedT,

@@ -82,6 +82,7 @@ export class MobileHudScene extends Phaser.Scene {
   private wSub!: Text;
   private bannerText!: Text;
   private deadText!: Text;
+  private downText!: Text;
   private chipTexts: Text[] = [];
   private logTexts: Text[] = [];
   private logLines: { text: string; cls: LogClass }[] = [];
@@ -175,6 +176,7 @@ export class MobileHudScene extends Phaser.Scene {
     this.wSub = this.txt(0, 0, '', 'display', 8, Colors.muted).setOrigin(0.5, 0).setDepth(61).setVisible(false);
     this.bannerText = this.txt(0, 0, '', 'display', 22, Colors.gold).setOrigin(0.5).setDepth(90).setAlpha(0);
     this.deadText = this.txt(0, 0, 'YOU DIED', 'display', 20, Colors.ink).setOrigin(0.5).setDepth(110).setVisible(false);
+    this.downText = this.txt(0, 0, 'Wait for a friend to revive you', 'body', 11, Colors.ink).setOrigin(0.5).setDepth(110).setVisible(false);
 
     this.layout();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
@@ -215,6 +217,7 @@ export class MobileHudScene extends Phaser.Scene {
     this.wSub.setX(w / 2);
     this.bannerText.setPosition(w / 2, h * 0.32);
     this.deadText.setPosition(w / 2, h / 2);
+    this.downText.setPosition(w / 2, h / 2 + 26);
     this.stats.setPosition(w / 2, h - 16).setOrigin(0.5, 0);
     for (let i = 0; i < LOG_LINES; i++) this.logTexts[i].setPosition(14, h - 20 - (LOG_LINES - i) * 16);
     if (this.openBtn) this.buildWheelItems(this.openBtn);
@@ -733,5 +736,6 @@ export class MobileHudScene extends Phaser.Scene {
     const dead = s.dead > 0;
     if (dead) g.fillStyle(0x500000, 0.55).fillRect(0, 0, this.W, this.H);
     this.deadText.setVisible(dead);
+    this.downText.setVisible(dead && s.down);
   }
 }

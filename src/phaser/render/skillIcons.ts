@@ -1067,6 +1067,29 @@ const BARRIER = [
   "",
 ];
 
+const REVIVE = [
+  ".........GWG",
+  ".........GWG",
+  ".........GWG",
+  ".....2...GWG",
+  ".........GWG.1",
+  ".......1.GWG",
+  "........GYWYG",
+  "........GYWYG",
+  "........GYWYG.2",
+  "......2.GYWYG",
+  "........1YWYG",
+  "........GYWYG..2",
+  "....FFb",
+  "..FFFFbRRRRRRRRmn",
+  "..FFFFbrrrrrrrrnnD",
+  "...FFb.qqqqqqqq.nD",
+  ".gGGYYYYYYYYYYGGg",
+  "...ggGGGGGGGGGgg",
+  "",
+  "",
+];
+
 function paint(rows: string[]): HTMLCanvasElement {
   const w = Math.max(...rows.map(r => r.length));
   const p = new PixelCanvas(w, rows.length);
@@ -1125,4 +1148,5 @@ export const SKILL_ICONS: Record<string, () => HTMLCanvasElement> = {
   icyveins: () => paint(ICYVEINS),
   blink: () => paint(BLINK),
   barrier: () => paint(BARRIER),
+  revive: () => paint(REVIVE),
 };

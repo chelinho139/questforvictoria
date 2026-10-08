@@ -188,6 +188,7 @@ export class Session {
       mpMax: h.mpMax,
       t: r2(h.t),
       dead: r2(h.dead),
+      down: h.down,
       flash: r2(h.flash),
       shake: r2(h.shake),
       buffT: r1(h.buffT),

@@ -40,10 +40,10 @@ function firstBlow(d: Difficulty, kind: EnemyKind, dx: number): number {
   return full - h.hp;
 }
 
-test('normal hits as the creatures always have; hard half again as hard, nightmare twice', () => {
+test('normal hits 30% harder than the creatures’ own numbers; hard half again as hard, nightmare twice', () => {
   assert.deepEqual(
     DIFFICULTY_IDS.map(d => DIFFICULTIES[d].dmg),
-    [1, 1.5, 2]
+    [1.3, 1.95, 2.6]
   );
   for (const d of DIFFICULTY_IDS) {
     const k = DIFFICULTIES[d].dmg;
@@ -57,13 +57,13 @@ test('creatures take more killing on hard and nightmare (cows as they are), and 
   game.setDifficulty('nightmare');
   const e = spawnBy(h, brute, 60);
   const cow = spawnBy(h, 'cow', -60);
-  assert.deepEqual([e.hp, e.hpMax], [300, 300]);
+  assert.deepEqual([e.hp, e.hpMax], [350, 350]);
   assert.equal(cow.hpMax, KINDS.cow.hp);
   e.hp = 150;
   game.setDifficulty('hard');
-  assert.deepEqual([e.hp, e.hpMax], [120, 240]);
+  assert.deepEqual([e.hp, e.hpMax], [120, 280]);
   game.setDifficulty('normal');
-  assert.deepEqual([e.hp, e.hpMax], [100, 200]);
+  assert.deepEqual([e.hp, e.hpMax], [99, 230]);
   assert.equal(cow.hpMax, KINDS.cow.hp);
   assert.ok(h.logHistory.some(l => l.text.startsWith('Difficulty: Normal.')), 'everyone is told');
 });

@@ -27,6 +27,7 @@ export type ActionKey =
   | 'mortal'
   | 'target'
   | 'mount'
+  | 'revive'
   // abilities you learn from talents
   | 'sunder'
   | 'deathblow'
@@ -213,10 +214,11 @@ export const SKILLS: Record<SkillKey, SkillDef> = {
 
 export const ACTIONS: Record<ActionKey, ActionDef> = {
   interrupt: { n: 'Interrupt', col: '#3ddbd9', cd: 15, desc: 'cuts the cast · 15 s' },
-  execute: { n: 'Execute', col: '#e0504b', cd: 0, desc: 'target < 25% and close' },
+  execute: { n: 'Execute', col: '#e0504b', cd: 20, desc: 'target < 25% and close · 20 s' },
   mortal: { n: 'Mortal Strike', col: '#f2c14e', cd: 30, desc: '12 + stun · 30 s' },
   target: { n: 'Switch target', col: '#f2c14e', cd: 0, desc: 'nearest enemy' },
   mount: { n: 'Mount', col: '#a78bfa', cd: 0, desc: '1 s still · ×1.8' },
+  revive: { n: 'Revive', col: '#f2e08a', cd: 0, desc: 'a fallen friend · 8 s still' },
   sunder: { n: 'Sunder', col: '#c8d2e0', cd: 10, c: 8, desc: '6 · +20% taken 10 s · 10 s' },
   deathblow: { n: 'Deathblow', col: '#e0504b', cd: 20, c: 25, desc: '30 · resets on a kill · 20 s' },
   bloodrage: { n: 'Bloodrage', col: '#e0504b', cd: 30, desc: '−15% health → +40 mana · 30 s' },
@@ -224,7 +226,7 @@ export const ACTIONS: Record<ActionKey, ActionDef> = {
   shieldbash: { n: 'Shield Bash', col: '#93a0b8', cd: 12, c: 5, desc: '6 + stun 2 s · needs a shield · 12 s' },
   laststand: { n: 'Last Stand', col: '#6ccf6a', cd: 60, desc: 'heal 30%, −30% damage 8 s · 60 s' },
   silence: { n: 'Silencing Shot', col: '#3ddbd9', cd: 15, desc: 'cuts the cast · far · 15 s' },
-  killshot: { n: 'Kill Shot', col: '#e0504b', cd: 0, desc: 'target < 25% · far' },
+  killshot: { n: 'Kill Shot', col: '#e0504b', cd: 20, desc: 'target < 25% · far · 20 s' },
   pierce: { n: 'Piercing Shot', col: '#f2c14e', cd: 30, desc: '12 through a line · 30 s' },
   rapidfire: { n: 'Rapid Fire', col: '#c8d2e0', cd: 10, c: 8, desc: '3 arrows × 4 · 10 s' },
   deadeye: { n: 'Deadeye', col: '#e0504b', cd: 20, c: 25, desc: '26 · resets on a kill · 20 s' },
@@ -233,7 +235,7 @@ export const ACTIONS: Record<ActionKey, ActionDef> = {
   disengage: { n: 'Disengage', col: '#6ccf6a', cd: 12, c: 5, desc: 'leap back · 12 s' },
   camouflage: { n: 'Camouflage', col: '#6ccf6a', cd: 60, desc: 'vanish, heal 20% · 60 s' },
   counterspell: { n: 'Counterspell', col: '#c08aff', cd: 15, desc: 'cuts the cast · far · 15 s' },
-  incinerate: { n: 'Incinerate', col: '#e0504b', cd: 0, desc: 'target < 25% · far' },
+  incinerate: { n: 'Incinerate', col: '#e0504b', cd: 20, desc: 'target < 25% · far · 20 s' },
   chainlightning: { n: 'Chain Lightning', col: '#bfe4ff', cd: 30, desc: '12, leaps to 2 more · 30 s' },
   scorch: { n: 'Scorch', col: '#ff9a4a', cd: 10, c: 8, desc: '6 · +20% taken 10 s · 10 s' },
   pyroblast: { n: 'Pyroblast', col: '#e0504b', cd: 20, c: 25, desc: '26 · resets on a kill · 20 s' },

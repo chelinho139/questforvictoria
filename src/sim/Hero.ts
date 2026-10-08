@@ -58,6 +58,22 @@ export const GCD = 1.2;
 /** Perfect-timing window (seconds after the GCD arc restarts). */
 export const WIN = 0.3;
 export const AA_RANGE = 48;
+/**
+ * Mana comes back slowly in a fight and quickly out of one: a hero is in combat for
+ * IN_COMBAT seconds after casting, striking or being struck.
+ */
+export const MANA_COMBAT = 1.5;
+export const MANA_REST = 4;
+export const IN_COMBAT = 5;
+/**
+ * A fallen hero lies where they fell while anyone else in the region is still up, until a
+ * friend stands over them and casts Revive: REVIVE_TIME seconds standing still within
+ * REVIVE_REACH, broken by a blow or a step. They get up with REVIVE_HP of their health.
+ * Once nobody there is left standing, everyone down wakes back at camp.
+ */
+export const REVIVE_TIME = 8;
+export const REVIVE_REACH = 40;
+export const REVIVE_HP = 0.4;
 export const JUMP_DUR = 0.38;
 export const JUMP_HEIGHT = 16;
 /** A flip is a slightly bigger, slower jump so the rotation reads. */
@@ -125,6 +141,15 @@ export class Hero implements Foe {
   hpMax = 140;
   mp = 60;
   mpMax = 100;
+  /** Seconds left in combat (mana comes back slowly until it runs out). */
+  combatT = 0;
+  /** Fallen, and lying there for a friend to revive (while anyone else here is up). */
+  down = false;
+  /** Everyone here fell: this hero wakes at camp with the rest, whoever is up by then. */
+  private wake = false;
+  /** Casting Revive: seconds left, and on whom (a hero id). */
+  reviveT = 0;
+  reviveWho: string | null = null;
   /** Seconds since last cast; >= GCD means ready. */
   t = 9;
   buffT = 0;
@@ -680,6 +705,12 @@ export class Hero implements Foe {
           : 'Mortal Strike needs a target close by.';
       case 'target':
         return this.nearestEnemy(this.target) ? null : 'No other enemy nearby.';
+      case 'revive':
+        return this.reviveT > 0
+          ? 'You are already reviving someone.'
+          : this.fallenNear()
+            ? null
+            : 'Stand by a fallen friend to revive them.';
       default:
         return null;
     }
@@ -837,6 +868,10 @@ export class Hero implements Foe {
       this.mountToggle();
       return true;
     }
+    if (k === 'revive') {
+      this.startRevive();
+      return true;
+    }
     if (
       !['bloodrage', 'laststand', 'berserk', 'predator', 'camouflage', 'icyveins', 'barrier'].includes(k)
     ) {
@@ -845,6 +880,7 @@ export class Hero implements Foe {
     }
     const a = ACTIONS[k];
     const R = this.region;
+    this.combatT = IN_COMBAT;
     this.floater(this.x, this.y - 36, a.n.toUpperCase(), 'name', a.col);
     this.castFlash(btn, k, a.col);
     this.sound(k);
@@ -859,6 +895,7 @@ export class Hero implements Foe {
       R.fx({ type: 'shield', x: tg.x, y: tg.y, col: '#3ddbd9', dur: 0.4 });
       this.burst(tg.x, tg.y - 8, 8, '#3ddbd9', 90, 0.4, 2, 0);
     } else if (k === 'execute' && tg) {
+      this.acd.execute = this.abilityCd('execute');
       R.fx({ type: 'xslash', x: tg.x, y: tg.y - 6, col: '#e0504b', dur: 0.45 });
       this.burst(tg.x, tg.y - 6, 14, '#c8302a', 110, 0.6, 3, 200);
       this.shake = 0.15;
@@ -908,6 +945,7 @@ export class Hero implements Foe {
       );
     } else if ((k === 'killshot' || k === 'incinerate') && tg) {
       const fire = k === 'incinerate';
+      this.acd[k] = this.abilityCd(k);
       this.loose(
         tg,
         e => {
@@ -1319,6 +1357,7 @@ export class Hero implements Foe {
     if (this.mounted) this.dismount('You dismount to attack.');
     this.mountT = 0;
     this.mp -= sk.c;
+    this.combatT = IN_COMBAT;
     this.cds[key] = this.skillCd(key);
     const phase = (this.t - GCD) % GCD;
     const perfect = fromTap && phase < WIN;
@@ -1568,6 +1607,7 @@ export class Hero implements Foe {
   // ---------- damage ----------
   /** This hero hits a creature: the region settles what happens to it; the hero's talents and rewards apply. */
   dmgEnemy(e: Enemy, v: number, cls: FloaterClass): void {
+    this.combatT = IN_COMBAT;
     // your duel opponent: the duel settles it (their armor, their luck)
     if (e instanceof Rival) return this.game.duels.strike(this, e, v, cls);
     if (!e.alive) return;
@@ -1626,6 +1666,7 @@ export class Hero implements Foe {
   /** A creature (or a toll, a fireball; or `by`, a duel opponent) hits this hero. */
   hurt(v: number, src: string, by?: Hero): void {
     if (this.dead) return;
+    this.combatT = IN_COMBAT;
     if (this.cheats.god) {
       this.floater(this.x, this.y - 20, 'IMMUNE', 'heal');
       return;
@@ -1660,6 +1701,7 @@ export class Hero implements Foe {
       this.region.fx({ type: 'shield', x: this.x, y: this.y, col: '#f2c14e', dur: 0.6 });
     }
     this.hp = Math.max(0, this.hp - v);
+    if (this.reviveT > 0) this.stopRevive('The blow breaks your Revive.');
     this.flash = 0.08;
     this.shake = 0.15;
     this.floater(this.x, this.y - 20, '-' + v, 'hurt');
@@ -1730,6 +1772,101 @@ export class Hero implements Foe {
       this.hear('error');
     }
     return true;
+  }
+
+  // ---------- falling and getting up ----------
+  /** Anyone else in this region up and about (who could come and revive you). */
+  private friendsUp(): boolean {
+    return this.region.heroes().some(h => h !== this && h.dead <= 0);
+  }
+
+  /** The nearest friend lying down within reach of a Revive, if any. */
+  fallenNear(): Hero | null {
+    let best: Hero | null = null;
+    let bd = REVIVE_REACH;
+    for (const h of this.region.heroes()) {
+      if (h === this || !h.down) continue;
+      const d = this.dist(this, h);
+      if (d <= bd) {
+        bd = d;
+        best = h;
+      }
+    }
+    return best;
+  }
+
+  /** Kneel by a fallen friend and start the long Revive. */
+  private startRevive(): void {
+    const who = this.fallenNear();
+    if (!who) return;
+    if (this.mounted) this.dismount('You dismount to revive.');
+    this.mountT = 0;
+    this.stopMoving();
+    this.stopCraft();
+    this.reviveT = REVIVE_TIME;
+    this.reviveWho = who.id;
+    this.face = faceToward(this.x, this.y, who.x, who.y, this.face);
+    this.floater(this.x, this.y - 36, 'REVIVE', 'name', ACTIONS.revive.col);
+    this.sound('revive');
+    this.region.fx({ type: 'ring', x: who.x, y: who.y, r0: 22, r1: 8, col: ACTIONS.revive.col, lw: 2, dur: 0.8 });
+    this.log(`You kneel by ${who.name}. Stand still for ${REVIVE_TIME} s to revive them.`, 't');
+    who.log(`${this.name} is reviving you.`, 't');
+    this.updateWork();
+  }
+
+  private stopRevive(why: string): void {
+    const who = this.region.heroes().find(h => h.id === this.reviveWho);
+    this.reviveT = 0;
+    this.reviveWho = null;
+    this.updateWork();
+    this.log(why, 'h');
+    if (who?.down) who.log(`${this.name} stopped reviving you.`, 'h');
+  }
+
+  /** A Revive under way: a step, mounting or the friend gone breaks it; at the end they get up. */
+  private updateRevive(dt: number): void {
+    if (this.reviveT <= 0) return;
+    const who = this.region.heroes().find(h => h.id === this.reviveWho);
+    const why = this.dead
+      ? 'You fall before you finish the Revive.'
+      : !who || !who.down
+        ? 'There is nobody there to revive now.'
+        : this.mounted || !this.planted
+          ? 'You move, and the Revive is broken.'
+          : this.dist(this, who) > REVIVE_REACH + 10
+            ? 'Too far away to revive them.'
+            : null;
+    if (why) return this.stopRevive(why);
+    this.reviveT -= dt;
+    // a soft light gathering over them
+    if (Math.random() < dt * 6) this.burst(who!.x, who!.y - 6, 2, ACTIONS.revive.col, 30, 0.8, 2, -40);
+    if (this.reviveT > 0) return this.updateWork();
+    this.reviveT = 0;
+    this.reviveWho = null;
+    this.updateWork();
+    who!.revive(this);
+  }
+
+  /** Brought back by a friend's Revive: up where you lay, with some of your health. */
+  revive(by: Hero): void {
+    if (!this.down) return;
+    this.dead = 0;
+    this.down = false;
+    this.wake = false;
+    this.hp = Math.max(1, Math.round(this.hpMax * REVIVE_HP));
+    this.mp = Math.max(this.mp, 30);
+    this.heldT = this.slowT = this.stunT = 0;
+    this.heldBy = '';
+    this.target = null;
+    this.invT = Math.max(this.invT, 1.5);
+    this.region.fx({ type: 'ring', x: this.x, y: this.y - 8, r0: 6, r1: 34, col: ACTIONS.revive.col, lw: 3, dur: 0.7 });
+    this.burst(this.x, this.y - 10, 16, ACTIONS.revive.col, 60, 0.9, 2, -50);
+    this.floater(this.x, this.y - 30, 'REVIVED', 'heal');
+    this.events.emit('respawned', {});
+    this.events.emit('loadout', {});
+    this.hear('respawn');
+    this.log(`${by.name} brings you back on your feet.`, 't');
+    by.log(`You revive ${this.name}.`, 'c');
   }
 
   // ---------- mount / jump ----------
@@ -2679,7 +2816,8 @@ export class Hero implements Foe {
     const m = this.making;
     const tr = this.chopTree;
     const rk = this.mineRock;
-    if (m) this.work = { kind: 'make', recipe: m.r.id, p: 1 - m.t / m.r.time };
+    if (this.reviveT > 0) this.work = { kind: 'revive', p: 1 - this.reviveT / REVIVE_TIME };
+    else if (m) this.work = { kind: 'make', recipe: m.r.id, p: 1 - m.t / m.r.time };
     else if (tr && !this.path) this.work = { kind: 'chop', p: (treeHits(tr) - tr.hp + swing) / treeHits(tr) };
     else if (rk && !this.path) this.work = { kind: 'mine', p: (MINE.hits - rk.hp + swing) / MINE.hits };
     else this.work = null;
@@ -2914,7 +3052,8 @@ export class Hero implements Foe {
   /** Advance this hero by dt seconds (the region ticks it, then the world around it). */
   tick(dt: number): void {
     this.t += dt;
-    this.mp = Math.min(this.mpMax, this.mp + 3 * dt);
+    this.combatT = Math.max(0, this.combatT - dt);
+    this.mp = Math.min(this.mpMax, this.mp + (this.combatT > 0 ? MANA_COMBAT : MANA_REST) * dt);
     if (this.tal.regen && !this.dead && this.hp < this.hpMax)
       this.hp = Math.min(this.hpMax, this.hp + this.tal.regen * dt);
     this.lastWardenCd = Math.max(0, this.lastWardenCd - dt);
@@ -2957,8 +3096,22 @@ export class Hero implements Foe {
 
     if (this.dead) {
       this.dead -= dt;
-      if (this.dead <= 0) {
+      // anyone else here still up can bring you back: you lie where you fell until they do,
+      // or until nobody is left standing
+      if (this.dead <= 0 && !this.wake && this.friendsUp()) {
+        this.dead = 0.05;
+        if (!this.down) {
+          this.down = true;
+          this.events.emit('loadout', {});
+          this.log('You are down. A friend can revive you.', 'h');
+        }
+      } else if (this.dead <= 0) {
+        const lying = this.down;
         this.dead = 0;
+        this.down = false;
+        this.wake = false;
+        // nobody was left standing: everyone else down here wakes at camp too
+        for (const h of this.region.heroes()) if (h !== this && h.dead > 0) h.wake = true;
         this.hp = this.hpMax;
         this.mp = 60;
         this.heldT = this.slowT = this.stunT = 0;
@@ -2971,9 +3124,11 @@ export class Hero implements Foe {
         else this.placeAt(wake ? (this.region.def.spots[wake.spot] ?? this.region.def.spots.start) : this.region.def.spots.start);
         this.events.emit('respawned', {});
         this.hear('respawn');
+        if (lying) this.log('Nobody is left standing to revive you.', 'h');
         this.log(wake?.say ?? 'You respawn on the road.');
       }
     }
+    this.updateRevive(dt);
 
     // a remote hero's browser moves it; otherwise it walks here
     const moved = this.driven === 'remote' ? this.stillT < 0.15 : this.tickMove(dt);

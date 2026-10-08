@@ -59,6 +59,11 @@ function caster(k: SpellKey) {
   // the spells that need their moment: a wounded target, a spell to cut short
   if (k === 'execute' || k === 'killshot' || k === 'incinerate') e.hp = Math.round(e.hpMax * 0.1);
   if (k === 'interrupt' || k === 'silence' || k === 'counterspell') e.castT = 1;
+  // Revive needs a friend lying at your feet
+  if (k === 'revive') {
+    const f = game.addHero('f', 'Friend');
+    Object.assign(f, { x: h.x + 10, y: h.y, dead: 0.05, down: true });
+  }
   const heard: SoundId[] = [];
   // the ogre's own cries are another test's business
   h.region.events.on('sound', p => {
@@ -222,6 +227,11 @@ test('dying and coming back; only you hear your level; a save loads in silence',
   const hb = ears(b);
   a.hurt(9999, 'a test');
   run(game, 3);
+  // Bo is up, so Ana lies there until he revives her
+  b.x = a.x + 10;
+  b.y = a.y;
+  assert.ok(b.castKey('revive'));
+  run(game, 9);
   a.gainXp(xpToNext(a.level));
   assert.deepEqual(ha, ['died', 'respawn', 'levelUp']);
   assert.deepEqual(hb, []);

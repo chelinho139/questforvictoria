@@ -102,9 +102,9 @@ Each fight runs over five random seeds. Two numbers per fight:
 
 | Mirrored builds | Average time × | Average cost × | Deaths |
 |---|---|---|---|
-| Blade warrior / Marksman archer | 1.01 | 0.91 | none |
-| Fury warrior / Hunter archer | 1.06 | 1.00 | none |
-| Warden warrior / Ranger archer | 1.03 | 1.10 | none |
+| Blade warrior / Marksman archer | 1.01 | 0.95 | none |
+| Fury warrior / Hunter archer | 1.08 | 1.02 | none |
+| Warden warrior / Ranger archer | 1.01 | 1.10 | none |
 
 The bands the tests enforce:
 - for each pair, average time between 0.95 and 1.10, and average cost between 0.90 and 1.10;
@@ -132,6 +132,11 @@ The fights (level, gear tier, creatures): L1 slime · L3 goblin · L6 two goblin
   - Deadeye 30 → 26.
 - **Creatures hit three times as hard** (playtesting: fights carried no risk). The heavier the hits, the more an archer saves by shooting creatures on the way in: Blade / Marksman fell to 0.88 on cost. So **warrior health** went 140 → 160: the one who stands in the middle of the group can take it.
 - **Creatures hit about 40% harder again** (goblins 9 → 13, skeletons and bone hounds 12 → 17, slimes 6 → 8, the shaman's fireball 25 → 35; ogres only 18 → 22) and have about 10% more health. Blade / Marksman fell to 0.87 on cost again, so **warrior health** went 160 → 175. The pairs now sit near the edges of the band (Blade 0.91, Warden 1.10): the heavier the hits, the more the health lost weighs in the cost.
+
+**Mana, Execute and a harder Normal** (8 October 2026, from playtesting: mana never ran short, Execute was too strong, Normal too easy):
+- Mana comes back at 1.5 a second in a fight and 4 out of one (it was 3 always). At 1 a second the Ranger and Arcane bots ran dry in the 90-second fight with two ogres and died, so 1.5 it is: half what it was.
+- Execute, Kill Shot and Incinerate have a 20 s cooldown (they had none).
+- Normal now hits 30% harder and has 15% more health than the creatures' own numbers. Fairness between the classes is still measured on the creatures' own numbers (`fight` in `tests/fight.ts`), since the difficulty scales every class's fights; `npx tsx tests/balance-report.ts --normal` fights them at Normal. There, only the Blade warrior falls (two goblins at level 6, an ogre and two goblins at 21): it has no healing and the bot never eats or steps back. The ranged builds get through everything.
 
 **What the simulation doesn't capture.**
 - Player skill: perfect-timing crits, kiting with Concussive Shot, and using Disengage and Bear Trap well.
