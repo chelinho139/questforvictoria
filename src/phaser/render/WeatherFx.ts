@@ -118,7 +118,9 @@ export class WeatherFx {
     this.shake = this.shakeT > 0 ? (Math.random() * 2 - 1) * 2 * (this.shakeT / 0.3) : 0;
     this.audio?.update(w.rain, w.storm, indoor);
     const cam = this.scene.cameras.main;
-    if (this.veil.width !== cam.width || this.veil.height !== cam.height) this.veil.setSize(cam.width, cam.height);
+    // three screens wide, centred: still the whole view when the 2D view is zoomed out
+    if (this.veil.width !== cam.width * 3 || this.veil.height !== cam.height * 3)
+      this.veil.setPosition(-cam.width, -cam.height).setSize(cam.width * 3, cam.height * 3);
     this.veil.setVisible(this.flash > 0.01).setAlpha(this.flash * 0.28);
     this.g.clear();
     if (!draw2d) return;

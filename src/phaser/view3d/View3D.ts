@@ -418,9 +418,9 @@ export class View3D {
     this.yawGoal = Math.round(this.yawGoal / step) * step + dir * step;
   }
 
-  /** Right-drag: turn round the hero, and tilt. */
+  /** Right-drag: turn round the hero (the world follows the mouse), and tilt. */
   look(dx: number, dy: number): void {
-    this.yaw -= dx * 0.008;
+    this.yaw += dx * 0.008;
     this.yawGoal = this.yaw;
     const lim = this.mode === 'pov' ? [-0.25, 1.2] : [0.12, 1.45];
     this.pitch[this.mode] = Math.max(lim[0], Math.min(lim[1], this.pitch[this.mode] + dy * 0.006));
@@ -430,9 +430,8 @@ export class View3D {
     this.dragging = v;
   }
 
-  /** The wheel zooms, inverted: rolling down pulls in, rolling up backs away. `k` > 1 is farther. */
   private wheel(e: WheelEvent): void {
-    const k = Math.exp(-Math.sign(e.deltaY) * 0.12);
+    const k = Math.exp(Math.sign(e.deltaY) * 0.12);
     if (this.mode === 'diorama') this.zoom = Math.max(0.35, Math.min(4, this.zoom / k));
     else this.dist = Math.max(0, Math.min(320, this.dist < 6 && k > 1 ? 12 : this.dist * k));
     if (this.mode === 'pov' && this.dist < 6) this.dist = 0;

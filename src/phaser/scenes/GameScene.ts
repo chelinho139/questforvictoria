@@ -46,6 +46,8 @@ import { fromIso } from '../../sim/map';
 import { Director, directorWanted } from '../dev/Director';
 
 const VIEW_KEY = 'qfv-view';
+/** How far the wheel zooms the 2D view: out to this, in to that (1: the game's own scale). */
+const ISO_ZOOM = [0.6, 2.5] as const;
 
 function readView(): ViewMode {
   try {
@@ -89,6 +91,13 @@ export class GameScene extends Phaser.Scene {
   /** The world in 3D (the diorama and PoV views), while one of them is on. */
   private view3d: View3D | null = null;
   private viewMode: ViewMode = 'iso';
+  /** The 2D view's own zoom on top of the pixel scale (the wheel: down backs away, up pulls in). */
+  private isoZoom = 1;
+  private readonly onWheel = (e: WheelEvent): void => {
+    if (this.viewMode !== 'iso') return;
+    const k = Math.exp(Math.sign(e.deltaY) * 0.12);
+    this.isoZoom = Math.max(ISO_ZOOM[0], Math.min(ISO_ZOOM[1], this.isoZoom / k));
+  };
   /** The region's ground as built for the 2D view (the 3D views lay the same art flat). */
   private built!: BuiltWorld;
   /** Filming a trailer (dev, `?director`): the director runs the clock and may hold the camera. */
@@ -207,9 +216,11 @@ export class GameScene extends Phaser.Scene {
     this.registry.set('getView', () => this.viewMode);
     this.registry.set('cycleView', (dir: 1 | -1) => this.cycleView(dir));
     this.setView(readView(), true);
+    this.game.canvas.addEventListener('wheel', this.onWheel, { passive: true });
     if (directorWanted()) this.director = new Director(this.game, () => ({ sim: this.sim, sfx: this.sfx, weather: this.weather, lighting: this.lighting }));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
+      this.game.canvas.removeEventListener('wheel', this.onWheel);
       this.effects.destroy();
       this.clouds.destroy();
       this.lighting.destroy();
@@ -662,7 +673,7 @@ export class GameScene extends Phaser.Scene {
     const shake = (this.sim.shake > 0 ? Math.random() * 6 - 3 : 0) + this.weather.shake;
     // filming: the director may hold the camera (where, and how close)
     const shot = this.director?.camera() ?? null;
-    const zoom = PIXEL_SCALE * (shot?.zoom ?? 1);
+    const zoom = PIXEL_SCALE * (shot?.zoom ?? (this.viewMode === 'iso' ? this.isoZoom : 1));
     if (this.cameras.main.zoom !== zoom) this.cameras.main.setZoom(zoom);
     // (the director's camera glides between whole pixels: a slow pan doesn't step)
     if (shot) this.cameras.main.centerOn(shot.x + shake, shot.y);

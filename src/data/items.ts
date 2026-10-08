@@ -761,7 +761,7 @@ export const CHOP = {
   noTool: 2,
   period: 0.7,
   logs: [2, 3] as [number, number],
-  regrow: 90,
+  regrow: 40,
   reach: 30,
 };
 
@@ -774,7 +774,7 @@ export const MINE = {
   stone: [1, 2] as [number, number],
   ore: 0.35,
   gold: 0.05,
-  regrow: 120,
+  regrow: 75,
   reach: 30,
 };
 
