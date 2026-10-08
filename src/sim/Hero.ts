@@ -64,8 +64,6 @@ export const AA_RANGE = 48;
  * any more (the last foe dead, gone home or lost) the fight is over within OUT_OF_COMBAT.
  */
 export const MANA_COMBAT = 0.75;
-/** Mana a sorceress's staff bolt gives back when it lands, so she can fight on through a long fight. */
-export const STAFF_MANA = 2;
 export const MANA_REST = 5;
 export const IN_COMBAT = 3;
 export const OUT_OF_COMBAT = 1;
@@ -3208,9 +3206,6 @@ export class Hero implements Foe {
                 e.slowT = Math.max(e.slowT, this.tal.critSlow);
                 e.slowK = Math.max(e.slowK, 0.5);
               }
-              // a sorceress's staff draws a little mana back with every bolt that lands
-              if (this.cls === 'sorceress' && !this.dead)
-                this.mp = Math.min(this.mpMax, this.mp + STAFF_MANA);
             },
             undefined,
             false,

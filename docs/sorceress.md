@@ -6,7 +6,7 @@
 
 ## How a sorceress plays
 
-- **From afar.** Her staff casts a bolt on its own every 1.7 s, reaching **200**; her spells reach **220** (Pyroblast 260). Each bolt **flies** to its mark at 480 a second (a little slower than an arrow, so you can see it go) and hits when it lands. Every staff bolt that lands gives her **2 mana** back (`STAFF_MANA` in `src/sim/Hero.ts`), and hits for 3 (the archer's arrow hits for 4): her staff is less a weapon than a way to keep casting through a long fight.
+- **From afar.** Her staff casts a bolt on its own every 1.7 s, reaching **200**; her spells reach **220** (Pyroblast 260). Each bolt **flies** to its mark at 480 a second (a little slower than an arrow, so you can see it go) and hits when it lands.
 - **Stand still to cast.** As for the archer: feet planted to cast, a click-walk stops for it, keys held down refuse it ("Stand still to cast"), and each bolt holds her still for 0.3 s. Arcane Power, Frost Nova, Icy Veins, Blink and Arcane Barrier don't loose a bolt, so they work on the move.
 - **A staff.** Without one she can only punch ("You need a staff to cast"). Her off hand holds a **book** or an **orb**.
 - **The lightest.** She starts with **125 health** (the archer 135, the warrior 175) and has no shield, but the most **mana**: 50, and 10 more a level; her spells cost the most too. What she has instead are crowds: Flamestrike, Chain Lightning and Frost Nova catch several creatures at once.
@@ -68,7 +68,7 @@ The same shape as the warrior's and the archer's: three trees of five tiers, a t
 **Arcane** (the old craft; mirrors Ranger)
 - Tier 1: Shimmer (3% chance for a blow to pass through ×5) · Fortitude (+10 health ×5) · Woodwise (gather 15% faster ×3)
 - Tier 2: Firestorm (Flamestrike +2 and +5 wider ×3) · Soul Harvest (+5 health a kill ×3) · Stonereader (extra logs and ore ×2, needs Woodwise)
-- Tier 3: **Blink** (needs Shimmer) · Meditation (+0.75 health a second ×2) · Hearth Witch (food heals 25% more ×2)
+- Tier 3: **Blink** (needs Shimmer) · Meditation (+0.5 health a second ×2) · Hearth Witch (food heals 25% more ×2)
 - Tier 4: Inferno (Flamestrike −6 s, needs Firestorm) · Spellbreaker (Counterspell −4 s, +0.5 s stun ×2) · Wayfarer (+5% speed, mount sooner ×2)
 - Capstone: **Arcane Barrier**
 
@@ -118,7 +118,7 @@ The bands: for each pair, average time between 0.95 and 1.10 and average cost be
 - Incinerate (like Execute and Kill Shot) have a 20 s cooldown (they had none).
 - Normal now hits 30% harder and has 15% more health than the creatures' own numbers. Fairness between the classes is still measured on the creatures' own numbers (`fight` in `tests/fight.ts`), since the difficulty scales every class's fights; `npx tsx tests/balance-report.ts --normal` fights them at Normal. There, only the Blade warrior falls (two goblins at level 6, an ogre and two goblins at 21): it has no healing and the bot never eats or steps back. The ranged builds get through everything.
 
-**Damage, plainly:** on a training dummy (`npx tsx tests/damage-report.ts`) she deals 0.93–1.03× the warrior's damage a second at every level and build, and exactly what the archer deals but for her talents' small differences; the table and the level-1 sums are in `docs/archer.md` (*Damage, plainly*). Icy Veins makes her staff's bolts 25% faster (it was 50%: with Quickened Casting she out-damaged the Fury warrior by a tenth at level 25).
+**Damage, plainly:** on a training dummy (`npx tsx tests/damage-report.ts`) she deals 0.93–1.05× the warrior's damage a second at every level and build, and exactly what the archer deals but for her talents' small differences; the table and the level-1 sums are in `docs/archer.md` (*Damage, plainly*). Icy Veins makes her staff's bolts 25% faster (it was 50%: with Quickened Casting she out-damaged the Fury warrior by a tenth at level 25).
 
 **What the simulation doesn't capture:** player skill (perfect-timed crits, kiting with Frostbolt, Blink), the Bell-Ringer's rings, and friends in multi player. The numbers to adjust are in `src/data/classes.ts`, `skills.ts`, `talents.ts` and `items.ts`.
 
@@ -136,5 +136,3 @@ The bands: for each pair, average time between 0.95 and 1.10 and average cost be
 - **The hero:** `src/sim/Hero.ts` (`ranged`, `hasStaff`, `loose` flying bolts, `chain`, Frost Nova, Blink, the auto-cast).
 - **Screens:** `src/phaser/ui/NewCharacter.ts` (three classes); the HUD, spellbook, talent window and shops show your class's things.
 - **Tests:** `tests/classes.test.ts` (her rules), `tests/balance.test.ts` and `tests/fight.ts` (fairness), `tests/sounds.test.ts` (her sounds), `tests/i18n.test.ts` (her Spanish).
-
-**Long fights.** At level 7 every class ran dry about 25 s into the Bell-Ringer and fought on with its weapon alone, and the sorceress felt it most. Her staff's bolts now draw 2 mana back as they land and hit for 3 (was 4), so over a 30 s fight she deals what she did (0.93–1.03× the warrior), and over a two-and-a-half-minute boss fight 9–13% more (at level 7: fire 6.9 → 7.5 a second, frost 10.3 → 11.3, arcane 6.3 → 7.1), more spells and fewer bolts. Arcane's Meditation gives 0.75 health a second a rank (was 0.5), as the Ranger's Rest does.
