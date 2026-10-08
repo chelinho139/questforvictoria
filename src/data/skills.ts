@@ -217,7 +217,7 @@ export const ACTIONS: Record<ActionKey, ActionDef> = {
   execute: { n: 'Execute', col: '#e0504b', cd: 20, desc: 'target < 25% and close · 20 s' },
   mortal: { n: 'Mortal Strike', col: '#f2c14e', cd: 30, desc: '12 + stun · 30 s' },
   target: { n: 'Switch target', col: '#f2c14e', cd: 0, desc: 'nearest enemy' },
-  mount: { n: 'Mount', col: '#a78bfa', cd: 0, desc: '1 s still · ×1.25' },
+  mount: { n: 'Mount', col: '#a78bfa', cd: 0, desc: '1 s still · ×1.4' },
   revive: { n: 'Revive', col: '#f2e08a', cd: 0, desc: 'a fallen friend · 8 s still' },
   sunder: { n: 'Sunder', col: '#c8d2e0', cd: 10, c: 8, desc: '6 · +20% taken 10 s · 10 s' },
   deathblow: { n: 'Deathblow', col: '#e0504b', cd: 20, c: 25, desc: '30 · resets on a kill · 20 s' },

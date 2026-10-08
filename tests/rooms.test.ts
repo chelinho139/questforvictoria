@@ -148,3 +148,14 @@ test('more heroes, tougher creatures: health and blows scale with the heroes in 
   (R as unknown as { strike(f: unknown, v: number, s: string): void }).strike(a, 20, 'a test');
   assert.ok(two > full2 - a.hp, 'two heroes take harder blows than one');
 });
+
+test('fall in the bell tower and you wake on the road into Millbrook, not at the foot of his stair', () => {
+  const { game, heroes } = gameWith('Ana');
+  const [a] = heroes;
+  game.moveHero(a, 'belltower', 'door');
+  run(game, 0.2);
+  a.hurt(10_000, 'the bell');
+  run(game, 3);
+  assert.equal(a.dead, 0);
+  assert.equal(a.regionId, 'millbrook');
+});

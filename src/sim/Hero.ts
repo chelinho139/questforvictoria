@@ -63,7 +63,7 @@ export const AA_RANGE = 48;
  * IN_COMBAT seconds after casting, striking or being struck, and once nothing is after them
  * any more (the last foe dead, gone home or lost) the fight is over within OUT_OF_COMBAT.
  */
-export const MANA_COMBAT = 0.5;
+export const MANA_COMBAT = 0.75;
 export const MANA_REST = 5;
 export const IN_COMBAT = 3;
 export const OUT_OF_COMBAT = 1;
@@ -1917,7 +1917,7 @@ export class Hero implements Foe {
     this.burst(this.x, this.y + 4, 10, '#b8956a', 70, 0.5, 3, -20);
     this.sound('mounted');
     this.floater(this.x, this.y - 36, 'MOUNTED', 'name', '#a78bfa');
-    this.log('Mounted. Speed ×1.25. Attacking dismounts you.', 't');
+    this.log('Mounted. Speed ×1.4. Attacking dismounts you.', 't');
   }
 
   /** Attack animation progress 0..1, or -1 when not attacking. */
@@ -1962,8 +1962,8 @@ export class Hero implements Foe {
   // ---------- dev helpers ----------
   /** Screen pixels per second, including mount and the dev speed multiplier. */
   get playerSpeed(): number {
-    // a horse is a little quicker than your feet, not a different game (×1.25)
-    const ride = this.mounted ? 148 : 118;
+    // a horse is quicker than your feet, not a different game (×1.4)
+    const ride = this.mounted ? 165 : 118;
     const slow = this.slowT > 0 ? 1 - this.slowK : 1;
     return ride * this.cheats.moveSpeed * (1 + this.gear.speed) * (1 + this.tal.moveSpeed) * slow;
   }

@@ -1,3 +1,4 @@
+import { HORSE_BOB } from './hdSprites';
 import { FLAT_OBJECTS, GLINTING_OBJECTS } from '../../data/regions/types';
 import { KILN_OUT } from './structureArt';
 import Phaser from 'phaser';
@@ -1041,8 +1042,12 @@ export class WorldRenderer {
     this.buffMark.setPosition(qx + 14, y - 4);
   }
 
-  /** How high a trotting horse lifts its rider this frame. */
+  /**
+   * How high a trotting horse lifts its rider this frame: nothing for a horse drawn with its
+   * own trot (the rider rises with its body in ride()); a bounce for the older two-frame ones.
+   */
   private trot(walking: boolean, now: number): number {
+    if (artFrames(Tex.horse) === HORSE_BOB.length) return 0;
     return walking ? Math.round(Math.abs(Math.sin(now / 70)) * 3) : 0;
   }
 
@@ -1066,8 +1071,12 @@ export class WorldRenderer {
   ): number {
     const hs = artScale(Tex.horse);
     const hf = artFrames(Tex.horse);
+    // a horse with its own trot: frame 0 standing, the rest the stride (an older two-frame one cycles both)
+    const trotting = hf === HORSE_BOB.length;
+    const fi = !walking || hf < 2 ? 0 : trotting ? 1 + (Math.floor(now / 75) % (hf - 1)) : Math.floor(now / 110) % hf;
+    const bob = trotting ? HORSE_BOB[fi] * hs : 0;
     horse
-      .setTexture(frameKey(Tex.horse, walking && hf > 1 ? Math.floor(now / 110) % hf : 0))
+      .setTexture(frameKey(Tex.horse, fi))
       .setVisible(true)
       .setPosition(qx, qy + 4)
       .setFlipX(face < 0)
@@ -1076,7 +1085,7 @@ export class WorldRenderer {
     // put the bottom of the cropped rider slice just below the horse's top edge
     const horseTop = qy + 4 - horse.frame.height * hs;
     const hiddenBelow = (rider.frame.height - rc.rows) * ks;
-    const y = horseTop + rc.below + hiddenBelow;
+    const y = horseTop + rc.below + hiddenBelow - bob;
     rider
       .setVisible(true)
       .setPosition(qx + rc.dx * face, y)

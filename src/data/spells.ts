@@ -48,7 +48,7 @@ export const SPELLS: Record<SpellKey, SpellInfo> = {
   mount: {
     level: 4,
     instant: true,
-    long: 'Call your horse: stand still for a second, then ride a quarter faster. Attacking knocks you out of the saddle.',
+    long: 'Call your horse: stand still for a second, then ride 1.4× as fast. Attacking knocks you out of the saddle.',
   },
   revive: {
     level: 1,

@@ -1103,7 +1103,7 @@ export class PcHudScene extends Phaser.Scene {
     const tg = s.target;
     if (tg && tg.alive && tg.stunT > 0) chips.push(['Stunned', Ink.mid]);
     if (tg && tg.alive && s.dist(s, tg) >= s.aaReach) chips.push(['Out of range', Ink.mid]);
-    if (s.mounted) chips.push(['Mounted ×1.25', '#6a4ab8']);
+    if (s.mounted) chips.push(['Mounted ×1.4', '#6a4ab8']);
     // under the frames (and under the target's cast bar when its frame is under yours)
     let x = 12;
     const stacked = this.target.y > this.player.y;

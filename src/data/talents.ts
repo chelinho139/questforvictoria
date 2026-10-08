@@ -1069,8 +1069,8 @@ Object.assign(TALENTS, {
     2,
     1,
     2,
-    r => `Regain ${(0.5 * r).toFixed(1)} health every second.`,
-    { regen: 0.5 }
+    r => `Regain ${(0.75 * r).toFixed(2)} health every second.`,
+    { regen: 0.75 }
   ),
   trail_rations: T(
     'ranger',

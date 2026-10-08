@@ -636,7 +636,7 @@ export class MobileHudScene extends Phaser.Scene {
     if (tg && tg.alive && tg.stunT > 0) chips.push(['Stunned', Colors.muted]);
     if (tg && tg.alive && s.dist(s, tg) >= s.aaReach) chips.push(['Out of range', Colors.muted]);
     if (s.rev) chips.push(['Rev', Colors.ember]);
-    if (s.mounted) chips.push(['Mounted ×1.25', Colors.purple]);
+    if (s.mounted) chips.push(['Mounted ×1.4', Colors.purple]);
     let y = 66;
     this.chipTexts.forEach((t, i) => {
       const c = chips[i];
