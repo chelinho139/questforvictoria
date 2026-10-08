@@ -130,6 +130,9 @@ const UI_SOUNDS: Record<UiSound, string> = {
   respawn: 'You respawn',
   open: 'Window opens',
   close: 'Window closes',
+  duelAsk: 'Challenged to a duel',
+  duelCount: 'Duel: the count',
+  duelWin: 'Duel won',
 };
 
 /** The sound board's names for the world's sounds. */
@@ -146,6 +149,7 @@ const WORLD_SOUNDS: Record<WorldSound, string> = {
   bellToll: 'The bell tolls',
   fireOut: 'A fire is smothered',
   wardenCall: "A Warden's whistle",
+  duelStart: 'A duel begins',
 };
 
 /** The sound board's names for thunder. */

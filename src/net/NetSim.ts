@@ -27,6 +27,8 @@ import { TICK_HZ } from './protocol';
 import { isShot } from '../data/skills';
 import { AIM_HOLD } from '../data/classes';
 import { keepNames } from '../i18n';
+import { Rival, RIVAL_TARGET } from '../sim/Duel';
+import type { DuelView, DuelFlag } from '../sim/Duel';
 
 /** A structure in a snapshot: id, kind, tile, seconds left (-1: for good), put out, how far smothered. */
 type StructureSnap = [number, StructureKind, number, number, number, number, number];
@@ -57,6 +59,10 @@ export class NetSim extends Sim {
   private heartbeat = 0;
   /** The scene step last shown (a change tells the scene box). */
   private sceneKey = '';
+  /** My duel as the server last told it, the flags here, and my opponent as a target. */
+  private duelNow: DuelView | null = null;
+  private flagsHere: DuelFlag[] = [];
+  private rivalNow: Rival | null = null;
 
   constructor(
     private readonly conn: Connection,
@@ -121,6 +127,8 @@ export class NetSim extends Sim {
         perf: f.perf,
         look: f.look,
         name: f.name,
+        duelsWon: f.duels[0],
+        duelsLost: f.duels[1],
       });
       h.talents = f.talents;
       h.applyTalents();
@@ -173,6 +181,7 @@ export class NetSim extends Sim {
       heldBy: me.heldBy as HeldKind | '',
       slowT: me.slowT,
       slowK: me.slowK,
+      stunT: me.stunT,
       itemCd: me.itemCd,
     });
     // holding still to shoot: what the server says, or what this browser started itself
@@ -183,8 +192,16 @@ export class NetSim extends Sim {
     if (me.shake > h.shake + 0.02) h.shake = me.shake;
     if (me.swing > h.swing + 0.02) h.swing = me.swing;
     this.syncEnemies(R, t.en);
-    h.target = me.target ? (R.enemies.find(e => e.id === me.target && e.alive) ?? null) : null;
     this.syncHeroes(R, t.hs);
+    if (t.du !== undefined) this.duelNow = t.du;
+    if (t.dl) this.flagsHere = t.dl;
+    this.syncRival();
+    h.target =
+      me.target === RIVAL_TARGET
+        ? this.rivalNow
+        : me.target
+          ? (R.enemies.find(e => e.id === me.target && e.alive) ?? null)
+          : null;
     this.syncCompanions(R, t.cp ?? []);
     if (t.wd)
       for (const [id, x, y, alpha, face] of t.wd) {
@@ -393,6 +410,8 @@ export class NetSim extends Sim {
       level,
       cls,
       heldBy,
+      won,
+      lost,
     ] of list) {
       let o = by.get(id);
       if (!o) {
@@ -425,14 +444,25 @@ export class NetSim extends Sim {
         level,
         cls,
         hiddenT: flags & 8 ? 1 : 0,
+        stunT: flags & 16 ? 1 : 0,
         heldBy: heldBy as HeldKind | '',
         heldT: heldBy ? 1 : 0,
+        duelsWon: won,
+        duelsLost: lost,
       });
       if (atkAnimT > o.atkAnimT + 0.06) o.atkAnimT = atkAnimT;
       if (flags & 4) o.flash = Math.max(o.flash, 0.08);
       keep.push(o);
     }
     g.heroes = keep;
+  }
+
+  /** My duel opponent, as a target: the other hero's replica here, from the count on. */
+  private syncRival(): void {
+    const v = this.duelNow;
+    const o = v && v.st !== 'ask' ? this.game.heroes.find(x => x.id === v.id && x !== this.hero) : undefined;
+    if (!o) this.rivalNow = null;
+    else if (this.rivalNow?.hero !== o) this.rivalNow = new Rival(o, () => this.duelNow?.st === 'fight');
   }
 
   /** The companions here (Wren): where the server last saw them, gliding there. */
@@ -670,7 +700,27 @@ export class NetSim extends Sim {
   }
   override setTarget(e: Enemy | null): void {
     this.hero.target = e;
-    this.cmd('setTarget', [e ? e.id : null]);
+    if (e instanceof Rival) this.cmd('targetRival');
+    else this.cmd('setTarget', [e ? e.id : null]);
+  }
+  // duels: the server's, as the snapshots tell them
+  override get duel(): DuelView | null {
+    return this.duelNow;
+  }
+  override get duelFlags(): DuelFlag[] {
+    return this.flagsHere;
+  }
+  override get rival(): Rival | null {
+    return this.rivalNow;
+  }
+  override challenge(o: Hero): void {
+    this.cmd('duelChallenge', [o.id]);
+  }
+  override acceptDuel(): void {
+    this.cmd('duelAccept');
+  }
+  override quitDuel(): void {
+    this.cmd('duelQuit');
   }
   override cycleTarget(): void {
     this.cmd('cycleTarget');

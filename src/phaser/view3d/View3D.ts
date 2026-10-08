@@ -990,12 +990,14 @@ export class View3D {
         g.fillStyle(hex('#f2c14e')).fillTriangle(top.x - 5, by - 12, top.x + 5, by - 12, top.x, by - 5);
       }
     }
+    // other players' health: red for a duel opponent
+    const duel = s.duel && s.duel.st !== 'ask' ? s.duel.id : '';
     for (const o of s.others) {
       const top = this.toScreen(o.x, o.y, 44);
       if (top.k <= 0) continue;
       const w = 22;
       g.fillStyle(hex('#0a0d14')).fillRect(Math.round(top.x - w / 2) - 1, top.y - 1, w + 2, 4);
-      g.fillStyle(hex('#5fc46a')).fillRect(Math.round(top.x - w / 2), top.y, Math.round((w * Math.max(0, o.hp)) / Math.max(1, o.hpMax)), 2);
+      g.fillStyle(hex(o.id === duel ? '#e0504b' : '#5fc46a')).fillRect(Math.round(top.x - w / 2), top.y, Math.round((w * Math.max(0, o.hp)) / Math.max(1, o.hpMax)), 2);
     }
     const work = s.mountT > 0 ? { p: 1 - s.mountT, col: '#a78bfa' } : s.work ? { p: s.work.p, col: s.work.kind === 'chop' ? '#c8a070' : s.work.kind === 'mine' ? '#c4cad4' : '#ffa040' } : null;
     if (work && !(this.mode === 'pov' && this.dist < 6)) {

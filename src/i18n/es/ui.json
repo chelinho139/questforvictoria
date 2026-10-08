@@ -329,5 +329,24 @@
   "Indoors": "Interiores",
   "Haunted wilds": "Tierras embrujadas",
   "The deep dark": "La oscuridad profunda",
-  "Boss": "Jefe"
+  "Boss": "Jefe",
+
+  "Challenge to a duel": "Desafiar a duelo",
+  "Waiting for {0} to answer…": "Esperando la respuesta de {0}…",
+  "{0} challenges you to a duel!": "¡{0} te desafía a un duelo!",
+  "Duel with {0}": "Duelo con {0}",
+  "Decline": "Rechazar",
+  "Take back": "Retirar",
+  "Back out": "Echarse atrás",
+  "Yield": "Rendirse",
+  "{0} s": "{0} s",
+  "Back to the flag or you forfeit: {0} s": "Vuelve a la bandera o pierdes: {0} s",
+  "{0} has challenged you: answer at the top.": "{0} te desafió: responde arriba.",
+  "You are in a duel with {0}.": "Estás en un duelo con {0}.",
+  "You're in a duel already.": "Ya estás en un duelo.",
+  "{0} is down.": "{0} está en el suelo.",
+  "Come closer to challenge them.": "Acércate más para desafiar.",
+  "Duels won: {0} · lost: {1}": "Duelos ganados: {0} · perdidos: {1}",
+  "No duels fought yet.": "Ningún duelo todavía.",
+  "You're stunned": "Te aturdieron"
 }

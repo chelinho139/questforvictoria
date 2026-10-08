@@ -49,6 +49,7 @@ import type {
 } from './types';
 import type { Game } from './Game';
 import type { Region } from './Region';
+import { Rival } from './Duel';
 
 /** What a hero sees over their head when something holds them still. */
 const HELD_SAY: Record<HeldKind, string> = { web: 'WEBBED', net: 'NETTED', snare: 'SNARED', roots: 'ROOTED' };
@@ -170,6 +171,11 @@ export class Hero implements Foe {
   /** Slowed (a crossbow bolt): seconds left, and by how much (0.3 = 30% slower). */
   slowT = 0;
   slowK = 0;
+  /** Stunned (by a duel opponent): no walking, casting or swinging, for this many seconds. */
+  stunT = 0;
+  /** Duels won and lost (kept with the character). */
+  duelsWon = 0;
+  duelsLost = 0;
   /** Seconds before each usable keepsake (by item id) can be used again. */
   itemCd: Partial<Record<ItemId, number>> = {};
   rev = false;
@@ -335,6 +341,9 @@ export class Hero implements Foe {
       heldBy: '',
       slowT: 0,
       slowK: 0,
+      stunT: 0,
+      duelsWon: 0,
+      duelsLost: 0,
       itemCd: {},
     });
     this.questLog.clear();
@@ -453,10 +462,28 @@ export class Hero implements Foe {
     return Math.hypot(a.x - b.x, a.y - b.y);
   }
 
+  /** Your duel opponent, as a target, while the fight is on (null otherwise). */
+  get rival(): Rival | null {
+    const d = this.game.duels.of(this);
+    return d && d.state === 'fight' ? d.rivalFor(this) : null;
+  }
+
+  /** Everything your blows can land on here: the creatures, and your duel opponent. */
+  private get targets(): Enemy[] {
+    const r = this.rival;
+    return r && r.alive ? [...this.region.enemies, r] : this.region.enemies;
+  }
+
+  /** Whether `e` is still there to hit: a creature alive in this region, or your opponent, in sight. */
+  private stillThere(e: Enemy): boolean {
+    if (!e.alive) return false;
+    return e instanceof Rival ? e === this.rival && !e.hid : this.region.enemies.includes(e);
+  }
+
   nearestEnemy(excl: Enemy | null, max = 260): Enemy | null {
     let best: Enemy | null = null;
     let bd = max;
-    for (const e of this.region.enemies) {
+    for (const e of this.targets) {
       if (!e.alive || e.hid || e === excl) continue;
       const d = this.dist(this, e);
       if (d < bd) {
@@ -754,6 +781,7 @@ export class Hero implements Foe {
   doAction(k: Key, fromTap: boolean, btn: ButtonId, quiet = false): boolean {
     if (isSkill(k)) return this.cast(k, fromTap, btn, quiet);
     if (this.dead) return false;
+    if (k !== 'target' && this.stunned(quiet)) return false;
     const tg = this.target;
     const why = this.canDo(k);
     if (why) {
@@ -1009,7 +1037,7 @@ export class Hero implements Foe {
       dur: len / ARROW_SPEED,
     });
     const dmg = 12 + this.tal.pierceDmg;
-    for (const e of R.enemies) {
+    for (const e of this.targets) {
       if (!e.alive) continue;
       const along = (e.x - x0) * ux + (e.y - y0) * uy;
       const off = Math.abs((e.x - x0) * uy - (e.y - y0) * ux);
@@ -1109,6 +1137,7 @@ export class Hero implements Foe {
 
   private cast(key: SkillKey, fromTap: boolean, btn: ButtonId, quiet: boolean): boolean {
     if (this.dead) return false;
+    if (this.stunned(quiet)) return false;
     if (this.t < GCD) {
       this.nudge(btn, key);
       return false;
@@ -1179,7 +1208,7 @@ export class Hero implements Foe {
       const reach = (sk.aoe ?? 0) + this.tal.whirlReach;
       R.fx({ type: 'whirl', x: this.x, y: this.y, r: reach, col: sk.col, dur: 0.5 });
       this.burst(this.x, this.y - 8, 12, sk.col, 140, 0.5, 2, 0);
-      for (const e of R.enemies) {
+      for (const e of this.targets) {
         if (e.alive && this.dist(this, e) < reach) {
           this.dmgEnemy(e, Math.round(base * mult), critCls);
           n++;
@@ -1231,7 +1260,7 @@ export class Hero implements Foe {
           R.sound('hitVolley', cx, cy);
           R.fx({ type: 'ring', x: cx, y: cy, r0: 6, r1: reach, col: sk.col, lw: 2, dur: 0.4 });
           this.burst(cx, cy - 6, 14, sk.col, 120, 0.5, 2, 160);
-          for (const e of R.enemies)
+          for (const e of this.targets)
             if (e.alive && Math.hypot(e.x - cx, e.y - cy) < reach)
               this.dmgEnemy(e, Math.round(base * this.dmgMult(e) * scale), critCls);
         },
@@ -1350,7 +1379,7 @@ export class Hero implements Foe {
     });
     R.after(t, () => {
       if (this.regionId !== R.id) return;
-      if (!always && !(tg.alive && R.enemies.includes(tg))) return;
+      if (!always && !this.stillThere(tg)) return;
       if (land) R.sound(land, tg.x, tg.y);
       hit(tg);
     });
@@ -1362,6 +1391,8 @@ export class Hero implements Foe {
   // ---------- damage ----------
   /** This hero hits a creature: the region settles what happens to it; the hero's talents and rewards apply. */
   dmgEnemy(e: Enemy, v: number, cls: FloaterClass): void {
+    // your duel opponent: the duel settles it (their armor, their luck)
+    if (e instanceof Rival) return this.game.duels.strike(this, e, v, cls);
     if (!e.alive) return;
     if (e.homeT > 0) return this.region.evade(e, cls);
     // weapons add to every direct hit (not to bleeding)
@@ -1415,8 +1446,8 @@ export class Hero implements Foe {
     }
   }
 
-  /** A creature (or a toll, a fireball) hits this hero. */
-  hurt(v: number, src: string): void {
+  /** A creature (or a toll, a fireball; or `by`, a duel opponent) hits this hero. */
+  hurt(v: number, src: string, by?: Hero): void {
     if (this.dead) return;
     if (this.cheats.god) {
       this.floater(this.x, this.y - 20, 'IMMUNE', 'heal');
@@ -1439,8 +1470,11 @@ export class Hero implements Foe {
     // armor: each point takes off a little, and a hit always does at least 1
     if (this.lastStandT > 0) v *= 0.7;
     v = Math.max(1, Math.round((v * 100) / (100 + this.armor * 6)));
+    // beaten in a duel: the last blow leaves you on your feet with a hit point, and it's over
+    const beaten = !!by && this.hp - v < 1 && this.game.duels.fighting(this, by);
+    if (beaten) v = Math.max(0, Math.floor(this.hp - 1));
     // Last Warden: once a minute, a killing blow leaves you standing
-    if (this.hp - v <= 0 && this.tal.lastWarden && this.lastWardenCd <= 0) {
+    if (!beaten && this.hp - v <= 0 && this.tal.lastWarden && this.lastWardenCd <= 0) {
       v = Math.max(0, Math.floor(this.hp) - 1);
       this.invT = 2;
       this.lastWardenCd = 60;
@@ -1455,7 +1489,8 @@ export class Hero implements Foe {
     this.sound('heroHurt');
     this.region.fx({ type: 'hit', x: this.x, y: this.y - 10, col: '#e0504b', dur: 0.2 });
     this.burst(this.x, this.y - 8, 6, '#e0504b', 80, 0.4, 2, 120);
-    if (this.hp <= 0) {
+    if (beaten) this.game.duels.beaten(this);
+    else if (this.hp <= 0) {
       this.dead = 2.2;
       this.stopMoving();
       this.events.emit('died', {});
@@ -1496,9 +1531,34 @@ export class Hero implements Foe {
     this.floater(this.x + 12, this.y - 30, 'SLOWED', 'name', '#93a0b8');
   }
 
+  /**
+   * Stunned (a duel opponent's Charge, Mortal Strike or Shield Bash): no walking, casting or
+   * swinging for `t` seconds. A dodge is clear of it (the blow already said so).
+   */
+  stun(t: number): void {
+    if (this.dead || this.cheats.god || this.invT > 0) return;
+    this.stunT = Math.max(this.stunT, t);
+    this.stopMoving();
+    this.mountT = 0;
+    if (this.mounted) this.dismount('Knocked off your mount.');
+    this.floater(this.x, this.y - 30, 'STUNNED', 'name', '#93a0b8');
+    this.log('You are stunned!', 'h');
+  }
+
+  /** Stunned right now: true (and you're told, unless `quiet`). */
+  private stunned(quiet = false): boolean {
+    if (this.stunT <= 0) return false;
+    if (!quiet) {
+      this.log("You're stunned!", 'h');
+      this.hear('error');
+    }
+    return true;
+  }
+
   // ---------- mount / jump ----------
   mountToggle(): void {
     if (this.dead) return;
+    if (!this.mounted && this.stunned()) return;
     if (this.mounted) {
       this.dismount('You dismount.');
       return;
@@ -1556,6 +1616,7 @@ export class Hero implements Foe {
     if (this.inScene) return;
     if (this.dead || this.airborne) return;
     if (this.heldT > 0) return this.log("You're held fast!", 'h');
+    if (this.stunned()) return;
     if (this.mountT > 0) {
       this.mountT = 0;
       this.log('Mount cancelled.');
@@ -2556,6 +2617,7 @@ export class Hero implements Foe {
   dodge(): void {
     if (this.dodgeCd > 0 || this.dead) return;
     if (this.heldT > 0) return this.log("You're held fast!", 'h');
+    if (this.stunned()) return;
     this.stopMoving();
     const m = this.lastMove ?? { x: this.face, y: -this.face };
     const l = Math.hypot(m.x, m.y) || 1;
@@ -2585,8 +2647,8 @@ export class Hero implements Foe {
     let mx = 0;
     let my = 0;
     // an archer drawing a bow holds still (the keys can stay down; the feet don't move); so does
-    // anyone caught in a web, a net, a snare or roots
-    const drawing = this.aimT > 0 || this.heldT > 0;
+    // anyone caught in a web, a net, a snare or roots, or stunned
+    const drawing = this.aimT > 0 || this.heldT > 0 || this.stunT > 0;
     const keyboard =
       !drawing &&
       !this.exiting &&
@@ -2653,7 +2715,7 @@ export class Hero implements Foe {
   ): boolean {
     if (this.dead || this.inScene || this.exiting) return false;
     const d = Math.hypot(x - this.x, y - this.y);
-    const max = this.heldT > 0 ? 1 : this.playerSpeed * 1.6 * Math.max(dt, 0.05) + 24;
+    const max = this.heldT > 0 || this.stunT > 0 ? 1 : this.playerSpeed * 1.6 * Math.max(dt, 0.05) + 24;
     if (d > max || this.map.blocked(x, y, 9, 8)) {
       this.tp++;
       return false;
@@ -2684,6 +2746,7 @@ export class Hero implements Foe {
     this.hiddenT = Math.max(0, this.hiddenT - dt);
     this.aimT = Math.max(0, this.aimT - dt);
     this.slowT = Math.max(0, this.slowT - dt);
+    this.stunT = Math.max(0, this.stunT - dt);
     if (this.heldT > 0) {
       this.heldT = Math.max(0, this.heldT - dt);
       if (this.heldT === 0) this.heldBy = '';
@@ -2721,7 +2784,7 @@ export class Hero implements Foe {
         this.dead = 0;
         this.hp = this.hpMax;
         this.mp = 60;
-        this.heldT = this.slowT = 0;
+        this.heldT = this.slowT = this.stunT = 0;
         this.heldBy = '';
         this.target = null;
         this.stopMoving();
@@ -2748,8 +2811,8 @@ export class Hero implements Foe {
 
     // auto attack
     const tg = this.target;
-    if (tg && (!tg.alive || !this.region.enemies.includes(tg))) this.target = null;
-    if (!this.dead && !this.mounted && !this.inScene && tg && tg.alive) {
+    if (tg && !this.stillThere(tg)) this.target = null;
+    if (!this.dead && !this.mounted && !this.inScene && this.stunT <= 0 && tg && tg.alive) {
       const d = this.dist(this, tg);
       const aa = CLASSES[this.cls].aa;
       const shoots = aa.ranged && this.hasBow;

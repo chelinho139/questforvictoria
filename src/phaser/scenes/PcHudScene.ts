@@ -10,7 +10,7 @@ import type { SpellKey } from '../../data/spells';
 import { dragSpell } from '../ui/spellDrag';
 import { isoX, isoY, fromIso } from '../../sim/map';
 import { Colors, Fonts, hex, PIXEL_SCALE, TOUCH, logicalSize } from '../config';
-import { Tex } from '../render/textures';
+import { Tex, heroLookTexture } from '../render/textures';
 import { drawSquareSweep } from '../render/hud';
 import type { Graphics, Text } from '../render/hud';
 import { DayDial, DIAL_R } from '../render/DayDial';
@@ -23,6 +23,9 @@ import { CLASSES } from '../../data/classes';
 import { VIEW_MODES, VIEW_NAMES } from '../view3d/View3D';
 import type { View3D, ViewMode } from '../view3d/View3D';
 import { keepAsIs } from '../../i18n/dom';
+import type { Hero } from '../../sim/Hero';
+import { Rival } from '../../sim/Duel';
+import type { DuelWindow } from '../ui/DuelWindow';
 
 type NineSlice = Phaser.GameObjects.NineSlice;
 type Image = Phaser.GameObjects.Image;
@@ -334,6 +337,8 @@ export class PcHudScene extends Phaser.Scene {
     this.placeFrame(this.player, 12, 12);
     if (stacked) this.placeFrame(this.target, 12, 12 + PANEL_H + 6);
     else this.placeFrame(this.target, 12 + this.panelW + 8, 12);
+    // where the frames and the chips under them end, in page px: the duel bar goes below
+    this.registry.set('hudTop', ((this.target.y + PANEL_H + 28) * PIXEL_SCALE) / (window.devicePixelRatio || 1));
 
     // info box pinned to the top-right corner, the day dial centred above it, gear to its left
     const infoW = 118;
@@ -707,11 +712,16 @@ export class PcHudScene extends Phaser.Scene {
     this.clickWorld(p, pointer, true);
   }
 
-  /** A click on the world: a creature, a thing, a person, a tree, a rock, or the ground to walk to. */
+  /** A click on the world: a creature, another player, a thing, a person, a tree, a rock, or the ground to walk to. */
   private clickWorld(p: { x: number; y: number }, pointer: Phaser.Input.Pointer, steer: boolean): void {
     const hit = this.hitEnemy(p);
     if (hit) {
       this.sim.setTarget(hit);
+      return;
+    }
+    const other = this.hitOther(p);
+    if (other) {
+      (this.registry.get('duel') as DuelWindow | undefined)?.clickHero(other);
       return;
     }
     const obj = this.hitObject(p);
@@ -829,6 +839,16 @@ export class PcHudScene extends Phaser.Scene {
       const dy = l.y + 6;
       const tall = o.kind === 'board' ? 36 : o.kind === 'chest' || o.kind === 'thorn' ? 18 : 10;
       if (dx <= (FLAT_OBJECTS.has(o.kind) ? 10 : 13) && dy >= -6 && dy <= tall) return o;
+    }
+    return null;
+  }
+
+  /** Another player under the pointer (their sprite, about 24×40). */
+  private hitOther(p: { x: number; y: number }): Hero | null {
+    for (const o of this.sim.others) {
+      if (o.dead > 0) continue;
+      const l = this.local(p, o.x, o.y);
+      if (Math.abs(l.x) <= 12 && l.y + 6 >= -2 && l.y + 6 <= 40) return o;
     }
     return null;
   }
@@ -982,9 +1002,18 @@ export class PcHudScene extends Phaser.Scene {
       f.name.setText('No target').setColor(Ink.soft).setY(f.y + 20);
       return;
     }
-    f.name.setText(tg.n).setColor(Ink.dark).setY(f.y + 4);
-    f.portrait.setTexture(tg.def.tex);
-    this.fitPortrait(f.portrait, f.slot);
+    f.name.setText(tg.n).setColor(tg instanceof Rival ? Ink.red : Ink.dark).setY(f.y + 4);
+    if (tg instanceof Rival) {
+      // your duel opponent: their hero's head and shoulders, their class and level
+      const o = tg.hero;
+      f.portrait.setTexture(heroLookTexture(this, o.look, o.equip));
+      this.fitPortrait(f.portrait, f.slot, portraitCrop());
+      f.sub.setText(`${CLASSES[o.cls].name} · Lv ${o.level}`).setX(f.name.x + f.name.width + 6);
+      f.sub.setVisible(f.sub.x + f.sub.width <= f.x + this.panelW - 8);
+    } else {
+      f.portrait.setTexture(tg.def.tex);
+      this.fitPortrait(f.portrait, f.slot);
+    }
     this.fillBar(f.hpBg, tg.hp / tg.hpMax, FILL.hp);
     f.hpText.setText(`${Math.round(tg.hp)} / ${tg.hpMax}`);
     if (casting) {
@@ -1002,6 +1031,7 @@ export class PcHudScene extends Phaser.Scene {
   private drawChips(): void {
     const s = this.sim;
     const chips: [string, string][] = [];
+    if (s.hero.stunT > 0) chips.push(["You're stunned", Ink.red]);
     if (s.buffT > 0) chips.push(['War Cry ' + s.buffT.toFixed(1) + 's', '#a8701e']);
     if (s.invT > 0) chips.push(['Dodge', '#1f7a78']);
     if (s.bleedT > 0) chips.push(['Bleed ' + s.bleedT.toFixed(1) + 's', Ink.red]);

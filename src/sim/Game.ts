@@ -23,6 +23,7 @@ import { Companion } from './Companion';
 import { COMPANION_IDS } from '../data/companions';
 import { Region } from './Region';
 import type { RegionMemory } from './Region';
+import { Duels } from './Duel';
 import type { RoomEvents, QuestProgress, QuestStatus, Structure } from './types';
 
 /** A goal's count to reach (a place counts once). */
@@ -65,6 +66,8 @@ export class Game {
   timeScale = 1;
   /** Dev switches for the whole game. */
   readonly cheats = { freezeEnemies: false };
+  /** Who has challenged whom, and the duels being fought (sim/Duel.ts). */
+  readonly duels = new Duels(this);
   private readonly lastStatus = new Map<string, QuestStatus>();
 
   /** The live region with this id (built if nobody was in it). */
@@ -87,6 +90,7 @@ export class Game {
   }
 
   removeHero(h: Hero): void {
+    this.duels.left(h);
     const from = h.regionId;
     this.heroes = this.heroes.filter(x => x !== h);
     h.regionId = '';
@@ -98,6 +102,8 @@ export class Game {
     const def = REGIONS[id];
     if (!def) throw new Error(`no region '${id}'`);
     const from = h.regionId;
+    // walking off to another region walks out of a duel
+    if (from && from !== id) this.duels.left(h);
     h.regionId = id;
     if (from && from !== id) this.closeIfEmpty(from);
     const r = this.region(id);
@@ -417,6 +423,7 @@ export class Game {
     if (this.weather.kind !== was) this.weatherChanged(was, this.weather.kind);
     this.placeCompanions();
     for (const r of [...this.regions.values()]) if (this.regions.has(r.id)) r.tick(dt);
+    this.duels.tick(dt);
     this.watchQuests();
   }
 
@@ -460,6 +467,7 @@ export class Game {
       journal: this.journal.slice(),
       day: { t: this.day.t, day: this.day.day },
       built: JSON.parse(JSON.stringify(built)) as SaveData['built'],
+      duels: { won: h.duelsWon, lost: h.duelsLost },
     };
   }
 
@@ -563,6 +571,8 @@ export class Game {
     );
     h.met.clear();
     for (const id of d.met) if (NPCS[id]) h.met.add(id);
+    h.duelsWon = d.duels?.won ?? 0;
+    h.duelsLost = d.duels?.lost ?? 0;
   }
 
   private heroLoaded(h: Hero): void {

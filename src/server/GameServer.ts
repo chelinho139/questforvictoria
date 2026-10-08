@@ -348,6 +348,8 @@ export class GameServer {
     const room = c.room;
     if (!room || !c.session || !c.char) return;
     const hero = c.session.hero;
+    // walking out of a duel loses it: settled first, so the save has it
+    room.game.duels.left(hero);
     this.saveChar(c);
     if (hero.regionId) room.lastRegion = hero.regionId;
     c.session.dispose();
