@@ -16,10 +16,10 @@ import puppeteer from 'puppeteer-core';
 import type { Page, CDPSession } from 'puppeteer-core';
 import ffmpegPath from 'ffmpeg-static';
 import { SHOTS } from './shots';
+import { CHROME, GL_ARGS } from './cards';
 
 const ROOT = path.join(__dirname, '..', '..');
 const OUT = path.join(__dirname, 'out', 'shots');
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const W = 1920;
 const H = 1080;
 
@@ -151,7 +151,7 @@ async function film(page: Page, cdp: CDPSession, name: string, bundle: string): 
   const browser = await puppeteer.launch({
     executablePath: CHROME,
     headless: true,
-    args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', `--window-size=${W},${H}`, '--hide-scrollbars', '--mute-audio', '--autoplay-policy=no-user-gesture-required'],
+    args: [...GL_ARGS, `--window-size=${W},${H}`, '--hide-scrollbars', '--mute-audio', '--autoplay-policy=no-user-gesture-required'],
     defaultViewport: { width: W, height: H, deviceScaleFactor: 1 },
     protocolTimeout: 600_000,
   });

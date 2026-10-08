@@ -7,7 +7,11 @@ import crypto from 'node:crypto';
 import puppeteer from 'puppeteer-core';
 import type { Browser } from 'puppeteer-core';
 
-export const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+/** Chrome (CHROME in the environment overrides it: a Linux box's Chromium). */
+export const CHROME = process.env.CHROME ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+/** WebGL on the GPU where there is one (Windows' D3D11), else in software (SwiftShader). */
+export const GL_ARGS = process.platform === 'win32' ? ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist'] 
+    : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', ...(process.getuid?.() === 0 ? ['--no-sandbox'] : [])];
 const OUT = path.join(__dirname, 'out', 'cards');
 
 /** How a line of text looks. */
@@ -85,7 +89,7 @@ export function captionKey(c: Caption): string {
 
 let browser: Browser | null = null;
 async function chrome(): Promise<Browser> {
-  browser ??= await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--hide-scrollbars'], defaultViewport: { width: 1920, height: 1080 } });
+  browser ??= await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--hide-scrollbars', ...(process.getuid?.() === 0 ? ['--no-sandbox'] : [])], defaultViewport: { width: 1920, height: 1080 } });
   return browser;
 }
 
@@ -116,7 +120,7 @@ export async function logoPng(port: string): Promise<string> {
   fs.mkdirSync(OUT, { recursive: true });
   const file = path.join(OUT, 'logo.png');
   if (fs.existsSync(file)) return file;
-  const b = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--use-angle=d3d11', '--enable-gpu'], defaultViewport: { width: 1280, height: 720 } });
+  const b = await puppeteer.launch({ executablePath: CHROME, headless: true, args: GL_ARGS, defaultViewport: { width: 1280, height: 720 } });
   const page = await b.newPage();
   await page.goto(`http://localhost:${port}/?director`, { waitUntil: 'load' });
   await page.waitForFunction('window.director', { timeout: 90_000 });

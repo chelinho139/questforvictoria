@@ -80,3 +80,15 @@ test('a fallen hero’s browser hears that they are down, waiting for a Revive',
   for (let i = 0; i < 5 && !down; i++) down = !!s.build(0.05).me?.down;
   assert.ok(down, 'down in the snapshot');
 });
+
+test("a friend down and waiting for a Revive shows as down to the others (so they're drawn plain to see)", () => {
+  const { game, heroes } = gameWith('Ana', 'Bo');
+  const s = new Session(heroes[1]);
+  s.build(0.05);
+  heroes[0].hurt(10_000, 'test');
+  run(game, 3);
+  assert.ok(heroes[0].down);
+  let flags = 0;
+  for (let i = 0; i < 5 && !(flags & 32); i++) flags = s.build(0.05).hs?.find(h => h[0] === heroes[0].id)?.[10] ?? 0;
+  assert.ok(flags & 32, 'down in the friend’s snapshot');
+});

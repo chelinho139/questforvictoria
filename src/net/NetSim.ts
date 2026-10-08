@@ -465,6 +465,7 @@ export class NetSim extends Sim {
         cls,
         hiddenT: flags & 8 ? 1 : 0,
         stunT: flags & 16 ? 1 : 0,
+        down: !!(flags & 32),
         heldBy: heldBy as HeldKind | '',
         heldT: heldBy ? 1 : 0,
         duelsWon: won,

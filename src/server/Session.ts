@@ -303,7 +303,7 @@ function companionSnap(c: Companion): CompanionSnap {
   ];
 }
 
-/** Another hero as the ones beside them see it. Its flags: 1 mounted, 2 flipping, 4 just hit, 8 camouflaged, 16 stunned. */
+/** Another hero as the ones beside them see it. Its flags: 1 mounted, 2 flipping, 4 just hit, 8 camouflaged, 16 stunned, 32 down (waiting for a Revive). */
 function heroSnap(h: Hero): HeroSnap {
   // camouflaged archers show faintly to their friends
   const flags =
@@ -311,7 +311,8 @@ function heroSnap(h: Hero): HeroSnap {
     (h.jumpFlip ? 2 : 0) |
     (h.flash > 0 ? 4 : 0) |
     (h.hiddenT > 0 ? 8 : 0) |
-    (h.stunT > 0 ? 16 : 0);
+    (h.stunT > 0 ? 16 : 0) |
+    (h.down ? 32 : 0);
   const equip = Object.values(h.equip)
     .map(v => v ?? '')
     .join(',');

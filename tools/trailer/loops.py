@@ -6,7 +6,7 @@ the music is on both sides of the seam (8 beats before and after). Best seams fi
 """
 import sys, numpy as np, subprocess, os
 HERE = os.path.dirname(os.path.abspath(__file__))
-FF = os.path.join(HERE, 'node_modules', 'ffmpeg-static', 'ffmpeg.exe')
+FF = os.path.join(HERE, 'node_modules', 'ffmpeg-static', 'ffmpeg.exe' if os.name == 'nt' else 'ffmpeg')
 SR = 22050
 p, a, b = sys.argv[1], float(sys.argv[2]), float(sys.argv[3])
 lens = [int(x) for x in sys.argv[4:]] or [16, 24, 32]

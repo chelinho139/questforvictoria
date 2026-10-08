@@ -492,7 +492,8 @@ export class WorldRenderer {
         .setPosition(Math.round(qx), Math.round(qy + 8 - z))
         .setFlipX(o.face < 0)
         .setDepth(depth)
-        .setAlpha(o.dead ? 0.35 : o.hiddenT > 0 ? 0.45 : 1)
+        // a friend down and waiting for a Revive stays plain to see; one gone back to camp fades
+        .setAlpha(o.dead ? (o.down ? 0.9 : 0.35) : o.hiddenT > 0 ? 0.45 : 1)
         .setRotation(o.dead ? 1.3 : 0);
       if (o.flash > 0) v.img.setTintFill(0xffffff);
       else v.img.clearTint();

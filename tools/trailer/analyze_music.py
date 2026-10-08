@@ -13,7 +13,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-FFMPEG = os.path.join(HERE, 'node_modules', 'ffmpeg-static', 'ffmpeg.exe')
+FFMPEG = os.path.join(HERE, 'node_modules', 'ffmpeg-static', 'ffmpeg.exe' if os.name == 'nt' else 'ffmpeg')
 SR = 22050
 
 
