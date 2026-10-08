@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // A test player for online play: joins the game server like a browser does and walks
 // (and fights) on its own, so co-op can be tried with one person at the keyboard. It takes up
-// any duel it is challenged to, and fights it.
+// any duel it is challenged to, and fights it; and any trade it is asked to: it stands still,
+// puts a little gold on the table, and accepts whatever you offer once you accept.
 //
 //   node tools/net/bot.js                     list the rooms
 //   node tools/net/bot.js host "Bot room"     open a room and play in it
@@ -63,6 +64,10 @@ let duel = null;
 let heroes = [];
 let answered = false;
 let challengeT = 0;
+/** My trade as the server tells it (null: none), and what the bot did about it. */
+let trade = null;
+let tradeSaid = '';
+let gold = 0;
 let castT = 0;
 
 /** Host or join with this character. */
@@ -119,6 +124,9 @@ ws.on('message', data => {
       answered = true;
       send({ t: 'cmd', c: 'duelAccept', a: [] });
     }
+    if (m.mf) gold = m.mf.gold;
+    if (m.tv !== undefined) trade = m.tv;
+    tradeStep();
     for (const [aud, ev, p] of m.ev || []) if (ev === 'log' && aud === 'h') say(p.text);
   }
 });
@@ -130,6 +138,23 @@ const SPELLS = {
   archer: ['quickshot', 'aimedshot', 'barbed', 'concussive'],
   sorceress: ['spark', 'firebolt', 'ignite', 'frostbolt'],
 };
+
+/** Asked to trade: yes; at the table, a little gold, and accept once the other one has. */
+function tradeStep() {
+  if (!trade) return void (tradeSaid = '');
+  if (trade.st === 'ask') {
+    if (!trade.mine && tradeSaid !== 'yes') {
+      tradeSaid = 'yes';
+      send({ t: 'cmd', c: 'tradeAccept', a: [] });
+    }
+    return;
+  }
+  if (tradeSaid !== 'gold') {
+    tradeSaid = 'gold';
+    send({ t: 'cmd', c: 'tradeGold', a: [Math.min(5, gold)] });
+  }
+  if (trade.get.ok && !trade.give.ok) send({ t: 'cmd', c: 'tradeReady', a: [true] });
+}
 
 /** In a duel: keep at a fighting distance from the other one, and hit them now and then. */
 function duelStep() {
@@ -161,7 +186,7 @@ setInterval(() => {
     if (near) send({ t: 'cmd', c: 'duelChallenge', a: [near[0]] });
   }
   if (duel && duel.st === 'fight') duelStep();
-  else if (duel && duel.st === 'count') goal = { x: me.x, y: me.y };
+  else if ((duel && duel.st === 'count') || (trade && trade.st === 'open')) goal = { x: me.x, y: me.y };
   else if (!goal || walkT <= 0) {
     walkT = 2 + Math.random() * 3;
     goal = { x: me.x + (Math.random() - 0.5) * 160, y: me.y + (Math.random() - 0.5) * 160 };

@@ -100,3 +100,5 @@ export const ARROW_SPEED = 600;
 export const BOLT_SPEED = 480;
 /** After loosing an arrow (or a bolt), an archer (or a sorceress) holds still this long (the draw and release). */
 export const AIM_HOLD = 0.3;
+/** A plain auto-shot holds the archer still only this long. */
+export const AA_HOLD = 0.2;

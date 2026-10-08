@@ -63,6 +63,7 @@ Up to eight friends open the game in their browsers, see a list of open rooms, j
 | **Talking** | Each player talks to people on their own; quest choices are shared. |
 | **Joining late** | A friend can join mid-campaign: they step into the party's story where it is and take up its open quests. |
 | **Duels** *(added 7 October 2026)* | WoW-style and by consent: click another player, **Challenge to a duel**, and they Accept or Decline. A flag goes in between you, a count of three, and you fight until one is down to their last hit point (nobody dies), yields, or strays from the flag's ring for 10 s. Everyone there hears who won; both get their health and mana back; wins and losses stay with the character. There is no open PvP: a duel is the only way to hurt another player. |
+| **Trading** *(added 8 October 2026)* | WoW-style too: click another player, **Trade**, and they say yes or no. A table opens on the left for both: put items from your bag and gold on it, see what they put, and **Accept trade**. Any change takes both accepts back; when both accept, it all changes hands at once (or nothing does, if a bag is too full). Keepsakes and quest rewards (items without a price) stay with you. Walking off, a scene or a duel calls it off. |
 
 ---
 
@@ -126,6 +127,7 @@ The groundwork. Today the simulation assumes one player, one region and one map 
   - `npm run bot -- join ABCD --name Botty --look k2 --secs 60` joins room ABCD;
   - `--cls archer` (or `--cls sorceress`) makes the bot's character an archer (or a sorceress) the first time that name is used;
   - a bot takes up any duel it's challenged to and fights back; `--challenge` has it challenge whoever comes near.
+  - a bot takes up any trade it's asked to, puts 5 gold on the table, and accepts once you do.
 
   Add `--url ws://<address>:3000/ws` to send it to another computer's server.
 - **While developing,** every change to the game's code restarts the server, which drops everyone and closes the rooms. Characters are saved first, so reload the page and pick up where you were.

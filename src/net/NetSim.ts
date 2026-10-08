@@ -26,10 +26,11 @@ import type { HeldKind } from '../data/enemies';
 import type { Companion } from '../sim/Companion';
 import { TICK_HZ } from './protocol';
 import { isShot } from '../data/skills';
-import { AIM_HOLD } from '../data/classes';
+import { AIM_HOLD, AA_HOLD } from '../data/classes';
 import { keepNames } from '../i18n';
 import { Rival, RIVAL_TARGET } from '../sim/Duel';
 import type { DuelView, DuelFlag } from '../sim/Duel';
+import type { TradeView } from '../sim/Trade';
 
 /** A structure in a snapshot: id, kind, tile, seconds left (-1: for good), put out, how far smothered. */
 type StructureSnap = [number, StructureKind, number, number, number, number, number];
@@ -55,6 +56,8 @@ export class NetSim extends Sim {
   readonly serverId: string;
   private readonly offConn: () => void;
   private tpSeen = -1;
+  /** The server's count of my auto-shots, to hear of each new one. */
+  private shotsSeen = -1;
   private moveT = 0;
   private sentMove = '';
   private heartbeat = 0;
@@ -64,6 +67,8 @@ export class NetSim extends Sim {
   private duelNow: DuelView | null = null;
   private flagsHere: DuelFlag[] = [];
   private rivalNow: Rival | null = null;
+  /** My trade as the server last told it. */
+  private tradeNow: TradeView | null = null;
 
   constructor(
     private readonly conn: Connection,
@@ -187,8 +192,17 @@ export class NetSim extends Sim {
       stunT: me.stunT,
       itemCd: me.itemCd,
     });
-    // holding still to shoot: what the server says, or what this browser started itself
-    h.aimT = Math.max(h.aimT, me.aimT);
+    // holding still to shoot is this browser's to keep, so the ping can't stretch it: a cast's
+    // hold starts here as the key goes down (the server's copy of it comes back a round trip
+    // later; taking it would hold the feet again, mid-step on a slow line). An auto-shot is the
+    // server's, so its short hold starts here when we hear of it, less the time it took to
+    // reach us, and only if the feet are still planted
+    if (me.shots !== this.shotsSeen) {
+      const fresh = this.shotsSeen >= 0;
+      this.shotsSeen = me.shots;
+      if (fresh && !h.moving)
+        h.aimT = Math.max(h.aimT, Math.min(me.aimT, AA_HOLD) - this.rtt / 2000);
+    }
     // the short animations count down here; a fresh one from the server restarts them
     if (me.atkAnimT > h.atkAnimT + 0.06) h.atkAnimT = me.atkAnimT;
     if (me.flash > h.flash + 0.02) h.flash = me.flash;
@@ -198,6 +212,7 @@ export class NetSim extends Sim {
     this.syncHeroes(R, t.hs);
     if (t.du !== undefined) this.duelNow = t.du;
     if (t.dl) this.flagsHere = t.dl;
+    if (t.tv !== undefined) this.tradeNow = t.tv;
     this.syncRival();
     h.target =
       me.target === RIVAL_TARGET
@@ -727,6 +742,28 @@ export class NetSim extends Sim {
   }
   override quitDuel(): void {
     this.cmd('duelQuit');
+  }
+  // trades: the server's, as the snapshots tell them
+  override get trading(): TradeView | null {
+    return this.tradeNow;
+  }
+  override askTrade(o: Hero): void {
+    this.cmd('tradeAsk', [o.id]);
+  }
+  override acceptTrade(): void {
+    this.cmd('tradeAccept');
+  }
+  override quitTrade(): void {
+    this.cmd('tradeQuit');
+  }
+  override tradeItem(id: ItemId, n: number): void {
+    this.cmd('tradeItem', [id, n]);
+  }
+  override tradeGold(n: number): void {
+    this.cmd('tradeGold', [n]);
+  }
+  override tradeReady(on: boolean): void {
+    this.cmd('tradeReady', [on]);
   }
   override cycleTarget(): void {
     this.cmd('cycleTarget');

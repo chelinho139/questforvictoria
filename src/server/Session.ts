@@ -152,6 +152,7 @@ export class Session {
     part('df', h.game.difficulty);
     part('du', h.game.duels.view(h));
     part('dl', h.game.duels.flags(R.id));
+    part('tv', h.game.trades.view(h));
     this.dayT -= dt;
     if (this.dayT <= 0 || this.sent.dy === undefined) {
       this.dayT = 1;
@@ -172,6 +173,7 @@ export class Session {
       y: r1(h.y),
       tp: h.tp,
       aimT: r2(h.aimT),
+      shots: h.shots,
       predatorT: r1(h.predatorT),
       hiddenT: r1(h.hiddenT),
       heldT: r2(h.heldT),

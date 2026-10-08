@@ -305,6 +305,29 @@ html, body { height: 100%; margin: 0; background: #0c1018; overflow: hidden; }
 .duel-fill { height: 100%; background: linear-gradient(180deg, #f2c14e, #a8701e); }
 .duel-warn { margin: 4px 0 0; color: #ff8a80; font-weight: 700; }
 .duel-bar .duel-choices { margin-top: 6px; }
+/* the fight under way: a small plate on the left under the frames, out of the middle of the view */
+.duel-bar.fight {
+  left: 12px; transform: none; width: auto; max-width: min(240px, calc(100vw - 32px)); padding: 4px 8px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; text-align: left; font-size: 13px; opacity: 0.9;
+}
+.duel-bar.fight .duel-head { justify-content: flex-start; }
+.duel-bar.fight .duel-head b { font-size: 10px; }
+.duel-bar.fight .duel-warn { flex-basis: 100%; margin: 0; }
+.duel-bar.fight .duel-choices { margin: 0 0 0 auto; }
+.duel-bar.fight .duel-choices button { padding: 2px 7px; font-size: 10px; }
+/* trading with another player: the request's bar (the duel bar's look), then the table on the left */
+.trade-bar { border-color: #c8901e; }
+.ptrade { max-width: calc(100vw - 24px); }
+.ptrade .ptrade-gold { display: flex; align-items: center; gap: 6px; margin: 6px 2px 2px; font-size: 14px; color: #a8701e; }
+.ptrade .ptrade-gold input {
+  width: 90px; font: 700 13px 'Pixelify Sans', monospace; color: #4a2410; background: #fcecc4;
+  border: 2px solid #9a5626; padding: 2px 4px; user-select: text;
+}
+.ptrade .ptrade-gold small { color: #9a6a40; font-size: 13px; }
+.ptrade .ptrade-gold-get { margin: 6px 2px 2px; font-size: 14px; color: #a8701e; font-weight: 700; }
+.ptrade > footer { display: flex; flex-direction: column; gap: 6px; }
+.ptrade .ptrade-note { margin: 0; text-align: center; }
+.ptrade .ptrade-note:empty { display: none; }
 @media (max-width: 620px) {
   .select-body { grid-template-columns: 1fr; }
   .select-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

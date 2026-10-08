@@ -8,7 +8,7 @@ import { dockLeft, undockLeft, openedLeft } from './panels';
 import { canWield } from '../../data/items';
 
 /** Draw an item's icon into a canvas at 1× (pixel art stays crisp). */
-function paintIcon(cv: HTMLCanvasElement, id: ItemId): void {
+export function paintIcon(cv: HTMLCanvasElement, id: ItemId): void {
   const c = cv.getContext('2d')!;
   c.imageSmoothingEnabled = false;
   c.clearRect(0, 0, cv.width, cv.height);
@@ -17,7 +17,7 @@ function paintIcon(cv: HTMLCanvasElement, id: ItemId): void {
 }
 
 /** What an item is, for the hover title: name, slot, stats and description. */
-function describe(id: ItemId): string {
+export function describe(id: ItemId): string {
   const d = ITEMS[id];
   return [d.name + (d.slot ? ` (${SLOT_NAMES[d.slot]})` : ''), ...statLines(d.stats), d.heal ? `Restores ${d.heal} health` : '', d.desc].filter(Boolean).join('\n');
 }

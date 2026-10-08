@@ -36,6 +36,7 @@ import { OnlineBadge } from '../ui/OnlineBadge';
 import { SceneBox } from '../ui/SceneBox';
 import { BossBar } from '../ui/BossBar';
 import { DuelWindow } from '../ui/DuelWindow';
+import { PlayerTradeWindow } from '../ui/PlayerTradeWindow';
 import { Sfx } from '../audio/Sfx';
 import { Music } from '../audio/Music';
 import { WeatherAudio } from '../audio/WeatherAudio';
@@ -79,6 +80,8 @@ export class GameScene extends Phaser.Scene {
   private bossBar!: BossBar;
   /** Duels: another player's card, and the bar while a duel is on. */
   private duel!: DuelWindow;
+  /** Trading with another player: the request's bar, and the table. */
+  private barter!: PlayerTradeWindow;
   private sfx!: Sfx;
   private music!: Music;
   /** Rain, storms and lightning on screen, and their sound. */
@@ -175,6 +178,12 @@ export class GameScene extends Phaser.Scene {
     this.bossBar = new BossBar(this.sim);
     this.duel = new DuelWindow(this.sim, () => (this.registry.get('hudTop') as number | undefined) ?? 40);
     this.registry.set('duel', this.duel);
+    // the trade request's bar goes under the duel's when both are up
+    this.barter = new PlayerTradeWindow(this.sim, () => {
+      const top = (this.registry.get('hudTop') as number | undefined) ?? 40;
+      const duel = this.duel.barBottom;
+      return duel ? duel + 6 : top;
+    });
     this.shown = this.windows().map(w => w.isOpen);
     // a scene's fades win over any fade already running (a new game's opening scene starts in
     // black while the fade up from the loading screen is still going: Phaser would ignore it)
@@ -245,6 +254,7 @@ export class GameScene extends Phaser.Scene {
       this.bossBar.destroy();
       this.duel.destroy();
       this.registry.remove('duel');
+      this.barter.destroy();
       this.sim.events.clear();
     });
   }
@@ -311,7 +321,7 @@ export class GameScene extends Phaser.Scene {
 
   /** The windows that open and close with a sound. */
   private windows(): { isOpen: boolean }[] {
-    return [this.inventory, this.crafting, this.trade, this.dialog, this.questLog, this.controls, this.talents, this.spellbook, this.dev];
+    return [this.inventory, this.crafting, this.trade, this.barter, this.dialog, this.questLog, this.controls, this.talents, this.spellbook, this.dev];
   }
 
   /** Which windows were open last frame. */
@@ -708,6 +718,7 @@ export class GameScene extends Phaser.Scene {
     } else this.lighting.update(dt);
     this.bossBar.update();
     this.duel.update();
+    this.barter.update();
     this.dev.update();
   }
 }

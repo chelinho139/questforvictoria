@@ -119,7 +119,7 @@ The bands: for each pair, average time between 0.95 and 1.10 and average cost be
 
 ## Multi player
 
-- The class travels with the character on the server and shows on the character cards and duel cards. PROTOCOL 8 (a new class is a new value in the messages).
+- The class travels with the character on the server and shows on the character cards and duel cards. PROTOCOL 9 (a new class is a new value in the messages).
 - Others see her cast (the casting frames), her bolts, lightning and flames (region effects go to everyone there), and anyone she freezes.
 - The server takes the browser's word that she stood still to cast, as for the archer.
 
