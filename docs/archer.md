@@ -7,7 +7,7 @@
 ## How an archer plays
 
 - **From afar.** The auto-shot reaches **200**, spells **220** (the warrior's reach is 48 and 56). Each arrow **flies** to its mark at 600 a second and hits when it lands, so creatures take arrows on the way in.
-- **Stand still to shoot.** An archer only shoots with feet planted. If you're walking somewhere with a click, a shot stops you and fires. If you're holding a movement key, the shot is refused ("Stand still to shoot"). After each arrow you hold still for 0.3 s while you draw and loose; a plain auto-shot holds you for 0.2 s.
+- **Stand still to shoot.** An archer only shoots with feet planted. If you're walking somewhere with a click, a shot stops you and fires. If you're holding a movement key, the shot is refused ("Stand still to shoot"). After each arrow you hold still for 0.3 s while you draw and loose; a plain auto-shot holds you for 0.2 s. Online, the hold is your browser's to keep, not the server's, so the ping never stretches it: a shot you fire holds you from the key press; an auto-shot the server looses holds you from when its news arrives, less the time it took, and never once you have started walking.
 - **Lighter.** An archer starts with **130 health** against the warrior's 175, and has no shield. The off hand holds a **quiver**, which adds damage.
 - **Creatures fight back.** A creature you shoot stays angry for 10 s, however far away you shot from. Without this, an archer could shoot slimes from outside their sight for free.
 - **Classes are chosen when you make a character**, in single player and multi player alike (the New character screen: Warrior | Archer). The class is saved with the character; characters from before classes are warriors.

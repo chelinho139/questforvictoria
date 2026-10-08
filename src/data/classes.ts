@@ -72,3 +72,5 @@ export function isClass(v: unknown): v is ClassId {
 export const ARROW_SPEED = 600;
 /** After loosing an arrow, an archer holds still this long (the draw and release). */
 export const AIM_HOLD = 0.3;
+/** A plain auto-shot holds the archer still only this long. */
+export const AA_HOLD = 0.2;
