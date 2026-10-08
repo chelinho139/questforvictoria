@@ -10,10 +10,11 @@ export const DUEL_COUNT = 3;
 /** How close (world px) you stand to someone to challenge them, or to take up their challenge. */
 export const DUEL_REACH = 260;
 /**
- * The ring round the flag (world px; about the screen, standing at the flag): outside it for
- * DUEL_OUT seconds, you have fled the duel.
+ * The ring round the flag (world px; wider than the screen, standing at the flag): outside it for
+ * DUEL_OUT seconds, you have fled the duel. Wide enough (it was 230) that a bow or a staff has
+ * room to keep its distance from a sword.
  */
-export const DUEL_RING = 230;
+export const DUEL_RING = 345;
 export const DUEL_OUT = 10;
 /** `MeSnap.target` when a hero's target is their duel opponent (creatures' ids start at 1). */
 export const RIVAL_TARGET = -1;

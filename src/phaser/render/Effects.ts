@@ -480,7 +480,7 @@ export class Effects {
   private duelFlag(g: Gfx, b: Gfx, at: At, x: number, y: number, own: boolean, live: boolean): void {
     const t = this.scene.time.now / 1000;
     const col = hex(live ? '#e0504b' : '#f2c14e');
-    const n = 48;
+    const n = 64;
     for (let i = 0; i < n; i += 2) {
       const a0 = (i / n) * Math.PI * 2 + t * 0.15;
       this.arc(g, x, y, DUEL_RING, a0, a0 + (Math.PI * 2) / n, 2, col, own ? 0.6 : 0.3);
