@@ -38,6 +38,8 @@ GLOW = {
     '1': '#ffffff', '2': '#ffcf3a', '3': '#ff8a2a', '4': '#6aa8f0', '5': '#3a74d0',
     '6': '#5ad8d4', '7': '#1fa0a0', '8': '#4cbc44', '9': '#9ae67a', '0': '#ff7a6a',
     '*': '#e8443a', '+': '#ae2626',
+    # the sorceress's: violet light and frost
+    '%': '#dcc4ff', '&': '#9a6ae6', '~': '#c4ecff',
 }
 ALL = {**PAL, **GLOW}
 
@@ -626,6 +628,7 @@ def aimedshot():
     g.at(16, 3, '2')
     return g
 
+
 def barbed():
     """A barbed broadhead, its hooks wet: blood running off and falling in drops."""
     g = G(20, 20)
@@ -647,6 +650,7 @@ def concussive():
     arc(g, 13.0, 5.0, 5.8, -85, -5, lambda t: 0.9, 'x', under=True)
     px(g, [(19, 1), (19, 6), (14, 0)], '1')
     return g
+
 
 def mark():
     """The hunter's mark: a gold chevron sigil over a red ring, glowing."""
@@ -721,6 +725,7 @@ def pierce():
     px(g, [(4, 12), (10, 6), (17, 2)], '2')
     return g
 
+
 def rapidfire():
     """Three arrows loosed one after another, each a little ahead of the last."""
     g = G(20, 20)
@@ -729,6 +734,7 @@ def rapidfire():
     arrow(g, 8, 18, 7)
     px(g, [(1, 9), (3, 14), (5, 18)], '4')
     return g
+
 
 def deadeye():
     """An eye with a crimson iris and a crosshair for a pupil."""
@@ -789,6 +795,7 @@ def predator():
     px(g, [(2, 7), (18, 7), (17, 1)], '3')
     return g
 
+
 def disengage():
     """A swift green leap backwards: an arc of motion curling back, the dust kicked up."""
     g = G(20, 20)
@@ -822,6 +829,408 @@ def camouflage():
     px(g, [(0, 11), (19, 10), (5, 1)], '8')
     return g
 
+# ---------------------------------------------------------------- the sorceress's spells
+# Fire is orange and red (O o p P, r q), frost pale blue (A a i I, glow ~ 4), arcane violet
+# (V v x X, glow % &).
+def blob(g, cx, cy, rx, ry, shade):
+    """An ellipse: `shade(nx, ny, e)` gives the letter at normalised offset (nx, ny), e = nx² + ny²."""
+    for y in range(20):
+        for x in range(20):
+            nx, ny = (x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry
+            e = nx * nx + ny * ny
+            if e <= 1:
+                ch = shade(nx, ny, e)
+                if ch:
+                    g.at(x, y, ch)
+
+
+def fireball(nx, ny, e):
+    """Shading for a ball of fire lit from the top-left: white-hot heart, red-brown rim."""
+    k = e + 0.35 * (nx + ny)
+    return 'O' if k < 0.12 else 'o' if k < 0.5 else 'p' if k < 0.95 else 'P'
+
+
+def spark():
+    """A small spark crackling: a white-gold star, jagged little arcs jumping off it."""
+    g = G(20, 20)
+    g.at(10, 6, 'Y'); g.at(10, 7, 'Y'); g.at(9, 8, 'YWG'); g.at(7, 9, 'YYWWWGg'); g.at(9, 10, 'GGg')
+    g.at(10, 11, 'g'); g.at(10, 12, 'g')
+    # crackles
+    px(g, [(13, 6), (14, 5), (15, 5), (16, 3)], '2'); px(g, [(17, 2)], '1')
+    px(g, [(5, 8), (4, 10), (3, 10)], '2'); px(g, [(2, 9)], '1')
+    px(g, [(12, 12), (13, 14), (14, 14), (14, 15)], '2'); px(g, [(15, 16)], '1')
+    px(g, [(7, 12), (6, 14)], '3'); px(g, [(5, 15)], '2')
+    px(g, [(8, 4), (7, 3)], '3'); px(g, [(12, 3), (4, 5), (16, 10), (3, 15), (11, 17)], '3')
+    return g
+
+
+def firebolt():
+    """A bolt of fire streaking up and to the right, its tail of flame streaming ragged behind it."""
+    g = G(20, 20)
+    curve(g, (1.0, 19.0), (6.5, 13.5), (12.5, 7.5), lambda t: 0.6 + 4.6 * t ** 1.3,
+          lambda t, s: 'P' if s > 0.55 else 'p' if (s > 0.1 or s < -0.6 or t < 0.3) else 'o' if t < 0.75 or s < -0.25 else 'O')
+    blob(g, 14.2, 5.8, 3.8, 3.8, fireball)
+    g.at(13, 4, 'W')
+    # licks of flame torn off the tail's edges
+    g.at(6, 11, 'p'); g.at(7, 10, 'o'); g.at(10, 8, 'o'); g.at(4, 14, 'p'); g.at(9, 15, 'P'); g.at(12, 12, 'P'); g.at(12, 11, 'p')
+    px(g, [(18, 2), (11, 2), (19, 6), (16, 11)], '2'); px(g, [(5, 9), (13, 14), (2, 15), (17, 0), (8, 17)], '3')
+    return g
+
+
+def ignite():
+    """A flame catching on the embers: a red tongue of fire rising, sparks going up."""
+    g = G(20, 20)
+    rows = {
+        3: (10, 'r'),
+        4: (9, 'rr'),
+        5: (9, 'rRr'),
+        6: (8, 'rRpr'),
+        7: (7, 'r.Rpr.r'),
+        8: (6, 'rr.Ropqrq'),
+        9: (6, 'rRrRoopq'),
+        10: (6, 'rRpoOopqq'),
+        11: (5, 'qrRpoOOopq'),
+        12: (5, 'qrRpoOOOpqq'),
+        13: (5, 'qrRpoOOopqq'),
+        14: (6, 'qrppoopqq'),
+        15: (6, 'Qqrrrrqq'),
+    }
+    for y, (x, r) in rows.items():
+        g.at(x, y, r)
+    # the embers it caught on
+    g.at(3, 16, 'PPQPPpPQPPPPQ'); g.at(2, 17, 'QPQQPQPPQQPQPQ'); g.at(3, 18, 'QQZQQZQQQZQ')
+    g.at(5, 16, 'o'); g.at(10, 17, 'o'); g.at(14, 16, 'o'); g.at(7, 17, 'p')
+    px(g, [(14, 5), (4, 6), (12, 1), (15, 9)], '3'); px(g, [(6, 3), (16, 3), (3, 11)], '2')
+    return g
+
+
+def frostbolt():
+    """A shard of ice flying up to the right: faceted, sharp at the nose, a trail of frost and
+    splinters behind it."""
+    g = G(20, 20)
+    curve(g, (4.0, 16.0), (10.0, 10.0), (18.0, 2.0),
+          lambda t: 0.6 + 4.4 * (t / 0.7 if t < 0.7 else (1 - t) / 0.3),
+          lambda t, s: 'W' if -0.2 < s < 0.15 and 0.3 < t < 0.9 else 'A' if s < -0.45 else 'a' if s < 0.15 else 'i' if s < 0.6 else 'I')
+    # splinters trailing it
+    g.at(3, 12, 'Aa'); g.at(3, 13, 'i')
+    # streaks of cold air
+    px(g, [(5, 10), (2, 15), (1, 9)], '4'); px(g, [(6, 9), (3, 16), (10, 17), (11, 16)], '~'); px(g, [(4, 11), (12, 15)], '5')
+    px(g, [(12, 2), (18, 9), (15, 1)], '1')
+    return g
+
+
+def star_burst(g, cx, cy, R, r2, lit, mid, dark):
+    """A four-pointed star (an astroid) of radius R, and a smaller one turned 45° of radius r2."""
+    for y in range(20):
+        for x in range(20):
+            dx, dy = x + 0.5 - cx, y + 0.5 - cy
+            ax, ay = abs(dx), abs(dy)
+            u, v = abs(dx + dy) / 1.414, abs(dx - dy) / 1.414
+            if (ax ** 0.42 + ay ** 0.42) <= R ** 0.42 or (u ** 0.42 + v ** 0.42) <= r2 ** 0.42:
+                g.at(x, y, lit if dx + dy < -0.5 else mid if dx + dy < 1.5 else dark)
+
+
+def arcanepower():
+    """A violet star of power bursting, white at its heart, motes of light thrown round it."""
+    g = G(20, 20)
+    arc(g, 10.0, 10.0, 6.6, -180, 180, lambda t: 1.0, '&', under=True)
+    star = [
+        '....................',
+        '.........v..........',
+        '.........vx.........',
+        '.........vx.........',
+        '...v.....Vx.....x...',
+        '....v....Vx....x....',
+        '.....v..vVxx..x.....',
+        '......vvvVxxxx......',
+        '......vVVVVxxx......',
+        '.vvvvvvVVWWVvvvvvvv.',
+        '.xxxxxxxVWWVxxxxxxX.',
+        '......vxxVxxxX......',
+        '......xxxVxxXX......',
+        '.....x..xVxX..X.....',
+        '....x....xX....X....',
+        '...x.....xX.....X...',
+        '.........xX.........',
+        '.........xX.........',
+        '.........X..........',
+    ]
+    for y, r in enumerate(star):
+        g.at(0, y, r)
+    for x, y in ((3, 2), (16, 2), (2, 16), (17, 17)):
+        g.at(x, y, '%')
+    px(g, [(1, 6), (18, 13), (6, 18), (13, 1)], '&')
+    return g
+
+
+def tongue(g, x, y, h, lean=0):
+    """A small tongue of flame standing on (x, y), h pixels tall: yellow heart, red edge."""
+    for i in range(h):
+        w = max(1, round((h - i) * 2.6 / h))
+        xx = x + round(lean * i / h) - w // 2
+        g.at(xx, y - i, ('p' + 'o' * (w - 2) + 'P') if w > 2 else 'po'[:w] if i < h - 1 else 'p')
+
+
+def flamestrike():
+    """A pillar of fire driven down from the sky onto the ground, flames bursting up where it lands."""
+    g = G(20, 20)
+    for y in range(0, 16):
+        left = 2.0 + y * 0.14 + 0.7 * math.sin(y * 1.9)
+        right = 2.0 + y * 0.14 + 0.7 * math.sin(y * 1.4 + 1.2)
+        for x in range(20):
+            dx = x + 0.5 - 10.0
+            d = dx / (left if dx < 0 else right)
+            if -1 <= d <= 1:
+                g.at(x, y, 'O' if abs(d + 0.1) < 0.3 else 'o' if -0.8 < d < 0.55 else 'p' if d < 0.85 else 'P')
+    # flames licking off its sides, streaks of it still falling
+    g.at(6, 7, 'o'); g.at(5, 6, 'p'); g.at(14, 10, 'p'); g.at(15, 9, 'P'); g.at(5, 12, 'p')
+    g.at(5, 0, 'p'); g.at(5, 1, 'p'); g.at(15, 1, 'P'); g.at(15, 2, 'p'); g.at(4, 4, 'o')
+    # the flames it lights where it lands, and the burned ground
+    tongue(g, 4, 16, 5, -1); tongue(g, 7, 16, 3); tongue(g, 13, 16, 3); tongue(g, 16, 16, 5, 1)
+    g.at(2, 16, 'pooOOOOOOOOOoop'); g.at(1, 17, 'PPpppppppppppppPP'); g.at(2, 18, 'QZZZZZZZZZZZZZQ')
+    px(g, [(2, 9), (17, 8), (18, 13), (1, 13)], '3'); px(g, [(3, 6), (16, 5)], '2')
+    return g
+
+
+def counterspell():
+    """A violet rune in its ring, struck through and broken apart, the pieces flying."""
+    g = G(20, 20)
+    arc(g, 10.0, 10.0, 8.6, -175, -40, lambda t: 1.6, 'vX')
+    arc(g, 10.0, 10.0, 8.6, 5, 140, lambda t: 1.6, 'vX')
+    # the rune: a stave with two arms up and one down (old marks)
+    for y in range(4, 16):
+        g.at(9, y, 'Vx')
+    g.at(6, 5, 'V'); g.at(7, 6, 'V'); g.at(8, 7, 'v')
+    g.at(13, 5, 'x'); g.at(12, 6, 'x'); g.at(11, 7, 'x')
+    g.at(11, 12, 'v'); g.at(12, 13, 'x'); g.at(13, 14, 'x')
+    # the break: a white crack across it, the gap open
+    for x, y in ((15, 3), (14, 4), (13, 6), (12, 7), (11, 8), (10, 9), (9, 10), (8, 11), (7, 12), (6, 14), (5, 15)):
+        g.at(x, y, '1')
+    for x, y in ((16, 3), (14, 5), (12, 8), (10, 10), (8, 12), (6, 15)):
+        g.at(x, y, '%')
+    px(g, [(18, 2), (2, 18), (19, 0)], '&'); px(g, [(17, 1), (1, 17)], '%')
+    return g
+
+
+def incinerate():
+    """A skull wreathed in fire, its eye sockets burning."""
+    g = G(20, 20)
+    # flames behind and above
+    flames = {
+        0: (9, 'o'),
+        1: (5, 'o..ro.o'),
+        2: (4, 'rp.rop.or'),
+        3: (3, 'rpprpoprppr'),
+        4: (3, 'rpooppopoopr'),
+        5: (2, 'rppoppppppopr'),
+    }
+    for y, (x, r) in flames.items():
+        g.at(x, y, r)
+    g.at(2, 8, 'r'); g.at(1, 9, 'rp'); g.at(1, 10, 'p'); g.at(2, 11, 'q')
+    g.at(17, 8, 'r'); g.at(17, 9, 'pr'); g.at(18, 10, 'p'); g.at(17, 11, 'q')
+    skull = {
+        5: (6, 'BBBBbbb'),
+        6: (5, 'BBBBbbbbd'),
+        7: (4, 'BBBbbbbbbbd'),
+        8: (4, 'BbbbbbbbbdD'),
+        9: (4, 'BbZZZbZZZdD'),
+        10: (4, 'bbZoZbZoZdD'),
+        11: (4, 'bbZZZbZZZdD'),
+        12: (5, 'bbbbZbbdD'),
+        13: (5, 'dbbZZZbdD'),
+        14: (6, 'dbbbbdD'),
+        15: (6, 'dBdBdBD'),
+        16: (6, 'DZDZDZD'),
+        17: (7, 'DDDDD'),
+    }
+    for y, (x, r) in skull.items():
+        g.at(x, y, r)
+    px(g, [(7, 10), (11, 10)], '3')
+    px(g, [(1, 4), (18, 3), (16, 13), (2, 14)], '3'); px(g, [(14, 0), (3, 1)], '2')
+    return g
+
+
+def bolt(g, pts, core='W', edge='a'):
+    """A jagged bolt through the points: a white core with a pale blue pixel on its lower side."""
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        n = max(abs(x1 - x0), abs(y1 - y0))
+        for i in range(n + 1):
+            x, y = round(x0 + (x1 - x0) * i / n), round(y0 + (y1 - y0) * i / n)
+            g.at(x, y, core)
+            if g.g[y + 1][x] == '.' if y + 1 < 20 else False:
+                g.at(x, y + 1, edge)
+
+
+def chainlightning():
+    """Lightning leaping from one foe to the next: three sparks of light joined by forked bolts."""
+    g = G(20, 20)
+    bolt(g, [(0, 0), (3, 3), (2, 5), (5, 8)])
+    bolt(g, [(5, 8), (8, 6), (9, 9), (12, 7), (14, 9)])
+    bolt(g, [(14, 9), (13, 12), (16, 13), (15, 16)])
+    bolt(g, [(9, 9), (8, 12), (6, 13)], core='A', edge='i')
+    for cx, cy in ((5, 8), (14, 9), (15, 16)):
+        g.at(cx - 1, cy - 1, '4.4'); g.at(cx - 1, cy + 1, '4.4')
+        g.at(cx - 2, cy, '4'); g.at(cx + 2, cy, '4')
+        g.at(cx, cy, '1')
+    px(g, [(18, 3), (1, 12), (17, 19), (10, 2)], '~')
+    return g
+
+
+def scorch():
+    """A seared mark: a blackened burn with a ragged edge still glowing, cracks of fire running
+    out from its heart, a wisp of smoke curling off it."""
+    g = G(20, 20)
+    cx, cy = 9.5, 13.0
+    for y in range(20):
+        for x in range(20):
+            dx, dy = (x + 0.5 - cx) / 9.2, (y + 0.5 - cy) / 4.8
+            a = math.atan2(dy, dx)
+            e = math.hypot(dx, dy) / (1 + 0.15 * math.sin(5 * a + 0.6) + 0.09 * math.sin(8 * a + 2.0))
+            if e <= 1:
+                g.at(x, y, ('o' if dy < -0.25 else 'p') if e > 0.8 else 'P' if e > 0.6 else 'Z')
+    # cracks of fire out from the heart, uneven
+    for pts in (((9, 13), (8, 13), (7, 12), (5, 12)), ((10, 13), (11, 12), (12, 12), (14, 11)),
+                ((10, 13), (11, 14), (13, 14), (14, 15)), ((9, 13), (8, 14), (7, 15))):
+        for i, (x, y) in enumerate(pts):
+            if g.g[y][x] in 'ZQ':
+                g.at(x, y, 'o' if i < 2 else 'p')
+    g.at(9, 13, 'OO')
+    # a wisp of smoke curling up off it
+    for x, y in ((11, 8), (12, 7), (12, 6), (11, 5), (10, 4), (10, 3), (11, 2), (12, 1)):
+        g.at(x, y, 't')
+    g.at(12, 6, 's'); g.at(10, 3, 's')
+    px(g, [(4, 6), (16, 5), (7, 3), (17, 9)], '3'); px(g, [(2, 9), (15, 2)], '2')
+    return g
+
+
+def pyroblast():
+    """A great ball of fire, rolling with flame, filling the hand that throws it."""
+    g = G(20, 20)
+    blob(g, 11.0, 9.0, 7.6, 7.6, fireball)
+    # flame tongues trailing to the bottom-left, swirls in the ball
+    g.at(2, 13, 'pp'); g.at(1, 14, 'pP'); g.at(3, 15, 'pP'); g.at(2, 16, 'P'); g.at(5, 17, 'pP'); g.at(4, 18, 'P')
+    g.at(1, 11, 'p'); g.at(7, 18, 'p'); g.at(0, 15, 'p')
+    arc(g, 11.0, 9.0, 5.0, 20, 110, lambda t: 1.0, 'o')
+    arc(g, 11.0, 9.0, 3.4, 200, 290, lambda t: 1.0, 'O')
+    g.at(8, 5, 'WW'); g.at(8, 6, 'W')
+    px(g, [(19, 2), (18, 0), (4, 2), (19, 16), (1, 6)], '3'); px(g, [(17, 1), (2, 4)], '2')
+    return g
+
+
+def frostnova():
+    """A ring of ice spikes bursting outward from where you stand, frost on the ground between."""
+    g = G(20, 20)
+    blob(g, 10.0, 10.0, 3.0, 3.0, lambda nx, ny, e: 'A' if nx + ny < -0.3 else 'a' if e < 0.7 else 'i')
+    for k in range(8):
+        a = math.radians(k * 45 - 90)
+        ux, uy = math.cos(a), math.sin(a)
+        for y in range(20):
+            for x in range(20):
+                dx, dy = x + 0.5 - 10.0, y + 0.5 - 10.0
+                along = dx * ux + dy * uy
+                across = -dx * uy + dy * ux
+                tip = 9.8 if k % 2 == 0 else 8.6
+                if 3.0 <= along <= tip and abs(across) <= 1.6 * (tip - along) / (tip - 3.0) + 0.3:
+                    lit = (-ux - uy) * 0.7 + (across * (uy - ux)) * 0.6
+                    g.at(x, y, 'W' if along > tip - 1.2 else 'A' if lit > 0.4 else 'a' if lit > -0.3 else 'i')
+    g.at(10, 10, 'W')
+    for x, y in ((5, 2), (14, 2), (2, 5), (17, 5), (2, 14), (17, 14), (5, 17), (14, 17)):
+        g.at(x, y, '~')
+    return g
+
+
+def icyveins():
+    """An open hand turned to ice, its veins dark blue under frosted skin, frost at the fingertips."""
+    g = G(20, 20)
+    hand = {
+        2: (8, 'Aa'),
+        3: (5, 'Aa.Aai.Aa'),
+        4: (5, 'Aai.Aai.Aai'),
+        5: (5, 'Aai.Aai.Aai'),
+        6: (5, 'Aai.Aai.Aai'),
+        7: (5, 'AaiAAaiAAai'),
+        8: (2, 'A..AAaaaaaaaaai'),
+        9: (2, 'Aa.Aaaaaaaaaaai'),
+        10: (2, 'AaAAaaaaaaaaaii'),
+        11: (3, 'AaAaaaaaaaaaii'),
+        12: (4, 'AAaaaaaaaaaai'),
+        13: (5, 'Aaaaaaaaaaii'),
+        14: (6, 'Aaaaaaaaii'),
+        15: (7, 'Aaaaaaai'),
+        16: (7, 'Aaaaaaii'),
+        17: (7, 'Aaaaaaii'),
+        18: (7, 'Aaaaaiii'),
+        19: (7, 'aaaaaiii'),
+    }
+    for y, (x, r) in hand.items():
+        g.at(x, y, r)
+    g.at(14, 3, 'Aa'); g.at(16, 4, 'i')
+    # the veins: up the wrist, branching into the palm and the fingers
+    for x, y in ((10, 19), (10, 18), (10, 17), (10, 16), (9, 15), (9, 14), (8, 13), (7, 12), (6, 11), (4, 10),
+                 (11, 15), (12, 14), (12, 13), (13, 12), (14, 11), (14, 10), (14, 9),
+                 (9, 13), (10, 12), (10, 11), (10, 10), (10, 9), (10, 8), (10, 7), (9, 6),
+                 (8, 12), (7, 10), (6, 9), (6, 8), (6, 7)):
+        g.at(x, y, 'I')
+    px(g, [(6, 1), (9, 0), (13, 1), (16, 2), (1, 6)], '~'); px(g, [(11, 1), (4, 2), (18, 6)], '1')
+    return g
+
+
+FIGURE = [  # a hooded figure in a robe, 7 wide (the sorceress, seen in the blink and the barrier)
+    '..XXX..',
+    '.Xvvvx.',
+    '.XvZZx.',
+    '.XvZZx.',
+    '..vxx..',
+    '.vvvxx.',
+    'vvVvxxX',
+    'vvVvxxX',
+    '.vVvxx.',
+    '.vVvxX.',
+    'vvVvxxX',
+    'vvvvxxX',
+]
+
+
+def blink():
+    """The sorceress gone in a blink: her outline left behind in violet sparks, herself stepped
+    out again a little way back, light still clinging to her."""
+    g = G(20, 20)
+    for i, r in enumerate(FIGURE):
+        g.at(1, 7 + i, r)
+    # the outline she left, every edge pixel a spark
+    for i, r in enumerate(FIGURE):
+        for j, c in enumerate(r):
+            if c == '.':
+                continue
+            edge = any(not (0 <= i + di < len(FIGURE) and 0 <= j + dj < 7) or FIGURE[i + di][j + dj] == '.'
+                       for di, dj in ((-1, 0), (1, 0), (0, -1), (0, 1)))
+            if edge:
+                g.at(12 + j, 2 + i, '%' if (i + j) % 2 == 0 else '&')
+            elif (i * 3 + j) % 7 == 0:
+                g.at(12 + j, 2 + i, '&')
+    # motes streaming from there to here
+    px(g, [(10, 6), (9, 9), (11, 11), (8, 4)], '%'); px(g, [(10, 13), (11, 8), (9, 2)], '&')
+    px(g, [(0, 6), (8, 8)], '%')
+    return g
+
+
+def barrier():
+    """A bubble of violet-white light round the sorceress, a gleam on its curve."""
+    g = G(20, 20)
+    arc(g, 10.0, 10.0, 9.4, -180, 180, lambda t: 1.4, 'vx')
+    for y in range(20):
+        for x in range(20):
+            if g.g[y][x] == 'v' and x + y > 22:
+                g.g[y][x] = 'x'
+            elif g.g[y][x] == 'x' and x + y > 24:
+                g.g[y][x] = 'X'
+    arc(g, 10.0, 10.0, 7.6, -175, -105, lambda t: 1.0, 'V')
+    g.at(4, 6, 'W'); g.at(5, 4, 'W')
+    for i, r in enumerate(FIGURE):
+        g.at(7, 5 + i, r)
+    arc(g, 10.0, 10.0, 8.0, 0, 90, lambda t: 1.0, '%', under=True)
+    return g
+
 ICONS = {
     'thrust': thrust, 'slash': slash, 'rend': rend, 'whirlwind': whirlwind, 'warcry': warcry,
     'charge': charge, 'interrupt': interrupt, 'mortal': mortal, 'mount': mount,
@@ -831,6 +1240,10 @@ ICONS = {
     'mark': mark, 'volley': volley, 'silence': silence, 'killshot': killshot, 'pierce': pierce,
     'rapidfire': rapidfire, 'deadeye': deadeye, 'beartrap': beartrap, 'predator': predator,
     'disengage': disengage, 'camouflage': camouflage,
+    'spark': spark, 'firebolt': firebolt, 'ignite': ignite, 'frostbolt': frostbolt, 'arcanepower': arcanepower,
+    'flamestrike': flamestrike, 'counterspell': counterspell, 'incinerate': incinerate,
+    'chainlightning': chainlightning, 'scorch': scorch, 'pyroblast': pyroblast, 'frostnova': frostnova,
+    'icyveins': icyveins, 'blink': blink, 'barrier': barrier,
 }
 
 if __name__ == '__main__':

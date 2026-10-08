@@ -15,6 +15,10 @@ icons = {'meat': MEAT_ICON, 'cooked_meat': craftart.COOKED_ICON, 'log': LOG_ICON
 import items3
 pals.update({k: v[1] for k, v in items3.ICONS.items()})
 icons.update({k: v[0].rows() for k, v in items3.ICONS.items()})
+# the sorceress's staves, grimoire and orb (sorcery.py)
+import sorcery
+pals.update({k: v[1] for k, v in sorcery.ICONS.items()})
+icons.update({k: v[0].rows() for k, v in sorcery.ICONS.items()})
 # the courier's dispatch bag: a leather satchel, drawn like the backpack
 pals['dispatch_bag'] = BACKPACK_PAL
 icons['dispatch_bag'] = backpack().rows()
