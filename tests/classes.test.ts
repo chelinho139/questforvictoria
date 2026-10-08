@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Game } from '../src/sim/Game';
 import type { Hero } from '../src/sim/Hero';
+import { STAFF_MANA } from '../src/sim/Hero';
 import { CLASSES, CLASS_IDS } from '../src/data/classes';
 import type { ClassId } from '../src/data/classes';
 import { TALENTS, TREES, treesOf, TIERS, COLS, MAX_LEVEL, xpToNext } from '../src/data/talents';
@@ -386,6 +387,24 @@ test('a sorceress stands still to cast, and her bolts fly', () => {
   assert.equal(e.hp, hp, 'not yet');
   run(game, 0.6);
   assert.ok(e.hp < hp, 'now');
+});
+
+test("her staff's bolts draw mana back as they land; an archer's arrows don't", () => {
+  const drawn = (cls: ClassId) => {
+    const { game, h } = hero(cls);
+    game.cheats.freezeEnemies = true;
+    const e = foe(h, 'ogre', 150);
+    h.setTarget(e);
+    h.mp = 0;
+    const hp = e.hp;
+    // two staff bolts (or arrows) and no spells: only the hits and the slow regen of a fight
+    run(game, 3.6);
+    return { mp: h.mp, hit: e.hp < hp };
+  };
+  const s = drawn('sorceress');
+  const a = drawn('archer');
+  assert.ok(s.hit && a.hit, 'both landed');
+  assert.ok(s.mp >= a.mp + 2 * STAFF_MANA - 0.01, `${s.mp} vs ${a.mp}`);
 });
 
 test('without a staff she cannot cast', () => {

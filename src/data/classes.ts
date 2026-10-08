@@ -81,13 +81,14 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     many: 'sorceresses',
     blurb: 'Fire, frost and lightning from a staff.',
     about:
-      'Fights from a distance with a staff and stands still to cast: bolts of fire and frost fly to their mark, flames fall on crowds and lightning leaps between foes. The lightest of the three, with no shield. Learns Fire, Frost and Arcane talents.',
+      'Fights from a distance with a staff and stands still to cast: bolts of fire and frost fly to their mark, flames fall on crowds and lightning leaps between foes. Every bolt of her staff that lands draws mana back. The lightest of the three, with no shield. Learns Fire, Frost and Arcane talents.',
     // the lightest: she pays for her reach and her crowds in health
     hp: 125,
     // her spells are her weapon: the most mana, and it grows fastest
     mp: 50,
     mpLevel: 10,
-    aa: { range: 200, period: 1.7, dmg: 4, ranged: true },
+    // a weaker blow than an arrow, but each one that lands gives back mana (STAFF_MANA)
+    aa: { range: 200, period: 1.7, dmg: 3, ranged: true },
     starter: { weapon: 'gnarled_staff', legs: 'cloth_trousers' },
     presets: {
       mobs: ['frostbolt', 'spark', 'firebolt', 'flamestrike'],
