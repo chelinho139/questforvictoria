@@ -30,6 +30,7 @@ import { AIM_HOLD, AA_HOLD } from '../data/classes';
 import { keepNames } from '../i18n';
 import { Rival, RIVAL_TARGET } from '../sim/Duel';
 import type { DuelView, DuelFlag } from '../sim/Duel';
+import type { TradeView } from '../sim/Trade';
 
 /** A structure in a snapshot: id, kind, tile, seconds left (-1: for good), put out, how far smothered. */
 type StructureSnap = [number, StructureKind, number, number, number, number, number];
@@ -66,6 +67,8 @@ export class NetSim extends Sim {
   private duelNow: DuelView | null = null;
   private flagsHere: DuelFlag[] = [];
   private rivalNow: Rival | null = null;
+  /** My trade as the server last told it. */
+  private tradeNow: TradeView | null = null;
 
   constructor(
     private readonly conn: Connection,
@@ -209,6 +212,7 @@ export class NetSim extends Sim {
     this.syncHeroes(R, t.hs);
     if (t.du !== undefined) this.duelNow = t.du;
     if (t.dl) this.flagsHere = t.dl;
+    if (t.tv !== undefined) this.tradeNow = t.tv;
     this.syncRival();
     h.target =
       me.target === RIVAL_TARGET
@@ -738,6 +742,28 @@ export class NetSim extends Sim {
   }
   override quitDuel(): void {
     this.cmd('duelQuit');
+  }
+  // trades: the server's, as the snapshots tell them
+  override get trading(): TradeView | null {
+    return this.tradeNow;
+  }
+  override askTrade(o: Hero): void {
+    this.cmd('tradeAsk', [o.id]);
+  }
+  override acceptTrade(): void {
+    this.cmd('tradeAccept');
+  }
+  override quitTrade(): void {
+    this.cmd('tradeQuit');
+  }
+  override tradeItem(id: ItemId, n: number): void {
+    this.cmd('tradeItem', [id, n]);
+  }
+  override tradeGold(n: number): void {
+    this.cmd('tradeGold', [n]);
+  }
+  override tradeReady(on: boolean): void {
+    this.cmd('tradeReady', [on]);
   }
   override cycleTarget(): void {
     this.cmd('cycleTarget');

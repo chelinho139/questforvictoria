@@ -109,6 +109,13 @@ export const COMMANDS: Record<string, Command> = {
     const r = h.rival;
     if (r && r.alive && !r.hid) h.setTarget(r);
   },
+  // trading with another hero (sim/Trade.ts: the trade checks who, where, what and how much)
+  tradeAsk: (h, [id]) => str(id) && h.game.trades.ask(h, id),
+  tradeAccept: h => h.game.trades.accept(h),
+  tradeQuit: h => h.game.trades.quit(h),
+  tradeItem: (h, [id, n]) => isItem(id) && int(n, 0, 99999) && h.game.trades.setItem(h, id, n),
+  tradeGold: (h, [n]) => int(n, 0, 1e9) && h.game.trades.setGold(h, n),
+  tradeReady: (h, [on]) => bool(on) && h.game.trades.setReady(h, on),
 };
 
 /** Dev commands: only in rooms opened with the dev tools on (the server's choice). */

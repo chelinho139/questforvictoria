@@ -2,16 +2,22 @@ import type { Sim } from '../../sim/Sim';
 import type { Hero } from '../../sim/Hero';
 import type { DuelView } from '../../sim/Duel';
 import { DUEL_ASK, DUEL_COUNT, DUEL_OUT, DUEL_REACH } from '../../sim/Duel';
+import { TRADE_REACH } from '../../sim/Trade';
 import { CLASSES } from '../../data/classes';
 
 type Button = { label: string; cls?: string; act: () => void };
 
+/** Seconds the Yield button waits for its second click before it's just Yield again. */
+const YIELD_SURE = 3;
+
 /**
  * Duels on the screen. Click another player and their card opens: their name, class and level,
- * the duels they have won and lost, and Challenge to a duel. While a duel is on, a bar across
- * the top says where it stands: a challenge to answer (Accept / Decline, and the time running
- * out), one you made (Take back), the count (Back out), the fight (Yield), and a warning while
- * you are too far from the flag.
+ * the duels they have won and lost, Challenge to a duel, and Trade (PlayerTradeWindow takes it
+ * from there). While a duel is on, a bar across the top says where it stands: a challenge to
+ * answer (Accept / Decline, and the time running out), one you made (Take back), the count
+ * (Back out). Once the fight is on it steps out of the way, to a small plate on the left under
+ * the frames: who you fight, a warning while you are too far from the flag, and Yield (which
+ * asks again before it gives the duel away).
  */
 export class DuelWindow {
   private readonly card: HTMLDivElement;
@@ -20,6 +26,7 @@ export class DuelWindow {
   private readonly cardTally: HTMLElement;
   private readonly cardWhy: HTMLElement;
   private readonly cardGo: HTMLButtonElement;
+  private readonly cardTrade: HTMLButtonElement;
   private readonly bar: HTMLDivElement;
   private readonly barText: HTMLElement;
   private readonly barTime: HTMLElement;
@@ -31,6 +38,8 @@ export class DuelWindow {
   /** What the bar and the card show now (only a change touches the page). */
   private barKey = '';
   private cardKey = '';
+  /** Yield was clicked once: until this time (performance.now, ms) a second click gives up the fight. */
+  private yieldUntil = 0;
   private readonly onKey = (e: KeyboardEvent) => {
     if (e.key === 'Escape' && this.who) this.closeCard();
   };
@@ -48,7 +57,7 @@ export class DuelWindow {
     card.hidden = true;
     card.innerHTML = `<header><b translate="no"></b><span></span></header>
       <p class="duel-tally"></p><p class="duel-why"></p>
-      <div class="duel-choices"><button type="button" class="duel-go">Challenge to a duel</button><button type="button" class="bye">Close</button></div>
+      <div class="duel-choices"><button type="button" class="duel-go">Challenge to a duel</button><button type="button" class="new duel-trade">Trade</button><button type="button" class="bye">Close</button></div>
       <button type="button" class="inv-x" title="Close (Esc)">×</button>`;
     this.cardName = card.querySelector('header b')!;
     this.cardSub = card.querySelector('header span')!;
@@ -57,6 +66,11 @@ export class DuelWindow {
     this.cardGo = card.querySelector('.duel-go')!;
     this.cardGo.addEventListener('click', () => {
       if (this.who) this.sim.challenge(this.who);
+      this.closeCard();
+    });
+    this.cardTrade = card.querySelector('.duel-trade')!;
+    this.cardTrade.addEventListener('click', () => {
+      if (this.who) this.sim.askTrade(this.who);
       this.closeCard();
     });
     card.querySelector('.bye')!.addEventListener('click', () => this.closeCard());
@@ -81,6 +95,13 @@ export class DuelWindow {
 
   get isOpen(): boolean {
     return this.who !== null;
+  }
+
+  /** How far down the page the bar at the top reaches (page px; 0 while it's away or on the side). */
+  get barBottom(): number {
+    if (this.bar.hidden || this.bar.classList.contains('fight')) return 0;
+    const r = this.bar.getBoundingClientRect();
+    return r.bottom;
   }
 
   /** A click on another player: your duel opponent becomes your target; anyone else shows their card. */
@@ -129,7 +150,8 @@ export class DuelWindow {
     const left = Math.ceil(d.t);
     const warn = d.st === 'fight' && d.out > 0 ? Math.max(0, Math.ceil(DUEL_OUT - d.out)) : 0;
     // the buttons only change with the state; the clock and the warning change as they run
-    const key = `${d.st}:${d.mine}:${d.name}`;
+    const sure = d.st === 'fight' && performance.now() < this.yieldUntil;
+    const key = `${d.st}:${d.mine}:${d.name}:${sure}`;
     if (key !== this.barKey) {
       this.barKey = key;
       this.bar.className = 'duel-bar';
@@ -151,7 +173,22 @@ export class DuelWindow {
             ? [{ label: 'Take back', cls: 'bye', act: () => this.sim.quitDuel() }]
             : d.st === 'count'
               ? [{ label: 'Back out', cls: 'bye', act: () => this.sim.quitDuel() }]
-              : [{ label: 'Yield', cls: 'bye', act: () => this.sim.quitDuel() }]
+              : [
+                  sure
+                    ? {
+                        label: 'Sure? Yield',
+                        cls: 'duel-go',
+                        act: () => {
+                          this.yieldUntil = 0;
+                          this.sim.quitDuel();
+                        },
+                      }
+                    : {
+                        label: 'Yield',
+                        cls: 'bye',
+                        act: () => (this.yieldUntil = performance.now() + YIELD_SURE * 1000),
+                      },
+                ]
       );
     }
     this.barTime.textContent =
@@ -177,14 +214,16 @@ export class DuelWindow {
     );
   }
 
-  /** The card: closed once they are gone; the challenge greyed (and why) while it can't be made. */
+  /** The card: closed once they are gone; the challenge and the trade greyed (and why) while they can't be made. */
   private updateCard(): void {
     const o = this.who;
     if (!o) return;
     const s = this.sim;
     if (!s.others.includes(o)) return this.closeCard();
     const d = s.duel;
-    const why = d
+    const t = s.trading;
+    const far = s.dist(s.hero, o);
+    const duelWhy = d
       ? d.id === o.id
         ? d.st === 'ask' && !d.mine
           ? `${o.name} has challenged you: answer at the top.`
@@ -192,10 +231,32 @@ export class DuelWindow {
         : "You're in a duel already."
       : o.dead > 0
         ? `${o.name} is down.`
-        : s.dist(s.hero, o) > DUEL_REACH
+        : far > DUEL_REACH
           ? 'Come closer to challenge them.'
           : '';
-    const key = `${o.name}:${o.level}:${o.cls}:${o.duelsWon}:${o.duelsLost}:${why}`;
+    const tradeWhy =
+      d && d.st !== 'ask'
+        ? ''
+        : t
+          ? t.id === o.id
+            ? t.st === 'ask' && !t.mine
+              ? `${o.name} wants to trade: answer at the top.`
+              : t.st === 'ask'
+                ? `Waiting for ${o.name} to answer.`
+                : `You are trading with ${o.name}.`
+            : "You're trading with someone else."
+          : o.dead > 0
+            ? `${o.name} is down.`
+            : far > TRADE_REACH
+              ? 'Come closer to trade.'
+              : '';
+    const tradeOff = !!tradeWhy || (!!d && d.st !== 'ask');
+    // one line for both when they say the same (down, too far)
+    const why =
+      duelWhy === 'Come closer to challenge them.' && tradeWhy === 'Come closer to trade.'
+        ? 'Come closer to challenge or trade.'
+        : [...new Set([duelWhy, tradeWhy].filter(Boolean))].join(' ');
+    const key = `${o.name}:${o.level}:${o.cls}:${o.duelsWon}:${o.duelsLost}:${why}:${tradeOff}`;
     if (key === this.cardKey) return;
     this.cardKey = key;
     this.cardName.textContent = o.name;
@@ -206,7 +267,8 @@ export class DuelWindow {
         : 'No duels fought yet.';
     this.cardWhy.textContent = why;
     this.cardWhy.hidden = !why;
-    this.cardGo.disabled = !!why;
+    this.cardGo.disabled = !!duelWhy;
+    this.cardTrade.disabled = tradeOff;
   }
 
   destroy(): void {

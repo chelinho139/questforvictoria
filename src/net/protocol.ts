@@ -13,7 +13,8 @@
  *   leave   take me out of my room
  *   move    where my hero is now (20 a second while it moves; my browser walks it)
  *   cmd     do this (a command from the whitelist in net/commands.ts, with its arguments;
- *           duels too: challenge, accept, quit, target my opponent)
+ *           duels too: challenge, accept, quit, target my opponent; and trades: ask,
+ *           accept, quit, put an item or gold on the table, accept the table)
  *   ping    are you there (the answer gives the round trip)
  *
  * Server → browser
@@ -32,6 +33,7 @@ import type { ClassId } from '../data/classes';
 import type { Difficulty } from '../data/difficulty';
 import type { Work } from '../sim/types';
 import type { DuelView, DuelFlag } from '../sim/Duel';
+import type { TradeView } from '../sim/Trade';
 
 /** Bump when a message changes shape: the server turns away a browser that speaks another. */
 export const PROTOCOL = 8;
@@ -159,6 +161,8 @@ export interface Tick {
   du?: DuelView | null;
   /** The duels with a flag in my region (when they change). */
   dl?: DuelFlag[];
+  /** My trade, or the request I made or was made (null: none), when it changes. */
+  tv?: TradeView | null;
   ev?: NetEvent[];
 }
 
