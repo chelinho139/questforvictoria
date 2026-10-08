@@ -388,6 +388,27 @@ test('a sorceress stands still to cast, and her bolts fly', () => {
   assert.ok(e.hp < hp, 'now');
 });
 
+test('Clarity: more mana back in a fight, open from the first tier', () => {
+  const regain = (ranks: number) => {
+    const { game, h } = hero('sorceress', 4);
+    for (let i = 0; i < ranks; i++) assert.ok(h.learnTalent('clarity'), 'no points in Arcane needed');
+    game.cheats.freezeEnemies = true;
+    const e = foe(h, 'ogre', 150);
+    h.setTarget(e);
+    // it is after her (so the fight goes on), and no staff bolts: only the regen of a fight
+    e.aggro = true;
+    e.foe = h.id;
+    h.aaT = 99;
+    h.combatT = 99;
+    h.mp = 0;
+    run(game, 4);
+    return h.mp;
+  };
+  const none = regain(0);
+  const three = regain(3);
+  assert.ok(Math.abs(three - none - 4 * 0.75) < 0.05, `${none} → ${three}`);
+});
+
 test('without a staff she cannot cast', () => {
   const { h } = hero('sorceress');
   const e = foe(h, 'cow', 150);

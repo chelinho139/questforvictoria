@@ -3091,7 +3091,7 @@ export class Hero implements Foe {
     // nothing fighting you: the fight is over (a duel's blows keep it going on their own)
     if (this.combatT > OUT_OF_COMBAT && !this.region.enemies.some(e => e.alive && e.aggro && e.foe === this.id))
       this.combatT = OUT_OF_COMBAT;
-    this.mp = Math.min(this.mpMax, this.mp + (this.combatT > 0 ? MANA_COMBAT : MANA_REST) * dt);
+    this.mp = Math.min(this.mpMax, this.mp + (this.combatT > 0 ? MANA_COMBAT + this.tal.manaRegen : MANA_REST) * dt);
     if (this.tal.regen && !this.dead && this.hp < this.hpMax)
       this.hp = Math.min(this.hpMax, this.hp + this.tal.regen * dt);
     this.lastWardenCd = Math.max(0, this.lastWardenCd - dt);

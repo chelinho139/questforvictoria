@@ -144,6 +144,7 @@ export interface TalentFx {
   killHeal: number; // health per kill
   food: number;
   regen: number; // health per second
+  manaRegen: number; // mana per second in a fight, over MANA_COMBAT
   intCd: number;
   intStun: number;
   prospect: number; // chance of an extra log or ore
@@ -206,6 +207,7 @@ export const NO_FX: TalentFx = {
   killHeal: 0,
   food: 0,
   regen: 0,
+  manaRegen: 0,
   intCd: 0,
   intStun: 0,
   prospect: 0,
@@ -1438,15 +1440,15 @@ Object.assign(TALENTS, {
   fortitude: T('arcane', 'Fortitude', 'icon:heart', 0, 1, 5, r => `${10 * r} more maximum health.`, {
     hp: 10,
   }),
-  woodwise: T(
+  clarity: T(
     'arcane',
-    'Woodwise',
-    'item:woodcutter_axe',
+    'Clarity',
+    'item:crystal_orb',
     0,
     2,
     3,
-    r => `Chop and mine ${15 * r}% faster.`,
-    { gather: 0.15 }
+    r => `Regain ${(0.25 * r).toFixed(2)} more mana every second in a fight.`,
+    { manaRegen: 0.25 }
   ),
   firestorm: T(
     'arcane',
@@ -1477,9 +1479,8 @@ Object.assign(TALENTS, {
     2,
     2,
     r =>
-      `${20 * r}% chance of an extra log when a tree falls, and of extra ore when a rock breaks.`,
-    { prospect: 0.2 },
-    { requires: 'woodwise' }
+      `Chop and mine ${15 * r}% faster, with a ${20 * r}% chance of an extra log when a tree falls and of extra ore when a rock breaks.`,
+    { prospect: 0.2, gather: 0.15 }
   ),
   blink: T(
     'arcane',

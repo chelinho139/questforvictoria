@@ -332,7 +332,6 @@
   "Shimmer": "Destello",
   "{0} chance for a blow to pass through you.": "{0} de probabilidad de que un golpe te atraviese sin tocarte.",
   "Fortitude": "Fortaleza",
-  "Woodwise": "Saber del bosque",
   "Firestorm": "Tormenta de fuego",
   "Flamestrike deals {0} more damage and covers {1} wider.": "Columna de llamas inflige {0} de daño adicional y cubre un área {1} más amplia.",
   "Soul Harvest": "Cosecha de almas",
@@ -383,5 +382,8 @@
   "target < 25% and close · 20 s": "objetivo < 25% y cerca · 20 s",
   "Revive": "Revivir",
   "a fallen friend · 8 s still": "un amigo caído · 8 s quieto",
-  "target < 25% · far · 20 s": "objetivo < 25% · a distancia · 20 s"
+  "target < 25% · far · 20 s": "objetivo < 25% · a distancia · 20 s",
+  "Clarity": "Claridad",
+  "Regain {0} more mana every second in a fight.": "Recuperas {0} de maná más por segundo en combate.",
+  "Chop and mine {0}% faster, with a {1}% chance of an extra log when a tree falls and of extra ore when a rock breaks.": "Talas y minas un {0}% más rápido, con un {1}% de probabilidad de un tronco extra cuando cae un árbol y de mineral extra cuando se rompe una roca."
 }

@@ -66,8 +66,8 @@ The same shape as the warrior's and the archer's: three trees of five tiers, a t
 - Capstone: **Icy Veins**
 
 **Arcane** (the old craft; mirrors Ranger)
-- Tier 1: Shimmer (3% chance for a blow to pass through ×5) · Fortitude (+10 health ×5) · Woodwise (gather 15% faster ×3)
-- Tier 2: Firestorm (Flamestrike +2 and +5 wider ×3) · Soul Harvest (+5 health a kill ×3) · Stonereader (extra logs and ore ×2, needs Woodwise)
+- Tier 1: Shimmer (3% chance for a blow to pass through ×5) · Fortitude (+10 health ×5) · **Clarity** (+0.25 mana a second in a fight ×3)
+- Tier 2: Firestorm (Flamestrike +2 and +5 wider ×3) · Soul Harvest (+5 health a kill ×3) · Stonereader (gather 15% faster, and extra logs and ore ×2)
 - Tier 3: **Blink** (needs Shimmer) · Meditation (+0.5 health a second ×2) · Hearth Witch (food heals 25% more ×2)
 - Tier 4: Inferno (Flamestrike −6 s, needs Firestorm) · Spellbreaker (Counterspell −4 s, +0.5 s stun ×2) · Wayfarer (+5% speed, mount sooner ×2)
 - Capstone: **Arcane Barrier**
@@ -136,3 +136,5 @@ The bands: for each pair, average time between 0.95 and 1.10 and average cost be
 - **The hero:** `src/sim/Hero.ts` (`ranged`, `hasStaff`, `loose` flying bolts, `chain`, Frost Nova, Blink, the auto-cast).
 - **Screens:** `src/phaser/ui/NewCharacter.ts` (three classes); the HUD, spellbook, talent window and shops show your class's things.
 - **Tests:** `tests/classes.test.ts` (her rules), `tests/balance.test.ts` and `tests/fight.ts` (fairness), `tests/sounds.test.ts` (her sounds), `tests/i18n.test.ts` (her Spanish).
+
+**Clarity.** Boss fights are long and a sorceress at level 7 ran dry about 25 s into the Bell-Ringer. Arcane's first tier now offers **Clarity** (3 ranks: +0.25 mana a second in a fight each, so 0.75 becomes up to 1.5), open to any sorceress from level 2 as it needs no points in the tree. It takes the place of Woodwise, whose faster chopping and mining moved into Stonereader (which no longer needs it). Over a two-and-a-half-minute fight three ranks are about 110 more mana, nine or so more spells, paid for with three points not spent on damage or health; the balance bots don't take it.
