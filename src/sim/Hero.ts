@@ -15,6 +15,8 @@ import {
   TIER_POINTS,
   MAX_LEVEL,
   HP_PER_LEVEL,
+  MP_BASE,
+  MP_PER_LEVEL,
   XP_FOR,
   xpToNext,
 } from '../data/talents';
@@ -2628,6 +2630,8 @@ export class Hero implements Foe {
       this.hp = Math.min(max, Math.round((this.hp * max) / Math.max(1, this.hpMax)));
       this.hpMax = max;
     }
+    this.mpMax = MP_BASE + MP_PER_LEVEL * (this.level - 1);
+    this.mp = Math.min(this.mp, this.mpMax);
   }
 
   /** Dev: a random item pops out a few steps away (walk over it to pick it up). */

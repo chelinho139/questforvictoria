@@ -281,6 +281,8 @@ export interface FightResult {
   time: number;
   /** Health lost, as a share of the hero's maximum. */
   hpLost: number;
+  /** The least mana the hero had, as a share of the most. */
+  mpLow: number;
   died: boolean;
 }
 
@@ -341,14 +343,15 @@ function fightNow(
   });
   const hp0 = h.hpMax;
   let low = h.hp;
+  let mpLow = h.mp;
   let t = 0;
   let pathT = 0;
   const maxT = opts.maxT ?? 240;
   const dt = 0.05;
   while (t < maxT) {
     const alive = list.filter(e => e.alive);
-    if (!alive.length) return { won: true, time: t, hpLost: (hp0 - low) / hp0, died: false };
-    if (h.dead) return { won: false, time: t, hpLost: 1, died: true };
+    if (!alive.length) return { won: true, time: t, hpLost: (hp0 - low) / hp0, died: false, mpLow: mpLow / h.mpMax };
+    if (h.dead) return { won: false, time: t, hpLost: 1, died: true, mpLow: mpLow / h.mpMax };
     const tg = alive.reduce((a, b) => (h.dist(h, a) <= h.dist(h, b) ? a : b));
     if (h.target !== tg) h.setTarget(tg);
     const d = h.dist(h, tg);
@@ -435,9 +438,10 @@ function fightNow(
     }
     game.tick(dt);
     low = Math.min(low, h.hp);
+    mpLow = Math.min(mpLow, h.mp);
     t += dt;
   }
-  return { won: false, time: maxT, hpLost: (hp0 - low) / hp0, died: false };
+  return { won: false, time: maxT, hpLost: (hp0 - low) / hp0, died: false, mpLow: mpLow / h.mpMax };
 }
 
 /** Use the first of these that can be used now (spells on the global cooldown wait for it). */

@@ -82,9 +82,9 @@ export interface ActionDef {
 }
 
 export const SKILLS: Record<SkillKey, SkillDef> = {
-  thrust: { n: 'Thrust', d: 5, c: 4, cd: 6, col: '#d3dcea', range: 56, desc: '5 dmg · 6 s' },
-  slash: { n: 'Slash', d: 8, c: 5, cd: 9, col: '#ff8c42', range: 56, desc: '8 · combo · 9 s' },
-  rend: { n: 'Rend', d: 3, c: 10, cd: 15, col: '#e0504b', range: 56, desc: '3 + bleed 8 s · 15 s' },
+  thrust: { n: 'Thrust', d: 5, c: 8, cd: 6, col: '#d3dcea', range: 56, desc: '5 dmg · 6 s' },
+  slash: { n: 'Slash', d: 8, c: 10, cd: 9, col: '#ff8c42', range: 56, desc: '8 · combo · 9 s' },
+  rend: { n: 'Rend', d: 3, c: 12, cd: 15, col: '#e0504b', range: 56, desc: '3 + bleed 8 s · 15 s' },
   whirlwind: { n: 'Whirlwind', d: 7, c: 20, cd: 14, col: '#3ddbd9', range: 0, aoe: 84, desc: '7 AoE · 14 s' },
   warcry: { n: 'War Cry', d: 0, c: 15, cd: 40, col: '#f2c14e', range: 0, desc: '+20% 15 s · 40 s' },
   charge: { n: 'Charge', d: 4, c: 10, cd: 20, col: '#a78bfa', range: 230, desc: '4 + stun · far · 20 s' },
@@ -92,7 +92,7 @@ export const SKILLS: Record<SkillKey, SkillDef> = {
   quickshot: {
     n: 'Quick Shot',
     d: 5,
-    c: 4,
+    c: 8,
     cd: 6,
     col: '#d3dcea',
     range: 220,
@@ -102,7 +102,7 @@ export const SKILLS: Record<SkillKey, SkillDef> = {
   aimedshot: {
     n: 'Aimed Shot',
     d: 8,
-    c: 5,
+    c: 10,
     cd: 9,
     col: '#ff8c42',
     range: 220,
@@ -112,7 +112,7 @@ export const SKILLS: Record<SkillKey, SkillDef> = {
   barbed: {
     n: 'Barbed Arrow',
     d: 3,
-    c: 10,
+    c: 12,
     cd: 15,
     col: '#e0504b',
     range: 220,
@@ -153,7 +153,7 @@ export const SKILLS: Record<SkillKey, SkillDef> = {
   spark: {
     n: 'Spark',
     d: 5,
-    c: 4,
+    c: 8,
     cd: 6,
     col: '#ffd27a',
     range: 220,
@@ -163,7 +163,7 @@ export const SKILLS: Record<SkillKey, SkillDef> = {
   firebolt: {
     n: 'Firebolt',
     d: 8,
-    c: 5,
+    c: 10,
     cd: 9,
     col: '#ff7a3a',
     range: 220,
@@ -173,7 +173,7 @@ export const SKILLS: Record<SkillKey, SkillDef> = {
   ignite: {
     n: 'Ignite',
     d: 3,
-    c: 10,
+    c: 12,
     cd: 15,
     col: '#e0504b',
     range: 220,

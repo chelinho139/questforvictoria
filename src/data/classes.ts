@@ -56,7 +56,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     about:
       'Fights from a distance and stands still to shoot: every arrow flies to its mark, so creatures take hits on the way in. Lighter than a warrior, with no shield. Learns Marksman, Hunter and Ranger talents.',
     // lighter than a warrior: creatures take hits on the way in, so the archer pays for range in health
-    hp: 130,
+    hp: 135,
     aa: { range: 200, period: 1.7, dmg: 4, ranged: true },
     starter: { weapon: 'worn_shortbow', legs: 'cloth_trousers' },
     presets: {

@@ -8,7 +8,7 @@
 
 - **From afar.** The auto-shot reaches **200**, spells **220** (the warrior's reach is 48 and 56). Each arrow **flies** to its mark at 600 a second and hits when it lands, so creatures take arrows on the way in.
 - **Stand still to shoot.** An archer only shoots with feet planted. If you're walking somewhere with a click, a shot stops you and fires. If you're holding a movement key, the shot is refused ("Stand still to shoot"). After each arrow you hold still for 0.3 s while you draw and loose; a plain auto-shot holds you for 0.2 s. Online, the hold is your browser's to keep, not the server's, so the ping never stretches it: a shot you fire holds you from the key press; an auto-shot the server looses holds you from when its news arrives, less the time it took, and never once you have started walking.
-- **Lighter.** An archer starts with **130 health** against the warrior's 175, and has no shield. The off hand holds a **quiver**, which adds damage.
+- **Lighter.** An archer starts with **135 health** against the warrior's 175, and has no shield. The off hand holds a **quiver**, which adds damage.
 - **Creatures fight back.** A creature you shoot stays angry for 10 s, however far away you shot from. Without this, an archer could shoot slimes from outside their sight for free.
 - **Classes are chosen when you make a character**, in single player and multi player alike (the New character screen: Warrior | Archer). The class is saved with the character; characters from before classes are warriors.
 
@@ -20,9 +20,9 @@ Each archer spell mirrors a warrior spell's level, cost and cooldown. The archer
 
 | Level | Archer | Mirrors | What it does |
 |---|---|---|---|
-| 1 | **Quick Shot** | Thrust | 5 damage · 4 mana · 6 s |
-| 1 | **Aimed Shot** | Slash | 8 damage, ×1.5 right after Quick Shot · 5 mana · 9 s |
-| 2 | **Barbed Arrow** | Rend | 3 damage + bleeds 2 a second for 8 s · 10 mana · 15 s |
+| 1 | **Quick Shot** | Thrust | 5 damage · 8 mana · 6 s |
+| 1 | **Aimed Shot** | Slash | 8 damage, ×1.5 right after Quick Shot · 10 mana · 9 s |
+| 2 | **Barbed Arrow** | Rend | 3 damage + bleeds 2 a second for 8 s · 12 mana · 15 s |
 | 3 | **Concussive Shot** | Charge | 4 damage, slows the target by half for 6 s · 10 mana · 20 s |
 | 4 | Mount | Mount | (both classes) |
 | 5 | **Hunter's Mark** | War Cry | your prey takes 20% more from you for 15 s · 15 mana · 40 s (no bow needed) |
@@ -102,9 +102,9 @@ Each fight runs over five random seeds. Two numbers per fight:
 
 | Mirrored builds | Average time × | Average cost × | Deaths |
 |---|---|---|---|
-| Blade warrior / Marksman archer | 1.01 | 0.95 | none |
-| Fury warrior / Hunter archer | 1.08 | 1.02 | none |
-| Warden warrior / Ranger archer | 1.01 | 1.10 | none |
+| Blade warrior / Marksman archer | 1.01 | 0.93 | none |
+| Fury warrior / Hunter archer | 1.08 | 1.05 | none |
+| Warden warrior / Ranger archer | 1.01 | 1.08 | none |
 
 The bands the tests enforce:
 - for each pair, average time between 0.95 and 1.10, and average cost between 0.90 and 1.10;
@@ -116,7 +116,7 @@ The fights (level, gear tier, creatures): L1 slime · L3 goblin · L6 two goblin
 **What the numbers say.**
 - Archers kill about as fast as warriors (1.02–1.04×).
 - Archers take less damage, because creatures walk through arrows to reach them. That's the archer's identity.
-- To pay for it, archers are lighter (130 health against 175) and have no shield.
+- To pay for it, archers are lighter (135 health against 175) and have no shield.
 - Marksman stays a little ahead on cost (0.91): it trades a slightly slower kill for safety, since things die before they arrive.
 - Fast creatures (bonehounds) and groups (three skeletons) are the archer's hardest fights (1.12–1.20×): they close the gap quickly, and Volley covers less than a Whirlwind in the middle of a crowd. That's what Concussive Shot, Bear Trap and Disengage are for.
 
@@ -134,7 +134,7 @@ The fights (level, gear tier, creatures): L1 slime · L3 goblin · L6 two goblin
 - **Creatures hit about 40% harder again** (goblins 9 → 13, skeletons and bone hounds 12 → 17, slimes 6 → 8, the shaman's fireball 25 → 35; ogres only 18 → 22) and have about 10% more health. Blade / Marksman fell to 0.87 on cost again, so **warrior health** went 160 → 175. The pairs now sit near the edges of the band (Blade 0.91, Warden 1.10): the heavier the hits, the more the health lost weighs in the cost.
 
 **Mana, Execute and a harder Normal** (8 October 2026, from playtesting: mana never ran short, Execute was too strong, Normal too easy):
-- Mana comes back at 1.5 a second in a fight and 4 out of one (it was 3 always). At 1 a second the Ranger and Arcane bots ran dry in the 90-second fight with two ogres and died, so 1.5 it is: half what it was.
+- Mana comes back at 1.5 a second in a fight and 4 out of one (it was 3 always), the first spells cost twice as much (Thrust, Quick Shot and Spark 8; Slash, Aimed Shot and Firebolt 10; Rend, Barbed Arrow and Ignite 12), and the pool grows with you: 100 at level 1, 5 more a level, 220 at 25. With the old costs a fight never took you below 93% at level 1 or 57% up to level 8; now a slime takes you to about 74%, a goblin to half, two goblins at level 6 to about a third, and the late fights run the defensive builds dry (`npx tsx tests/mana-report.ts` prints the table). At 1 a second in a fight, or with the costs but a fixed pool of 100, the ranged bots ran dry against the two ogres at level 25 and fell. To keep them standing there the archer went from 130 to 135 health, and the sorceress's Firestorm from +10 to +5 wider a rank.
 - Execute, Kill Shot and Incinerate have a 20 s cooldown (they had none).
 - Normal now hits 30% harder and has 15% more health than the creatures' own numbers. Fairness between the classes is still measured on the creatures' own numbers (`fight` in `tests/fight.ts`), since the difficulty scales every class's fights; `npx tsx tests/balance-report.ts --normal` fights them at Normal. There, only the Blade warrior falls (two goblins at level 6, an ogre and two goblins at 21): it has no healing and the bot never eats or steps back. The ranged builds get through everything.
 

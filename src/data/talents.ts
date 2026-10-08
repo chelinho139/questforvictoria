@@ -15,6 +15,9 @@ import type { ClassId } from './classes';
 export const MAX_LEVEL = 25;
 /** Extra maximum health per level above 1. */
 export const HP_PER_LEVEL = 5;
+/** Mana at level 1, and more per level above it: early fights are tight, late ones have room. */
+export const MP_BASE = 100;
+export const MP_PER_LEVEL = 5;
 
 /** Experience needed to go from `level` to the next (quick at first, slower later). */
 export function xpToNext(level: number): number {
@@ -1454,8 +1457,8 @@ Object.assign(TALENTS, {
     1,
     0,
     3,
-    r => `Flamestrike deals ${2 * r} more damage and covers ${10 * r} wider.`,
-    { volleyDmg: 2, volleyReach: 10 },
+    r => `Flamestrike deals ${2 * r} more damage and covers ${5 * r} wider.`,
+    { volleyDmg: 2, volleyReach: 5 },
     { spell: 'flamestrike' }
   ),
   soul_harvest: T(
