@@ -1221,6 +1221,38 @@ export const SOUNDS: Record<SoundId, Recipe> = {
       thump(s, 0.05, 150, 0.6, 0.06);
     },
   },
+  // duels: a horn when you are challenged, a drum for each of the count, the winner's fanfare
+  duelAsk: {
+    len: 1.2,
+    loud: 0.6,
+    make: s => {
+      // a hunting horn calling across the field: ta-taa
+      brass(s, 0, hz(-5), 0.5, 0.14);
+      brass(s, 0.18, hz(2), 0.6, 0.55);
+      brass(s, 0.18, hz(-10), 0.25, 0.55);
+      s.reverb(0.3);
+    },
+  },
+  duelCount: {
+    len: 0.7,
+    loud: 0.55,
+    make: s => {
+      // a war drum, once
+      drum(s, 0, 70, 0.9, 0.45);
+      s.reverb(0.15);
+    },
+  },
+  duelWin: {
+    len: 2.4,
+    loud: 0.85,
+    make: s => {
+      // up the chord, then the whole of it held, and steel ringing like a bell
+      [-7, -3, 0].forEach((n, i) => brass(s, i * 0.12, hz(n), 0.45, 0.14));
+      for (const n of [-12, 0, 4, 7]) brass(s, 0.38, hz(n), 0.35, 1.2);
+      s.metal({ at: 0.38, f: 1150, v: 0.3, d: 0.9, ratios: [1, 2.42, 3.9, 5.1] });
+      s.reverb(0.3);
+    },
+  },
   // ------------------------------------------------------------ the world
   autoSwing: {
     len: 0.35,
@@ -1325,6 +1357,19 @@ export const SOUNDS: Record<SoundId, Recipe> = {
       s.tone({ at: 0.26, f: hz(24), f1: hz(21), slide: 0.9, v: 0.4, a: 0.03, d: 0.95, wave: 'sine', vib: [5, 0.008] });
       s.noise({ at: 0.26, v: 0.14, a: 0.03, d: 0.95, filter: 'bandpass', f: hz(24), f1: hz(21), q: 6 });
       s.reverb(0.45);
+    },
+  },
+  duelStart: {
+    len: 1.8,
+    loud: 0.85,
+    make: s => {
+      // a duel begins: a horn over a drum, and two blades crossing
+      drum(s, 0, 62, 0.8, 0.5);
+      brass(s, 0.02, hz(-5), 0.55, 0.9);
+      brass(s, 0.02, hz(-17), 0.3, 0.9);
+      s.metal({ at: 0.12, f: 1420, v: 0.35, d: 0.4, ratios: [1, 2.42, 3.9, 5.1] });
+      s.noise({ at: 0.12, v: 0.4, d: 0.02, filter: 'highpass', f: 3000 });
+      s.reverb(0.35);
     },
   },
   fireball: {

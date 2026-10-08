@@ -11,6 +11,8 @@ import { Colors, Fonts, hex, PIXEL_SCALE, logicalSize } from '../config';
 import { Tex } from '../render/textures';
 import { CLASSES } from '../../data/classes';
 import { t } from '../../i18n';
+import type { Hero } from '../../sim/Hero';
+import type { DuelWindow } from '../ui/DuelWindow';
 
 type Text = Phaser.GameObjects.Text;
 type Graphics = Phaser.GameObjects.Graphics;
@@ -188,6 +190,8 @@ export class MobileHudScene extends Phaser.Scene {
 
   /** Anchor every element to the current logical view size. Runs on create and resize. */
   private layout(): void {
+    // where the plates at the top end, in page px: the duel bar goes below
+    this.registry.set('hudTop', (58 * PIXEL_SCALE) / (window.devicePixelRatio || 1));
     const { w, h } = logicalSize(this.scale);
     this.W = w;
     this.H = h;
@@ -347,10 +351,15 @@ export class MobileHudScene extends Phaser.Scene {
         return;
       }
     }
-    // map: target or joystick
+    // map: target, another player, or joystick
     const hit = this.hitEnemy(p);
     if (hit) {
       this.sim.setTarget(hit);
+      return;
+    }
+    const other = this.hitOther(p);
+    if (other) {
+      (this.registry.get('duel') as DuelWindow | undefined)?.clickHero(other);
       return;
     }
     if (this.joy) return;
@@ -574,6 +583,16 @@ export class MobileHudScene extends Phaser.Scene {
     g.fillStyle(hex(col), 1).fillRect(x + 2, y + 2, Math.max(0, (w - 4) * Math.min(1, frac)), h - 4);
   }
 
+  /** Another player under the finger (their sprite, about 28×44). */
+  private hitOther(p: { x: number; y: number }): Hero | null {
+    for (const o of this.sim.others) {
+      if (o.dead > 0) continue;
+      const sp = this.worldToHud(o.x, o.y);
+      if (Math.abs(sp.x - p.x) <= 14 && sp.y - p.y >= -6 && sp.y - p.y <= 42) return o;
+    }
+    return null;
+  }
+
   private drawPlates(g: Graphics): void {
     const s = this.sim;
     this.bar(g, 14, 28, 132, 10, s.hp / s.hpMax, Colors.hp);
@@ -600,6 +619,7 @@ export class MobileHudScene extends Phaser.Scene {
   private drawChips(g: Graphics): void {
     const s = this.sim;
     const chips: [string, string][] = [];
+    if (s.hero.stunT > 0) chips.push(["You're stunned", '#ff7a72']);
     if (s.buffT > 0) chips.push(['War Cry ' + s.buffT.toFixed(1) + 's', Colors.gold]);
     if (s.invT > 0) chips.push(['Dodge', Colors.teal]);
     if (s.bleedT > 0) chips.push(['Bleed ' + s.bleedT.toFixed(1) + 's', '#ff7a72']);

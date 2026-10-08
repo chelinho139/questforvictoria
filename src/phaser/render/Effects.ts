@@ -5,6 +5,7 @@ import { ISO_OX, isoX, isoY } from '../../sim/map';
 import { hex } from '../config';
 import { Tex } from './textures';
 import { artScale } from './art';
+import { DUEL_RING } from '../../sim/Duel';
 
 const WHITE = 0xffffff;
 
@@ -128,6 +129,19 @@ export class Effects {
     for (const o of this.sim.others) if (o.heldT > 0) held.push({ x: o.x, y: o.y, by: o.heldBy });
     for (const c of this.sim.companions) if (c.heldT > 0) held.push({ x: c.x, y: c.y, by: c.heldBy });
     for (const h of held) this.holding(g, b, at, h.x, h.y, h.by);
+
+    // duels: each flag and the ring round it (brighter for your own), your opponent ringed red
+    // at their feet, and stars over anyone stunned
+    const duel = this.sim.duel;
+    for (const [x, y, da, db, live] of this.sim.duelFlags)
+      this.duelFlag(g, b, at, x, y, !!duel && (duel.id === da || duel.id === db), live === 1);
+    const rv = this.sim.rival;
+    if (rv && rv.alive && !rv.hid) {
+      const k = (Math.sin(this.scene.time.now / 160) + 1) / 2;
+      g.lineStyle(2, hex('#e0504b'), 0.55 + 0.35 * k);
+      g.strokeCircle(rv.x, rv.y, 11 + k);
+    }
+    for (const h of [this.sim.hero, ...this.sim.others]) if (h.stunT > 0 && h.dead <= 0) this.stars(b, at, h.x, h.y);
 
     const live = new Set<Fx>();
     for (const f of this.sim.fx) {
@@ -337,6 +351,43 @@ export class Effects {
         const p1 = at(x - 6 + i * 4, y, 20);
         b.lineBetween(p0.x, p0.y, p1.x, p1.y);
       }
+  }
+
+  /**
+   * A duel's flag: a pole with a red pennant rippling at the top, and round it on the ground a
+   * ring of dashes slowly going round (gold in the count, red once they fight).
+   */
+  private duelFlag(g: Gfx, b: Gfx, at: At, x: number, y: number, own: boolean, live: boolean): void {
+    const t = this.scene.time.now / 1000;
+    const col = hex(live ? '#e0504b' : '#f2c14e');
+    const n = 48;
+    for (let i = 0; i < n; i += 2) {
+      const a0 = (i / n) * Math.PI * 2 + t * 0.15;
+      this.arc(g, x, y, DUEL_RING, a0, a0 + (Math.PI * 2) / n, 2, col, own ? 0.6 : 0.3);
+    }
+    g.fillStyle(hex('#3b2a1a'), 0.5);
+    g.fillCircle(x, y, 3);
+    const foot = at(x, y, 0);
+    const top = at(x, y, 34);
+    const k = top.k;
+    b.lineStyle(2 * foot.k, hex('#5a3a1e'), 1);
+    b.lineBetween(foot.x, foot.y, top.x, top.y);
+    const ripple = Math.sin(t * 6) * 2 * k;
+    b.fillStyle(hex('#b8392f'), 1);
+    b.fillTriangle(top.x, top.y, top.x + 14 * k, top.y + 4.5 * k + ripple, top.x, top.y + 9 * k);
+    b.fillStyle(hex('#f2c14e'), 1);
+    b.fillRect(top.x - 1.5 * k, top.y - 3 * k, 3 * k, 3 * k);
+  }
+
+  /** Stunned: three little stars wheeling round over the head. */
+  private stars(b: Gfx, at: At, x: number, y: number): void {
+    const t = this.scene.time.now / 1000;
+    b.fillStyle(hex('#fff0a0'), 1);
+    for (let i = 0; i < 3; i++) {
+      const a = t * 4 + (i * Math.PI * 2) / 3;
+      const p = at(x + Math.cos(a) * 7, y + Math.sin(a) * 7, 44);
+      b.fillRect(p.x - 1.5 * p.k, p.y - 1.5 * p.k, 3 * p.k, 3 * p.k);
+    }
   }
 
   private arc(g: Gfx, x: number, y: number, r: number, a0: number, a1: number, w: number, col: number, alpha: number): void {
