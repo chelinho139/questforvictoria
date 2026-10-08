@@ -112,7 +112,7 @@
   "Mount cancelled.": "Montar: cancelado.",
   "Mounting…": "Montando…",
   "MOUNTED": "A CABALLO",
-  "Mounted. Speed ×1.8. Attacking dismounts you.": "A caballo. Velocidad ×1.8. Si atacas, desmontas.",
+  "Mounted. Speed ×1.25. Attacking dismounts you.": "A caballo. Velocidad ×1.25. Si atacas, desmontas.",
   "Stand still to mount.": "No te muevas para montar.",
   "FULL": "AL MÁXIMO",
   "The way is closed.": "El camino está cerrado.",
@@ -341,5 +341,7 @@
 
   "Alone here: the creatures are as they are.": "A solas aquí: las criaturas son como son.",
   "{0} heroes here: the creatures grow tougher (×{1} health, ×{2} damage).": "{0} héroes aquí: las criaturas se vuelven más duras (salud ×{1}, daño ×{2}).",
-  "{0} heroes here: the creatures are tougher (×{1} health, ×{2} damage).": "{0} héroes aquí: las criaturas son más duras (salud ×{1}, daño ×{2})."
+  "{0} heroes here: the creatures are tougher (×{1} health, ×{2} damage).": "{0} héroes aquí: las criaturas son más duras (salud ×{1}, daño ×{2}).",
+
+  "LEVEL {0}": "NIVEL {0}"
 }

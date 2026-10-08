@@ -1917,7 +1917,7 @@ export class Hero implements Foe {
     this.burst(this.x, this.y + 4, 10, '#b8956a', 70, 0.5, 3, -20);
     this.sound('mounted');
     this.floater(this.x, this.y - 36, 'MOUNTED', 'name', '#a78bfa');
-    this.log('Mounted. Speed ×1.8. Attacking dismounts you.', 't');
+    this.log('Mounted. Speed ×1.25. Attacking dismounts you.', 't');
   }
 
   /** Attack animation progress 0..1, or -1 when not attacking. */
@@ -1962,7 +1962,8 @@ export class Hero implements Foe {
   // ---------- dev helpers ----------
   /** Screen pixels per second, including mount and the dev speed multiplier. */
   get playerSpeed(): number {
-    const ride = this.mounted ? 215 : 118;
+    // a horse is a little quicker than your feet, not a different game (×1.25)
+    const ride = this.mounted ? 148 : 118;
     const slow = this.slowT > 0 ? 1 - this.slowK : 1;
     return ride * this.cheats.moveSpeed * (1 + this.gear.speed) * (1 + this.tal.moveSpeed) * slow;
   }
@@ -2421,20 +2422,14 @@ export class Hero implements Foe {
     this.applyGear();
     this.hp = this.hpMax;
     this.mp = this.mpMax;
-    this.banner(`LEVEL ${this.level}!`, 'cool');
+    this.banner(`LEVEL ${this.level}`, 'level');
     this.hear('levelUp');
     this.log(`You reach level ${this.level}. You have a talent point to spend (N).`, 'c');
-    this.region.fx({
-      type: 'ring',
-      x: this.x,
-      y: this.y - 8,
-      r0: 10,
-      r1: 60,
-      col: '#c8a8ff',
-      lw: 4,
-      dur: 0.7,
-    });
-    this.burst(this.x, this.y - 14, 22, '#c8a8ff', 90, 1, 3, -80);
+    // a column of gold light on the hero, for everyone there to see
+    this.region.fx({ type: 'levelup', x: this.x, y: this.y, col: '#ffd866', dur: 2.2 });
+    this.region.fx({ type: 'ring', x: this.x, y: this.y, r0: 8, r1: 70, col: '#ffd866', lw: 4, dur: 0.9 });
+    this.burst(this.x, this.y - 14, 40, '#ffd866', 110, 1.4, 3, -90);
+    this.floater(this.x, this.y - 44, 'LEVEL UP!', 'name', '#ffd866');
     this.events.emit('level', {});
   }
 

@@ -206,7 +206,8 @@ export interface Fx {
     | 'arrow'
     | 'orb'
     | 'zap'
-    | 'pillar';
+    | 'pillar'
+    | 'levelup';
   t: number;
   dur: number;
   x?: number;
@@ -365,7 +366,8 @@ export interface TreeState {
 }
 
 export type LogClass = '' | 'c' | 'h' | 't';
-export type BannerClass = '' | 'bad' | 'cool';
+/** A banner's look: plain, bad news, good news, or (a level reached) the big one. */
+export type BannerClass = '' | 'bad' | 'cool' | 'level';
 export type FloaterClass = '' | 'crit' | 'heal' | 'hurt' | 'dot' | 'aa' | 'name';
 
 /** What one hero hears: their own messages, bag, cooldowns, level, travel. */

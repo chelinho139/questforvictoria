@@ -278,7 +278,7 @@
   "Stunned": "Aturdido",
   "Out of range": "Fuera de alcance",
   "Rev": "Rev",
-  "Mounted ×1.8": "A caballo ×1.8",
+  "Mounted ×1.25": "A caballo ×1.25",
   "REV AUTO": "REV AUTO",
   "REV ON": "REV SÍ",
   "REV OFF": "REV NO",
@@ -361,5 +361,9 @@
 
   "Wait for a friend to revive you": "Espera a que un amigo te reviva",
 
-  "Too full: eat again in {0} s": "Sin hambre: vuelve a comer en {0} s"
+  "Too full: eat again in {0} s": "Sin hambre: vuelve a comer en {0} s",
+
+  "LEVEL UP!": "¡SUBES DE NIVEL!",
+  "Level {0} · a talent point to spend ({1})": "Nivel {0} · un punto de talento para gastar ({1})",
+  "LEVEL UP! · {0}": "¡SUBES DE NIVEL! · {0}"
 }

@@ -344,6 +344,32 @@ export class Effects {
           }
           break;
         }
+        case 'levelup': {
+          // a column of gold light on the hero: rings rising through it, sparks drifting up
+          const col = hex(f.col ?? '#ffd866');
+          const fade = p < 0.15 ? p / 0.15 : 1 - Math.max(0, p - 0.6) / 0.4;
+          const foot = at(f.x!, f.y!, 0);
+          const top = at(f.x!, f.y!, 110);
+          b.lineStyle(14 * foot.k, col, 0.25 * fade);
+          b.lineBetween(foot.x, foot.y, top.x, top.y);
+          b.lineStyle(5 * foot.k, 0xffffff, 0.5 * fade);
+          b.lineBetween(foot.x, foot.y, top.x, top.y);
+          g.lineStyle(3, col, 0.8 * fade);
+          g.strokeCircle(f.x!, f.y!, 14 + 10 * Math.sin(p * Math.PI * 6));
+          for (let k = 0; k < 3; k++) {
+            const q = (p * 1.6 + k / 3) % 1;
+            const r = at(f.x!, f.y!, 8 + q * 90);
+            b.lineStyle(2 * r.k, col, (1 - q) * fade);
+            b.strokeCircle(r.x, r.y, (16 - q * 8) * r.k);
+          }
+          for (let k = 0; k < 10; k++) {
+            const q = (p * 1.3 + k * 0.137) % 1;
+            const s2 = at(f.x! + Math.sin(k * 2.4) * 14, f.y! + Math.cos(k * 1.7) * 8, q * 100);
+            b.fillStyle(k % 3 ? col : 0xffffff, (1 - q) * fade);
+            b.fillRect(s2.x - s2.k, s2.y - s2.k, 2 * s2.k, 2 * s2.k);
+          }
+          break;
+        }
         case 'fireball': {
           const fly = (q: number) => at(f.x0! + (f.x1! - f.x0!) * q, f.y0! + (f.y1! - f.y0!) * q, Math.sin(q * Math.PI) * 24);
           for (let k = 3; k >= 0; k--) {

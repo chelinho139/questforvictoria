@@ -257,7 +257,11 @@ export class MobileHudScene extends Phaser.Scene {
       while (this.logLines.length > LOG_LINES) this.logLines.shift();
       this.refreshLog();
     });
-    on('banner', ({ text, cls }) => this.showBanner(text, cls === 'bad' ? Colors.hp : cls === 'cool' ? Colors.teal : Colors.gold));
+    on('banner', ({ text, cls }) =>
+      cls === 'level'
+        ? this.showBanner(`LEVEL UP! · ${text.replace(/\D+/g, '')}`, Colors.gold)
+        : this.showBanner(text, cls === 'bad' ? Colors.hp : cls === 'cool' ? Colors.teal : Colors.gold)
+    );
     on('floater', f => {
       const sp = this.worldToHud(f.x, f.y);
       const style = { size: 15, color: '#fff', dur: 900 };
@@ -632,7 +636,7 @@ export class MobileHudScene extends Phaser.Scene {
     if (tg && tg.alive && tg.stunT > 0) chips.push(['Stunned', Colors.muted]);
     if (tg && tg.alive && s.dist(s, tg) >= s.aaReach) chips.push(['Out of range', Colors.muted]);
     if (s.rev) chips.push(['Rev', Colors.ember]);
-    if (s.mounted) chips.push(['Mounted ×1.8', Colors.purple]);
+    if (s.mounted) chips.push(['Mounted ×1.25', Colors.purple]);
     let y = 66;
     this.chipTexts.forEach((t, i) => {
       const c = chips[i];

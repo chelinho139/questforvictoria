@@ -1245,16 +1245,34 @@ export const SOUNDS: Record<SoundId, Recipe> = {
   // ------------------------------------------------------------ the interface
   // Tuned to D major, so the jingles sit together; these are only heard by you.
   levelUp: {
-    len: 2.2,
-    loud: 0.8,
+    len: 3.4,
+    loud: 1,
     make: s => {
-      // a harp runs up two octaves, then a bright chord rings out and sparkles
-      [-7, -3, 0, 5, 9, 12].forEach((n, i) => note(s, i * 0.055, hz(n), 0.6, 0.6));
-      for (const n of [-7, 5, 9, 12]) brass(s, 0.33, hz(n), 0.22, 1.1);
-      for (const n of [17, 21, 24])
-        s.tone({ at: 0.33, f: hz(n), v: 0.07, a: 0.02, d: 1.2, vib: [6, 0.004] });
-      crackle(s, 0.33, 1, 0.25, 60, 7000, 9000, 3);
-      s.reverb(0.25);
+      // the biggest moment there is: a timpani roll swells, the brass calls da-da-da-DAAA over
+      // a harp running up two octaves, bells ring, and the chord holds and rings out
+      for (let i = 0; i < 12; i++) drum(s, i * 0.04, 52 + (i % 2) * 6, 0.25 + i * 0.05, 0.3);
+      drum(s, 0.5, 46, 1, 0.9);
+      for (const [at, n] of [
+        [0.5, 0],
+        [0.64, 0],
+        [0.78, 4],
+      ]) {
+        brass(s, at, hz(n), 0.45, 0.11);
+        brass(s, at, hz(n - 12), 0.3, 0.11);
+      }
+      for (const n of [-12, -5, 0, 4, 7, 12]) brass(s, 0.94, hz(n), 0.28, 1.9);
+      [-12, -8, -5, 0, 4, 7, 12, 16, 19, 24].forEach((n, i) => note(s, 0.94 + i * 0.04, hz(n), 0.35, 0.9));
+      for (const [at, n] of [
+        [1.0, 24],
+        [1.12, 28],
+        [1.24, 31],
+        [1.36, 36],
+      ])
+        bell(s, at, hz(n), 0.18, 1.4);
+      for (const n of [0, 4, 7])
+        s.tone({ at: 0.94, f: hz(n), v: 0.1, a: 0.3, d: 2.2, wave: 'tri', vib: [5, 0.006], lp: 2600 });
+      crackle(s, 0.94, 1.4, 0.2, 80, 7000, 10000, 3);
+      s.reverb(0.35);
     },
   },
   talent: {

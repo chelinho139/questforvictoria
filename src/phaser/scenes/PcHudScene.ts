@@ -176,6 +176,13 @@ export class PcHudScene extends Phaser.Scene {
   private logTexts: Text[] = [];
   private logLines: { text: string; cls: LogClass }[] = [];
   private bannerText!: Text;
+  /** A level reached: the big title and the line under it, and when it began (ms). */
+  private levelTitle!: Text;
+  private levelSub!: Text;
+  private levelAt = -1e9;
+  /** Your level, on a gold badge at the corner of your portrait (it glows a while after a level). */
+  private levelBadge!: Text;
+  private gBadge!: Graphics;
   private deadText!: Text;
   private downText!: Text;
   private offs: Array<() => void> = [];
@@ -289,6 +296,10 @@ export class PcHudScene extends Phaser.Scene {
     this.bannerText = this.text(0, 0, '', 26, Colors.gold, { stroke: true, bold: true, font: Fonts.title }).setOrigin(0.5).setDepth(D.banner).setAlpha(0);
     this.deadText = this.text(0, 0, 'YOU DIED', 40, '#e8584a', { stroke: true, bold: true, font: Fonts.title }).setOrigin(0.5).setDepth(D.dead).setVisible(false);
     this.downText = this.text(0, 0, 'Wait for a friend to revive you', 16, '#f2e08a', { stroke: true }).setOrigin(0.5).setDepth(D.dead).setVisible(false);
+    this.levelTitle = this.text(0, 0, 'LEVEL UP!', 46, '#ffd866', { stroke: true, bold: true, font: Fonts.title }).setOrigin(0.5).setDepth(D.banner).setAlpha(0);
+    this.levelSub = this.text(0, 0, '', 16, '#fff2c8', { stroke: true }).setOrigin(0.5).setDepth(D.banner).setAlpha(0);
+    this.gBadge = this.add.graphics().setDepth(D.text + 0.5);
+    this.levelBadge = this.text(0, 0, '1', 13, '#ffd866', { stroke: true, bold: true, font: Fonts.title }).setOrigin(0.5).setDepth(D.text + 1);
 
     this.layout();
     if (this.registry.get('fadeIn')) this.cameras.main.fadeIn(500, 0, 0, 0);
@@ -409,6 +420,8 @@ export class PcHudScene extends Phaser.Scene {
     this.logBottom = y - 36;
     this.refreshLog();
     this.bannerText.setPosition(w / 2, h * 0.3);
+    this.levelTitle.setPosition(w / 2, h * 0.3);
+    this.levelSub.setPosition(w / 2, h * 0.3 + 40);
     this.deadText.setPosition(w / 2, h * 0.42);
     this.downText.setPosition(w / 2, h * 0.42 + 38);
   }
@@ -472,7 +485,9 @@ export class PcHudScene extends Phaser.Scene {
       while (this.logLines.length > LOG_LINES) this.logLines.shift();
       this.refreshLog();
     });
-    on('banner', ({ text, cls }) => this.showBanner(text, cls === 'bad' ? '#ff7a6a' : cls === 'cool' ? '#7ae8e4' : '#ffd866'));
+    on('banner', ({ text, cls }) =>
+      cls === 'level' ? this.showLevelUp(text) : this.showBanner(text, cls === 'bad' ? '#ff7a6a' : cls === 'cool' ? '#7ae8e4' : '#ffd866')
+    );
     on('floater', f => {
       const sp = this.worldToHud(f.x, f.y);
       const style = { size: 14, color: '#ffffff', dur: 900 };
@@ -535,6 +550,35 @@ export class PcHudScene extends Phaser.Scene {
 
   /** Bottom edge of the combat log (above the Rev label and the action bar). */
   private logBottom = 0;
+
+  /**
+   * A level reached, the biggest moment on screen: a gold flash and a slow sunburst behind
+   * "LEVEL UP!" punching in, the new level under it, held three seconds; the badge on your
+   * portrait glows on a while after (drawn in drawOverlays and drawPlayerFrame).
+   */
+  private showLevelUp(text: string): void {
+    const level = text.replace(/\D+/g, '');
+    this.levelAt = this.time.now;
+    for (const t of [this.levelTitle, this.levelSub]) this.tweens.killTweensOf(t);
+    this.levelTitle.setAlpha(0).setScale(0.3);
+    this.levelSub.setText(`Level ${level} · a talent point to spend (${PC_KEYS.talents.bind})`).setAlpha(0);
+    this.tweens.chain({
+      targets: this.levelTitle,
+      tweens: [
+        { scale: 1.25, alpha: 1, duration: 260, ease: 'Back.Out' },
+        { scale: 1, duration: 300 },
+        { scale: 1.04, duration: 900, yoyo: true, ease: 'Sine.InOut' },
+        { alpha: 0, scale: 1.1, duration: 500, delay: 200 },
+      ],
+    });
+    this.tweens.chain({
+      targets: this.levelSub,
+      tweens: [
+        { alpha: 1, duration: 300, delay: 350 },
+        { alpha: 0, duration: 500, delay: 2100 },
+      ],
+    });
+  }
 
   private showBanner(text: string, color: string): void {
     const t = this.bannerText;
@@ -976,7 +1020,21 @@ export class PcHudScene extends Phaser.Scene {
   private drawPlayerFrame(): void {
     const s = this.sim;
     const f = this.player;
-    f.sub.setText(`${CLASSES[s.cls].name} · Lv ${s.level}`);
+    f.sub.setText(CLASSES[s.cls].name);
+    // the level, on a gold badge at the portrait's corner; for 6 s after a level it glows and beats
+    const glow = (this.time.now - this.levelAt) / 1000;
+    const hot = glow >= 0 && glow < 6;
+    this.levelBadge
+      .setText(String(s.level))
+      .setPosition(f.slot.x + 44, f.slot.y + 44)
+      .setScale(hot ? 1.25 + 0.25 * Math.abs(Math.sin(glow * 5)) : 1)
+      .setColor(hot ? '#fff2c8' : '#ffd866');
+    const bx = f.slot.x + 44;
+    const by = f.slot.y + 44;
+    const g = this.gBadge.clear();
+    if (hot) g.fillStyle(0xffd866, 0.35 * (1 - glow / 6)).fillCircle(bx, by, 16 + 4 * Math.sin(glow * 5));
+    g.fillStyle(0x4a2410, 1).fillCircle(bx, by, 10);
+    g.lineStyle(2, hot ? 0xfff2c8 : 0xd8a03a, 1).strokeCircle(bx, by, 10);
     f.sub.setX(f.name.x + f.name.width + 6);
     // a narrow frame (a phone held upright) drops the class and level before they spill out
     f.sub.setVisible(f.sub.x + f.sub.width <= f.x + this.panelW - 8);
@@ -1045,7 +1103,7 @@ export class PcHudScene extends Phaser.Scene {
     const tg = s.target;
     if (tg && tg.alive && tg.stunT > 0) chips.push(['Stunned', Ink.mid]);
     if (tg && tg.alive && s.dist(s, tg) >= s.aaReach) chips.push(['Out of range', Ink.mid]);
-    if (s.mounted) chips.push(['Mounted ×1.8', '#6a4ab8']);
+    if (s.mounted) chips.push(['Mounted ×1.25', '#6a4ab8']);
     // under the frames (and under the target's cast bar when its frame is under yours)
     let x = 12;
     const stacked = this.target.y > this.player.y;
@@ -1341,5 +1399,21 @@ export class PcHudScene extends Phaser.Scene {
     if (dead) g.fillStyle(0x500000, 0.55).fillRect(0, 0, this.W, this.H);
     this.deadText.setVisible(dead);
     this.downText.setVisible(dead && s.down);
+    // a level reached: a gold flash, then a sunburst turning slowly behind the title
+    const lt = (this.time.now - this.levelAt) / 1000;
+    if (lt >= 0 && lt < 3.4) {
+      if (lt < 0.5) g.fillStyle(0xffe08a, 0.3 * (1 - lt / 0.5)).fillRect(0, 0, this.W, this.H);
+      const fade = Math.min(1, lt / 0.3) * Math.min(1, (3.4 - lt) / 0.8);
+      const cx = this.W / 2;
+      const cy = this.levelTitle.y;
+      const R = Math.min(this.W, this.H) * 0.32 * Math.min(1, 0.4 + lt * 1.5);
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2 + lt * 0.35;
+        const w = 0.07;
+        g.fillStyle(0xffd866, 0.26 * fade);
+        g.fillTriangle(cx, cy, cx + Math.cos(a - w) * R, cy + Math.sin(a - w) * R * 0.6, cx + Math.cos(a + w) * R, cy + Math.sin(a + w) * R * 0.6);
+      }
+      g.fillStyle(0xfff2c8, 0.18 * fade).fillCircle(cx, cy, 60 + 10 * Math.sin(lt * 4));
+    }
   }
 }
