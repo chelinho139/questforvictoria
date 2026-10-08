@@ -7,6 +7,7 @@ import type { NpcId } from '../data/npcs';
 import type { TalentFx, TreeId } from '../data/talents';
 import type { SpellKey } from '../data/spells';
 import type { ClassId } from '../data/classes';
+import type { Difficulty } from '../data/difficulty';
 import type { ItemId, Slot, Stats } from '../data/items';
 import type { SaveData } from './save';
 import type { RegionMap } from './map';
@@ -68,7 +69,7 @@ export class Sim {
       this.listenToRegion();
       this.events.emit('region', p);
     });
-    for (const k of ['quests', 'flags', 'journal'] as const) this.game.events.on(k, p => this.events.emit(k, p as never));
+    for (const k of ['quests', 'flags', 'journal', 'difficulty'] as const) this.game.events.on(k, p => this.events.emit(k, p as never));
     if (replica) return;
     this.game.reset(h);
     this.listenToRegion();
@@ -151,10 +152,20 @@ export class Sim {
     this.events.emit('loadout', {});
   }
 
-  /** A new game as a hero of this class (a new single-player character). */
-  startAs(cls: ClassId): void {
+  /** A new game as a hero of this class, at this difficulty (a new single-player character). */
+  startAs(cls: ClassId, difficulty: Difficulty = 'normal'): void {
     this.hero.cls = cls;
+    this.game.difficulty = difficulty;
     this.reset();
+  }
+
+  /** How hard the creatures are (data/difficulty.ts). */
+  get difficulty(): Difficulty {
+    return this.game.difficulty;
+  }
+  /** Dev: make the game harder or easier. */
+  setDifficulty(d: Difficulty): void {
+    this.game.setDifficulty(d);
   }
 
   /** Warrior or archer. */

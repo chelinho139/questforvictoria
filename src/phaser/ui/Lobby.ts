@@ -6,6 +6,8 @@ import type { CharInfo, RoomInfo, S2C } from '../../net/protocol';
 import { HD_HERO_IDS } from '../render/art';
 import { CharacterList } from './CharacterList';
 import { NewCharacter } from './NewCharacter';
+import { DifficultyPick } from './DifficultyPick';
+import { DIFFICULTIES } from '../../data/difficulty';
 import { esc } from './html';
 import { keepNames, t } from '../../i18n';
 
@@ -21,6 +23,8 @@ export class Lobby {
   private list: CharacterList | null = null;
   /** The rooms screen (over the character list, which waits hidden). */
   private rooms: HTMLDivElement | null = null;
+  /** How hard a room opened from it will be. */
+  private diff: DifficultyPick | null = null;
   private refreshTimer = 0;
   private char: CharInfo | null = null;
   private busy = false;
@@ -97,6 +101,9 @@ export class Lobby {
       </div>`;
     document.body.append(root);
     this.rooms = root;
+    // how hard the room is: as hard as the character's campaign was, unless picked otherwise
+    this.diff = new DifficultyPick(ch.difficulty ?? 'normal');
+    root.querySelector('.lobby-open')!.before(this.diff.el);
     const input = root.querySelector<HTMLInputElement>('#lobby-name')!;
     keepNames(ch.name);
     // a field's value isn't translated on screen: the name it suggests is, here
@@ -133,7 +140,7 @@ export class Lobby {
     if (!this.conn || this.busy || !this.char) return;
     this.busy = true;
     this.roomStatus('Opening a room…');
-    this.conn.send({ t: 'host', name: name.trim(), char: this.char.id });
+    this.conn.send({ t: 'host', name: name.trim(), char: this.char.id, difficulty: this.diff?.value });
   }
 
   private join(id: string): void {
@@ -162,7 +169,7 @@ export class Lobby {
           <h3 translate="no">${esc(r.name)}</h3>
           <button type="button" class="select-go" data-room="${esc(r.id)}"${full ? ' disabled' : ''}>${full ? 'Full' : 'Join'}</button>
           <p>${r.players.length}/${r.max} · ${who}</p>
-          <p>${esc(r.place)} · ${esc(r.story)}</p>
+          <p>${DIFFICULTIES[r.difficulty]?.name ?? 'Normal'} · ${esc(r.place)} · ${esc(r.story)}</p>
         </div>`;
       })
       .join('');

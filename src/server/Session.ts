@@ -149,6 +149,7 @@ export class Session {
     );
     part('sc', R.scene);
     part('sy', { flags: h.game.flags, quests: h.game.quests, journal: h.game.journal });
+    part('df', h.game.difficulty);
     part('du', h.game.duels.view(h));
     part('dl', h.game.duels.flags(R.id));
     this.dayT -= dt;

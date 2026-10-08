@@ -156,6 +156,17 @@ html, body { height: 100%; margin: 0; background: #0c1018; overflow: hidden; }
 .select-class:hover { background: #f2dcae; }
 .select-class[aria-checked='true'] { background: #f2c14e; border-color: #8a4a1e; box-shadow: inset 0 2px 0 #ffe38a, 0 0 0 2px #4a2410; }
 .select-class-about { margin: 2px 0 0; font: 400 13px 'Pixelify Sans', monospace; color: #7a4a24; text-transform: none; letter-spacing: 0; }
+/* the difficulty: Normal | Hard | Nightmare (a new single-player character, opening a room) */
+.select-diffs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.select-pick {
+  padding: 5px 6px; cursor: pointer; text-align: center; color: #4a2410;
+  background: #ead0a0; border: 2px solid #b0763c; box-shadow: inset 0 2px 0 #fcecc4;
+  text-transform: none; letter-spacing: 0;
+}
+.select-pick b { font: 700 13px Silkscreen, 'Courier New', monospace; }
+.select-pick:hover { background: #f2dcae; }
+.select-pick[aria-checked='true'] { background: #f2c14e; border-color: #8a4a1e; box-shadow: inset 0 2px 0 #ffe38a, 0 0 0 2px #4a2410; }
+.select-pick:focus-visible { outline: 2px solid #c8392f; outline-offset: 1px; }
 .select-panel > footer { display: flex; justify-content: flex-end; padding: 0 14px 14px; }
 .select-go {
   font: 700 14px Silkscreen, 'Courier New', monospace; letter-spacing: 0.04em; cursor: pointer;
@@ -215,8 +226,9 @@ html, body { height: 100%; margin: 0; background: #0c1018; overflow: hidden; }
 .lobby-room .select-go { grid-column: 2; grid-row: 1 / span 2; padding: 6px 14px; }
 .lobby-room .select-go:disabled { background: #8a7a6a; cursor: default; box-shadow: none; }
 .lobby-empty { margin: 0; padding: 14px; text-align: center; font-size: 15px; color: #9a6a40; border: 2px dashed #c8a070; }
-.lobby-host { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
-.lobby-host .select-field { flex: 1; min-width: 180px; }
+/* a new room: its name across the top, then the difficulty and the button */
+.lobby-host { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: end; }
+.lobby-host label.select-field { grid-column: 1 / -1; }
 .lobby-back {
   margin-right: auto; font: 700 13px Silkscreen, 'Courier New', monospace; cursor: pointer;
   color: #4a2410; background: #ead0a0; border: 2px solid #9a5626; padding: 8px 14px; box-shadow: inset 0 2px 0 #fcecc4;

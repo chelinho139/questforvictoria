@@ -5,6 +5,8 @@ import type { CharInfo } from '../net/protocol';
 import { REGIONS } from '../data/regions';
 import { CLASSES, isClass } from '../data/classes';
 import type { ClassId } from '../data/classes';
+import { isDifficulty } from '../data/difficulty';
+import type { Difficulty } from '../data/difficulty';
 
 /**
  * Single player's characters, in this browser: the list (localStorage `qfv-chars`) and one
@@ -23,6 +25,8 @@ export interface LocalChar {
   look: string;
   /** Warrior or archer (characters from before classes: warriors). */
   cls?: ClassId;
+  /** How hard their adventure is, until it is first saved (the save keeps it from then on). */
+  difficulty?: Difficulty;
   created: number;
 }
 
@@ -78,7 +82,8 @@ export function localChars(): LocalChar[] {
 export function createLocalChar(
   rawName: string,
   look: string,
-  cls: ClassId = 'warrior'
+  cls: ClassId = 'warrior',
+  difficulty: Difficulty = 'normal'
 ): LocalChar | string {
   const list = load();
   const name = rawName.trim().replace(/\s+/g, ' ');
@@ -88,7 +93,7 @@ export function createLocalChar(
     return 'Names are 2 to 14 letters or digits (spaces, apostrophes and hyphens too).';
   const taken = list.find(c => c.name.toLowerCase() === name.toLowerCase());
   if (taken) return `You already have a ${taken.name}. Try another name.`;
-  const c: LocalChar = { id: newId(), name, look, cls, created: Date.now() };
+  const c: LocalChar = { id: newId(), name, look, cls, difficulty, created: Date.now() };
   list.push(c);
   store(list);
   return c;
@@ -128,6 +133,8 @@ export function localCharInfos(): CharInfo[] {
   return load().map(c => {
     const s = readSave(c.id);
     const cls = isClass(c.cls) ? c.cls : 'warrior';
+    // once saved, the save's (an old save has none: normal)
+    const hard = s ? s.difficulty : c.difficulty;
     return {
       id: c.id,
       name: c.name,
@@ -138,6 +145,7 @@ export function localCharInfos(): CharInfo[] {
       place: s ? (REGIONS[s.region]?.name ?? '') : 'The lakeshore',
       at: s?.at ?? 0,
       busy: false,
+      difficulty: isDifficulty(hard) ? hard : 'normal',
     };
   });
 }

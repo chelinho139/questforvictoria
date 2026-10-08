@@ -56,6 +56,7 @@ export const AREAS: Record<string, string[]> = {
     'src/phaser/audio/sounds.ts',
     'src/phaser/audio/ambience.ts',
     'src/phaser/view3d/View3D.ts',
+    'src/data/difficulty.ts',
   ],
   settings: [
     'src/phaser/dev/DevMenu.ts',

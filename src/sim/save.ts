@@ -3,6 +3,7 @@ import type { SpellKey } from '../data/spells';
 import type { NpcId } from '../data/npcs';
 import type { Stack, Structure, QuestProgress } from './types';
 import type { ClassId } from '../data/classes';
+import type { Difficulty } from '../data/difficulty';
 
 /** Bump when the shape changes in a way old saves can't be read as. */
 export const SAVE_VERSION = 1;
@@ -38,6 +39,8 @@ export interface SaveData {
   day: { t: number; day: number };
   /** What you built in each region (forges stay; campfires keep their burn time). */
   built: Record<string, Structure[]>;
+  /** How hard the campaign is (saves from before difficulty have none: normal). */
+  difficulty?: Difficulty;
   /** Duels won and lost (saves from before duels have none). */
   duels?: { won: number; lost: number };
 }

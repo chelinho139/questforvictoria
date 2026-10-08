@@ -5,6 +5,7 @@ import type { HdHeroId, HeroCanvases } from '../render/hdHeroes';
 import { heroArt, paint } from './NewCharacter';
 import { esc } from './html';
 import { CLASSES } from '../../data/classes';
+import { DIFFICULTIES } from '../../data/difficulty';
 import { getLang, keepNames } from '../../i18n';
 
 const when = (ms: number) =>
@@ -125,9 +126,11 @@ export class CharacterList {
       cv.width = 96;
       cv.height = 96;
       b.append(cv);
+      // (how hard their campaign is, unless it's normal)
+      const hard = ch.difficulty && ch.difficulty !== 'normal' ? `<small>${DIFFICULTIES[ch.difficulty].name}</small>` : '';
       b.insertAdjacentHTML(
         'beforeend',
-        `<span translate="no">${esc(ch.name)}</span><small>Level ${ch.level} ${CLASSES[ch.cls]?.name ?? 'Warrior'}</small><small>${esc(ch.place)}</small><small>${ch.busy ? 'playing right now' : when(ch.at)}</small>`
+        `<span translate="no">${esc(ch.name)}</span><small>Level ${ch.level} ${CLASSES[ch.cls]?.name ?? 'Warrior'}</small>${hard}<small>${esc(ch.place)}</small><small>${ch.busy ? 'playing right now' : when(ch.at)}</small>`
       );
       b.addEventListener('click', () => this.select(i));
       b.addEventListener('dblclick', () => this.play());

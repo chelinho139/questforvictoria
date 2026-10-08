@@ -60,6 +60,7 @@ export class BootScene extends Phaser.Scene {
       if (ch) {
         this.registry.set('localChar', ch.id);
         this.registry.set('localClass', ch.cls);
+        this.registry.set('localDifficulty', ch.difficulty);
         playAs(ch.name);
         playLook(ch.look);
       }
@@ -137,6 +138,7 @@ export class BootScene extends Phaser.Scene {
   private playLocal(ch: CharInfo): void {
     this.registry.set('localChar', ch.id);
     this.registry.set('localClass', ch.cls);
+    this.registry.set('localDifficulty', ch.difficulty);
     this.wear(ch);
   }
 

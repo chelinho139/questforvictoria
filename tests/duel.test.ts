@@ -292,7 +292,7 @@ function online() {
     send: (m: C2S) => void sent.push(m),
     close: () => {},
   } as unknown as Connection;
-  const room = { id: 'TEST', name: 'Test', players: [], max: 8, place: '', story: '' };
+  const room = { id: 'TEST', name: 'Test', players: [], max: 8, place: '', story: '', difficulty: 'normal' as const };
   const sim = new NetSim(conn, { room, hero: me.id }, session.build(0.05));
   const frames = (s: number) => {
     for (let i = 0; i < s * 20; i++) {

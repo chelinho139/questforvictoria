@@ -37,7 +37,7 @@ function online(cls: ClassId) {
     send: (m: C2S) => void sent.push(m),
     close: () => {},
   } as unknown as Connection;
-  const room = { id: 'TEST', name: 'Test', players: [], max: 8, place: '', story: '' };
+  const room = { id: 'TEST', name: 'Test', players: [], max: 8, place: '', story: '', difficulty: 'normal' as const };
   const sim = new NetSim(conn, { room, hero: 'p1' }, session.build(0.05));
   /** One server frame: run what the browser sent, tick, send the snapshot back, and let the browser draw a frame. */
   const frame = () => {

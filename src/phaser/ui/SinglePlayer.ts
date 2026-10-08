@@ -49,8 +49,9 @@ export class SinglePlayer {
     new NewCharacter({
       mode: 'Single Player',
       hero: HD_HERO_IDS[Math.floor(Math.random() * HD_HERO_IDS.length)],
+      difficulty: true,
       onCreate: c => {
-        const made = createLocalChar(c.name, c.hero, c.cls);
+        const made = createLocalChar(c.name, c.hero, c.cls, c.difficulty);
         if (typeof made === 'string') return made;
         list.setChars(localCharInfos(), made.id);
         list.show();

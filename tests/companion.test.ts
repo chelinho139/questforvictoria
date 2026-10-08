@@ -139,7 +139,7 @@ test('online, she walks in the snapshots; and a held hero can’t walk in their 
     send: (m: C2S) => void sent.push(m),
     close: () => {},
   } as unknown as Connection;
-  const room = { id: 'TEST', name: 'Test', players: [], max: 8, place: '', story: '' };
+  const room = { id: 'TEST', name: 'Test', players: [], max: 8, place: '', story: '', difficulty: 'normal' as const };
   const sim = new NetSim(conn, { room, hero: 'p1' }, session.build(0.05));
   const frame = () => {
     for (const m of sent.splice(0)) {

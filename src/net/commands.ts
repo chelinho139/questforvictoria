@@ -15,6 +15,7 @@ import type { Hero } from '../sim/Hero';
 import type { ButtonId } from '../sim/types';
 import { WEATHER_KINDS } from '../sim/weather';
 import type { WeatherKind } from '../sim/weather';
+import { isDifficulty } from '../data/difficulty';
 
 /** Argument checks: a command with arguments of the wrong kind is ignored. */
 const int = (v: unknown, lo: number, hi: number): v is number =>
@@ -136,6 +137,8 @@ export const DEV_COMMANDS: Record<string, Command> = {
   setWeather: (h, [k]) => {
     if (k === null || (str(k) && (WEATHER_KINDS as string[]).includes(k))) h.game.weather.forced = k as WeatherKind | null;
   },
+  /** For the whole room. */
+  setDifficulty: (h, [d]) => isDifficulty(d) && h.game.setDifficulty(d),
   enterRegion: (h, [id, spot]) =>
     str(id) && has(REGIONS, id) && str(spot) && h.game.moveHero(h, id, spot),
   setFlag: (h, [name]) => str(name) && h.game.setFlag(name),

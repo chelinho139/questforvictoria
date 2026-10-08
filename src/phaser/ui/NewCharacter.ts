@@ -7,12 +7,15 @@ import { STARTER } from '../../data/items';
 import type { ItemId, Slot } from '../../data/items';
 import { CLASSES, CLASS_IDS } from '../../data/classes';
 import type { ClassId } from '../../data/classes';
+import type { Difficulty } from '../../data/difficulty';
+import { DifficultyPick } from './DifficultyPick';
 
-/** A new character: what they're called, their class, and which hero they look like. */
+/** A new character: what they're called, their class, which hero they look like, and how hard their adventure is. */
 export interface NewChoice {
   name: string;
   hero: HdHeroId;
   cls: ClassId;
+  difficulty: Difficulty;
 }
 
 /** Hero frames in some gear (the starting kit by default), recoloured the way the game shows them (HD · Silhouette colours). */
@@ -71,8 +74,9 @@ export function paint(
 }
 
 /**
- * Making a character, the same screen for single player and multi player: a name, and one of
- * the HD heroes. Every hero card plays its idle animation; the large preview runs the
+ * Making a character, the same screen for single player and multi player: a name, a class,
+ * one of the HD heroes, and in single player how hard their adventure is (online, the room
+ * decides). Every hero card plays its idle animation; the large preview runs the
  * selected hero through every animation. Arrow keys change the hero, Enter creates, Esc goes
  * back. Making it may be refused (a name taken), and the screen stays open saying why.
  */
@@ -121,6 +125,8 @@ export class NewCharacter {
       mode: string;
       /** The hero picked at first. */
       hero: HdHeroId;
+      /** Ask how hard their adventure is (single player: each character has their own). */
+      difficulty?: boolean;
       /** Make the character: null when made (the screen closes), or why not (it stays open). */
       onCreate: (c: NewChoice) => Promise<string | null> | string | null;
       /** Back to your characters. */
@@ -132,6 +138,8 @@ export class NewCharacter {
 
   /** Warrior or archer: the class card picked. */
   private cls: ClassId = 'warrior';
+  /** Normal, hard or nightmare (when asked). */
+  private readonly diff = new DifficultyPick();
 
   /** A hero in the chosen class's starting kit (a sword, or a bow). */
   private artOf(id: HdHeroId): HeroCanvases {
@@ -201,6 +209,7 @@ export class NewCharacter {
     for (const b of root.querySelectorAll<HTMLButtonElement>('.select-class'))
       b.addEventListener('click', () => this.pickClass(b.dataset.cls as ClassId));
     this.pickClass(this.cls);
+    if (this.opts.difficulty) grid.before(this.diff.el);
     root.querySelector('.select-go')!.addEventListener('click', () => this.make());
     root.querySelector('.lobby-back')!.addEventListener('click', () => this.back());
     window.addEventListener('keydown', this.onKey);
@@ -262,7 +271,7 @@ export class NewCharacter {
     this.busy = true;
     this.say('Making your character…', false);
     void Promise.resolve(
-      this.opts.onCreate({ name, hero: HD_HERO_IDS[this.sel], cls: this.cls })
+      this.opts.onCreate({ name, hero: HD_HERO_IDS[this.sel], cls: this.cls, difficulty: this.diff.value })
     ).then(err => {
       this.busy = false;
       if (err) this.say(err);
