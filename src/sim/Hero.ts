@@ -15,8 +15,6 @@ import {
   TIER_POINTS,
   MAX_LEVEL,
   HP_PER_LEVEL,
-  MP_BASE,
-  MP_PER_LEVEL,
   XP_FOR,
   xpToNext,
 } from '../data/talents';
@@ -64,7 +62,7 @@ export const AA_RANGE = 48;
  * Mana comes back slowly in a fight and quickly out of one: a hero is in combat for
  * IN_COMBAT seconds after casting, striking or being struck.
  */
-export const MANA_COMBAT = 1;
+export const MANA_COMBAT = 0.5;
 export const MANA_REST = 3;
 export const IN_COMBAT = 5;
 /**
@@ -2630,7 +2628,8 @@ export class Hero implements Foe {
       this.hp = Math.min(max, Math.round((this.hp * max) / Math.max(1, this.hpMax)));
       this.hpMax = max;
     }
-    this.mpMax = MP_BASE + MP_PER_LEVEL * (this.level - 1);
+    // each class's own mana (data/classes.ts): early fights are tight, each level makes room
+    this.mpMax = CLASSES[this.cls].mp + CLASSES[this.cls].mpLevel * (this.level - 1);
     this.mp = Math.min(this.mp, this.mpMax);
   }
 

@@ -8,7 +8,7 @@
 
 - **From afar.** The auto-shot reaches **200**, spells **220** (the warrior's reach is 48 and 56). Each arrow **flies** to its mark at 600 a second and hits when it lands, so creatures take arrows on the way in.
 - **Stand still to shoot.** An archer only shoots with feet planted. If you're walking somewhere with a click, a shot stops you and fires. If you're holding a movement key, the shot is refused ("Stand still to shoot"). After each arrow you hold still for 0.3 s while you draw and loose; a plain auto-shot holds you for 0.2 s. Online, the hold is your browser's to keep, not the server's, so the ping never stretches it: a shot you fire holds you from the key press; an auto-shot the server looses holds you from when its news arrives, less the time it took, and never once you have started walking.
-- **Lighter.** An archer starts with **135 health** against the warrior's 175, and has no shield. The off hand holds a **quiver**, which adds damage.
+- **Lighter.** An archer starts with **135 health** and **45 mana** against the warrior's 175 and 40, and has no shield. The off hand holds a **quiver**, which adds damage.
 - **Creatures fight back.** A creature you shoot stays angry for 10 s, however far away you shot from. Without this, an archer could shoot slimes from outside their sight for free.
 - **Classes are chosen when you make a character**, in single player and multi player alike (the New character screen: Warrior | Archer). The class is saved with the character; characters from before classes are warriors.
 
@@ -20,26 +20,26 @@ Each archer spell mirrors a warrior spell's level, cost and cooldown. The archer
 
 | Level | Archer | Mirrors | What it does |
 |---|---|---|---|
-| 1 | **Quick Shot** | Thrust | 5 damage · 8 mana · 6 s |
-| 1 | **Aimed Shot** | Slash | 8 damage, ×1.5 right after Quick Shot · 10 mana · 9 s |
-| 2 | **Barbed Arrow** | Rend | 3 damage + bleeds 2 a second for 8 s · 12 mana · 15 s |
-| 3 | **Concussive Shot** | Charge | 4 damage, slows the target by half for 6 s · 10 mana · 20 s |
+| 1 | **Quick Shot** | Thrust | 5 damage · 9 mana · 6 s |
+| 1 | **Aimed Shot** | Slash | 8 damage, ×1.5 right after Quick Shot · 11 mana · 9 s |
+| 2 | **Barbed Arrow** | Rend | 3 damage + bleeds 2 a second for 8 s · 14 mana · 15 s |
+| 3 | **Concussive Shot** | Charge | 4 damage, slows the target by half for 6 s · 11 mana · 20 s |
 | 4 | Mount | Mount | (both classes) |
-| 5 | **Hunter's Mark** | War Cry | your prey takes 20% more from you for 15 s · 15 mana · 40 s (no bow needed) |
+| 5 | **Hunter's Mark** | War Cry | your prey takes 20% more from you for 15 s · 17 mana · 40 s (no bow needed) |
 | 6 | **Silencing Shot** | Interrupt | cuts a spell short from afar, stuns 1 s · 15 s (shares Interrupt's talents) |
 | 7 | **Kill Shot** | Execute | below 25% health: 30% of what's left + 8, from range |
-| 9 | **Volley** | Whirlwind | 7 to every enemy within 70 of the target · 20 mana · 14 s |
+| 9 | **Volley** | Whirlwind | 7 to every enemy within 70 of the target · 22 mana · 14 s |
 | 11 | **Piercing Shot** | Mortal Strike | 12 to everything in a line to the target and 60 beyond · 30 s |
 
 **Taught by talents** (two per tree, like the warrior's):
 
 | Tree | Ability | Mirrors | What it does |
 |---|---|---|---|
-| Marksman | **Rapid Fire** | Sunder | three arrows, 4 each · 8 mana · 10 s |
-| Marksman | **Deadeye** (capstone) | Deathblow | 26 damage; ready again at once if it kills · 25 mana · 20 s |
-| Hunter | **Bear Trap** | Bloodrage | a trap at your feet: the first creature on it takes 8 and is held 3 s (it can still swing) · 10 mana · 20 s |
+| Marksman | **Rapid Fire** | Sunder | three arrows, 4 each · 9 mana · 10 s |
+| Marksman | **Deadeye** (capstone) | Deathblow | 26 damage; ready again at once if it kills · 28 mana · 20 s |
+| Hunter | **Bear Trap** | Bloodrage | a trap at your feet: the first creature on it takes 8 and is held 3 s (it can still swing) · 11 mana · 20 s |
 | Hunter | **Predator** (capstone) | Berserk | 10 s: auto-shots 50% faster, 20% more damage · 45 s |
-| Ranger | **Disengage** | Shield Bash | leap back up to 90 from your target · 5 mana · 12 s |
+| Ranger | **Disengage** | Shield Bash | leap back up to 90 from your target · 6 mana · 12 s |
 | Ranger | **Camouflage** (capstone) | Last Stand | 6 s: creatures lose track of you, heal 20%, your next shot crits; shooting ends it · 60 s |
 
 ---
@@ -63,7 +63,7 @@ Same shape as the warrior's: three trees of five tiers, a tier opening every 4 p
 - Capstone: **Predator**
 
 **Ranger** (the Wardens' scouts; mirrors Warden)
-- Tier 1: Nimble (3% chance to sidestep a blow ×5) · Endurance (+6 health ×5) · Forager (gather 15% faster ×3)
+- Tier 1: Nimble (3% chance to sidestep a blow ×5) · Endurance (+10 health ×5) · Forager (gather 15% faster ×3)
 - Tier 2: Volley Master (Volley +2 and +10 wider ×3) · Living off the Land (+5 health a kill ×3) · Keen Forager (extra logs and ore ×2, needs Forager)
 - Tier 3: **Disengage** (needs Nimble) · Ranger's Rest (+0.5 health a second ×2) · Trail Rations (food heals 25% more ×2)
 - Tier 4: Storm of Arrows (Volley −6 s, needs Volley Master) · Watchful Eye (Silencing Shot −4 s, +0.5 s stun ×2) · Fleet Foot (+5% speed, mount sooner ×2)
@@ -102,9 +102,9 @@ Each fight runs over five random seeds. Two numbers per fight:
 
 | Mirrored builds | Average time × | Average cost × | Deaths |
 |---|---|---|---|
-| Blade warrior / Marksman archer | 1.01 | 0.93 | none |
-| Fury warrior / Hunter archer | 1.08 | 1.05 | none |
-| Warden warrior / Ranger archer | 1.00 | 1.07 | none |
+| Blade warrior / Marksman archer | 1.00 | 0.93 | none |
+| Fury warrior / Hunter archer | 1.06 | 1.02 | none |
+| Warden warrior / Ranger archer | 1.00 | 1.06 | none |
 
 The bands the tests enforce:
 - for each pair, average time between 0.95 and 1.10, and average cost between 0.90 and 1.10;
@@ -134,7 +134,7 @@ The fights (level, gear tier, creatures): L1 slime · L3 goblin · L6 two goblin
 - **Creatures hit about 40% harder again** (goblins 9 → 13, skeletons and bone hounds 12 → 17, slimes 6 → 8, the shaman's fireball 25 → 35; ogres only 18 → 22) and have about 10% more health. Blade / Marksman fell to 0.87 on cost again, so **warrior health** went 160 → 175. The pairs now sit near the edges of the band (Blade 0.91, Warden 1.10): the heavier the hits, the more the health lost weighs in the cost.
 
 **Mana, Execute and a harder Normal** (8 October 2026, from playtesting: mana never ran short, Execute was too strong, Normal too easy):
-- Mana: the pool starts small and grows with you, 60 at level 1 and 8 more a level (252 at 25), so each level makes room for its new spells. It comes back at 1 a second in a fight and 3 out of one (it was 3 always), and the first spells cost twice what they did (Thrust, Quick Shot and Spark 8; Slash, Aimed Shot and Firebolt 10; Rend, Barbed Arrow and Ignite 12). With the old numbers a fight never took you below 93% at level 1 or 57% up to level 8; now a slime at level 1 takes you to about 47%, a goblin at level 3 to 13–31%, two goblins at level 6 nearly to empty, and the late fights run the defensive builds dry (`npx tsx tests/mana-report.ts` prints the table). With a pool fixed at 100, the ranged bots ran dry against the two ogres at level 25 and fell; the growing pool keeps them standing, with the archer at 135 health (was 130) and the sorceress's Firestorm at +5 wider a rank (was +10).
+- Mana: each class has its own pool, small at first and growing every level so each level makes room for its new spells: the warrior 40 and 8 more a level, the archer 45 and 10, the sorceress 50 and 10. It comes back at 0.5 a second in a fight and 3 out of one (it was 3 always). The first spells cost twice what they did (the warrior's Thrust 8, Slash 10, Rend 12), and the archer's and the sorceress's cost in proportion to their pools (×1.125 and ×1.25: Quick Shot 9, Spark 10; Volley 22, Flamestrike 25), so a bigger pool doesn't buy free damage. A fight at level 1 now affords about four spells (a slime leaves you near empty); in the middle levels you end fights at 0–50%; late fights run the defensive builds dry (`npx tsx tests/mana-report.ts` prints the table). To keep the ranged scouts standing against the two ogres at level 25: the archer has 135 health (was 130), the Ranger's Endurance and the Arcane Fortitude give 10 health a rank (was 6), the archer bot raises Camouflage when hurt as the others raise Last Stand and Arcane Barrier, and the sorceress's Firestorm is +5 wider a rank (was +10).
 - Execute, Kill Shot and Incinerate have a 20 s cooldown (they had none).
 - Normal now hits 30% harder and has 15% more health than the creatures' own numbers. Fairness between the classes is still measured on the creatures' own numbers (`fight` in `tests/fight.ts`), since the difficulty scales every class's fights; `npx tsx tests/balance-report.ts --normal` fights them at Normal. There, only the Blade warrior falls (two goblins at level 6, an ogre and two goblins at 21): it has no healing and the bot never eats or steps back. The ranged builds get through everything.
 

@@ -15,9 +15,6 @@ import type { ClassId } from './classes';
 export const MAX_LEVEL = 25;
 /** Extra maximum health per level above 1. */
 export const HP_PER_LEVEL = 5;
-/** Mana at level 1, and more per level above it: early fights are tight, late ones have room. */
-export const MP_BASE = 60;
-export const MP_PER_LEVEL = 8;
 
 /** Experience needed to go from `level` to the next (quick at first, slower later). */
 export function xpToNext(level: number): number {
@@ -1006,8 +1003,9 @@ Object.assign(TALENTS, {
     r => `${pct(0.03 * r)} chance to sidestep a blow entirely.`,
     { evade: 0.03 }
   ),
-  endurance: T('ranger', 'Endurance', 'icon:heart', 0, 1, 5, r => `${6 * r} more maximum health.`, {
-    hp: 6,
+  // no shield to hide behind: the scouts' health talent gives more than the Warden's Vitality
+  endurance: T('ranger', 'Endurance', 'icon:heart', 0, 1, 5, r => `${10 * r} more maximum health.`, {
+    hp: 10,
   }),
   forager: T(
     'ranger',
@@ -1437,8 +1435,8 @@ Object.assign(TALENTS, {
     r => `${pct(0.03 * r)} chance for a blow to pass through you.`,
     { evade: 0.03 }
   ),
-  fortitude: T('arcane', 'Fortitude', 'icon:heart', 0, 1, 5, r => `${6 * r} more maximum health.`, {
-    hp: 6,
+  fortitude: T('arcane', 'Fortitude', 'icon:heart', 0, 1, 5, r => `${10 * r} more maximum health.`, {
+    hp: 10,
   }),
   woodwise: T(
     'arcane',

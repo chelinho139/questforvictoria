@@ -393,6 +393,7 @@ function fightNow(
         return;
       }
       if (hero.path) hero.stopMoving();
+      if (hero.hp < hero.hpMax * 0.35) tryCast(hero, ['camouflage']);
       if (hero.knows('beartrap') && hero.cdRemaining('beartrap') <= 0 && dist > 60)
         tryCast(hero, ['beartrap']);
       tryCast(hero, ARCHER_INSTANT);

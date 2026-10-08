@@ -9,7 +9,7 @@
 - **From afar.** Her staff casts a bolt on its own every 1.7 s, reaching **200**; her spells reach **220** (Pyroblast 260). Each bolt **flies** to its mark at 480 a second (a little slower than an arrow, so you can see it go) and hits when it lands.
 - **Stand still to cast.** As for the archer: feet planted to cast, a click-walk stops for it, keys held down refuse it ("Stand still to cast"), and each bolt holds her still for 0.3 s. Arcane Power, Frost Nova, Icy Veins, Blink and Arcane Barrier don't loose a bolt, so they work on the move.
 - **A staff.** Without one she can only punch ("You need a staff to cast"). Her off hand holds a **book** or an **orb**.
-- **The lightest.** She starts with **125 health** (the archer 135, the warrior 175) and has no shield. What she has instead are crowds: Flamestrike, Chain Lightning and Frost Nova catch several creatures at once.
+- **The lightest.** She starts with **125 health** (the archer 135, the warrior 175) and has no shield, but the most **mana**: 50, and 10 more a level; her spells cost the most too. What she has instead are crowds: Flamestrike, Chain Lightning and Frost Nova catch several creatures at once.
 - **Creatures fight back.** As with arrows, a creature her bolts hit stays angry at her for 10 s, however far away she cast from.
 - **Chosen when you make a character** (the New character screen: Warrior | Archer | Sorceress), in single player and multi player alike, and saved with the character.
 
@@ -21,26 +21,26 @@ Each sorceress spell mirrors an archer spell's level, cost and cooldown.
 
 | Level | Sorceress | Mirrors | What it does |
 |---|---|---|---|
-| 1 | **Spark** | Quick Shot | 5 damage · 8 mana · 6 s |
-| 1 | **Firebolt** | Aimed Shot | 8 damage, ×1.5 right after Spark · 10 mana · 9 s |
-| 2 | **Ignite** | Barbed Arrow | 3 damage + burns 2 a second for 8 s · 12 mana · 15 s |
-| 3 | **Frostbolt** | Concussive Shot | 4 damage, slows the target by half for 6 s · 10 mana · 20 s |
+| 1 | **Spark** | Quick Shot | 5 damage · 10 mana · 6 s |
+| 1 | **Firebolt** | Aimed Shot | 8 damage, ×1.5 right after Spark · 12 mana · 9 s |
+| 2 | **Ignite** | Barbed Arrow | 3 damage + burns 2 a second for 8 s · 15 mana · 15 s |
+| 3 | **Frostbolt** | Concussive Shot | 4 damage, slows the target by half for 6 s · 12 mana · 20 s |
 | 4 | Mount | Mount | (every class) |
-| 5 | **Arcane Power** | Hunter's Mark / War Cry | you deal 20% more damage for 15 s · 15 mana · 40 s (no target, cast on the move) |
+| 5 | **Arcane Power** | Hunter's Mark / War Cry | you deal 20% more damage for 15 s · 19 mana · 40 s (no target, cast on the move) |
 | 6 | **Counterspell** | Silencing Shot | cuts a spell short from afar, stuns 1 s · 15 s (shares Interrupt's talents) |
 | 7 | **Incinerate** | Kill Shot | below 25% health: 30% of what's left + 8, from range |
-| 9 | **Flamestrike** | Volley | 7 to every enemy within 70 of the target · 20 mana · 14 s |
+| 9 | **Flamestrike** | Volley | 7 to every enemy within 70 of the target · 25 mana · 14 s |
 | 11 | **Chain Lightning** | Piercing Shot | 12 to the target, then leaps to the two nearest enemies within 90 · 30 s |
 
 **Taught by talents** (two per tree):
 
 | Tree | Ability | Mirrors | What it does |
 |---|---|---|---|
-| Fire | **Scorch** | Rapid Fire / Sunder | 6 damage; the target takes 20% more damage for 10 s · 8 mana · 10 s |
-| Fire | **Pyroblast** (capstone) | Deadeye | 26 damage; ready again at once if it kills · 25 mana · 20 s |
-| Frost | **Frost Nova** | Bear Trap | every enemy within 70 of her takes 4 and is frozen where it stands for 3 s (it can still swing) · 10 mana · 20 s |
+| Fire | **Scorch** | Rapid Fire / Sunder | 6 damage; the target takes 20% more damage for 10 s · 10 mana · 10 s |
+| Fire | **Pyroblast** (capstone) | Deadeye | 26 damage; ready again at once if it kills · 31 mana · 20 s |
+| Frost | **Frost Nova** | Bear Trap | every enemy within 70 of her takes 4 and is frozen where it stands for 3 s (it can still swing) · 12 mana · 20 s |
 | Frost | **Icy Veins** (capstone) | Predator | 10 s: her staff's bolts come 50% faster, 20% more damage · 45 s |
-| Arcane | **Blink** | Disengage | vanish and step out up to 90 back from the target, untouchable for half a second · 5 mana · 12 s |
+| Arcane | **Blink** | Disengage | vanish and step out up to 90 back from the target, untouchable for half a second · 6 mana · 12 s |
 | Arcane | **Arcane Barrier** (capstone) | Camouflage / Last Stand | heal 30% and take 30% less damage for 8 s · 60 s |
 
 In a duel, Frost Nova freezes the opponent too (no walking for 3 s, as a web or a snare holds you), Scorch is a Sunder on them, and Counterspell stuns them.
@@ -66,7 +66,7 @@ The same shape as the warrior's and the archer's: three trees of five tiers, a t
 - Capstone: **Icy Veins**
 
 **Arcane** (the old craft; mirrors Ranger)
-- Tier 1: Shimmer (3% chance for a blow to pass through ×5) · Fortitude (+6 health ×5) · Woodwise (gather 15% faster ×3)
+- Tier 1: Shimmer (3% chance for a blow to pass through ×5) · Fortitude (+10 health ×5) · Woodwise (gather 15% faster ×3)
 - Tier 2: Firestorm (Flamestrike +2 and +5 wider ×3) · Soul Harvest (+5 health a kill ×3) · Stonereader (extra logs and ore ×2, needs Woodwise)
 - Tier 3: **Blink** (needs Shimmer) · Meditation (+0.5 health a second ×2) · Hearth Witch (food heals 25% more ×2)
 - Tier 4: Inferno (Flamestrike −6 s, needs Firestorm) · Spellbreaker (Counterspell −4 s, +0.5 s stun ×2) · Wayfarer (+5% speed, mount sooner ×2)
@@ -101,9 +101,9 @@ Measured exactly as the archer was (see `docs/archer.md`): `tests/fight.ts` runs
 
 | Mirrored builds | Average time × | Average cost × | Deaths |
 |---|---|---|---|
-| Blade warrior / Fire sorceress | 0.97 | 0.96 | none |
-| Fury warrior / Frost sorceress | 0.98 | 0.95 | none |
-| Warden warrior / Arcane sorceress | 0.95 | 1.07 | none |
+| Blade warrior / Fire sorceress | 0.97 | 0.97 | none |
+| Fury warrior / Frost sorceress | 0.96 | 0.93 | none |
+| Warden warrior / Arcane sorceress | 0.96 | 1.07 | none |
 
 The bands: for each pair, average time between 0.95 and 1.10 and average cost between 0.90 and 1.10; no single fight outside 0.75–1.35 in time; nobody dies.
 
@@ -114,7 +114,7 @@ The bands: for each pair, average time between 0.95 and 1.10 and average cost be
 - Her health was set at 125 from the start ("the lightest of the three"), and the first measurement already sat inside every band, so nothing else was tuned.
 
 **Mana, Execute and a harder Normal** (8 October 2026, from playtesting: mana never ran short, Execute was too strong, Normal too easy):
-- Mana: the pool starts small and grows with you, 60 at level 1 and 8 more a level (252 at 25), so each level makes room for its new spells. It comes back at 1 a second in a fight and 3 out of one (it was 3 always), and the first spells cost twice what they did (Thrust, Quick Shot and Spark 8; Slash, Aimed Shot and Firebolt 10; Rend, Barbed Arrow and Ignite 12). With the old numbers a fight never took you below 93% at level 1 or 57% up to level 8; now a slime at level 1 takes you to about 47%, a goblin at level 3 to 13–31%, two goblins at level 6 nearly to empty, and the late fights run the defensive builds dry (`npx tsx tests/mana-report.ts` prints the table). With a pool fixed at 100, the ranged bots ran dry against the two ogres at level 25 and fell; the growing pool keeps them standing, with the archer at 135 health (was 130) and the sorceress's Firestorm at +5 wider a rank (was +10).
+- Mana: each class has its own pool, small at first and growing every level so each level makes room for its new spells: the warrior 40 and 8 more a level, the archer 45 and 10, the sorceress 50 and 10. It comes back at 0.5 a second in a fight and 3 out of one (it was 3 always). The first spells cost twice what they did (the warrior's Thrust 8, Slash 10, Rend 12), and the archer's and the sorceress's cost in proportion to their pools (×1.125 and ×1.25: Quick Shot 9, Spark 10; Volley 22, Flamestrike 25), so a bigger pool doesn't buy free damage. A fight at level 1 now affords about four spells (a slime leaves you near empty); in the middle levels you end fights at 0–50%; late fights run the defensive builds dry (`npx tsx tests/mana-report.ts` prints the table). To keep the ranged scouts standing against the two ogres at level 25: the archer has 135 health (was 130), the Ranger's Endurance and the Arcane Fortitude give 10 health a rank (was 6), the archer bot raises Camouflage when hurt as the others raise Last Stand and Arcane Barrier, and the sorceress's Firestorm is +5 wider a rank (was +10).
 - Incinerate (like Execute and Kill Shot) have a 20 s cooldown (they had none).
 - Normal now hits 30% harder and has 15% more health than the creatures' own numbers. Fairness between the classes is still measured on the creatures' own numbers (`fight` in `tests/fight.ts`), since the difficulty scales every class's fights; `npx tsx tests/balance-report.ts --normal` fights them at Normal. There, only the Blade warrior falls (two goblins at level 6, an ogre and two goblins at 21): it has no healing and the bot never eats or steps back. The ranged builds get through everything.
 

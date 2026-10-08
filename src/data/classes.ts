@@ -19,6 +19,9 @@ export interface ClassDef {
   about: string;
   /** Health at level 1 (each level adds HP_PER_LEVEL). */
   hp: number;
+  /** Mana at level 1, and how much more each level brings (room for the spells it teaches). */
+  mp: number;
+  mpLevel: number;
   /** Auto-attack: reach (world px), seconds between attacks, base damage, and whether it shoots (arrows, or bolts from a staff). */
   aa: { range: number; period: number; dmg: number; ranged: boolean };
   /** What a new hero of this class wears. */
@@ -38,6 +41,9 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     about:
       'Fights face to face: charges in, cuts, bleeds and whirls, wears a shield and shrugs off blows. Learns Blade, Fury and Warden talents.',
     hp: 175,
+    // steel does most of a warrior's work: the least mana
+    mp: 40,
+    mpLevel: 8,
     aa: { range: 48, period: 1.3, dmg: 3, ranged: false },
     starter: { weapon: 'rusty_sword', legs: 'cloth_trousers' },
     presets: {
@@ -57,6 +63,8 @@ export const CLASSES: Record<ClassId, ClassDef> = {
       'Fights from a distance and stands still to shoot: every arrow flies to its mark, so creatures take hits on the way in. Lighter than a warrior, with no shield. Learns Marksman, Hunter and Ranger talents.',
     // lighter than a warrior: creatures take hits on the way in, so the archer pays for range in health
     hp: 135,
+    mp: 45,
+    mpLevel: 10,
     aa: { range: 200, period: 1.7, dmg: 4, ranged: true },
     starter: { weapon: 'worn_shortbow', legs: 'cloth_trousers' },
     presets: {
@@ -76,6 +84,9 @@ export const CLASSES: Record<ClassId, ClassDef> = {
       'Fights from a distance with a staff and stands still to cast: bolts of fire and frost fly to their mark, flames fall on crowds and lightning leaps between foes. The lightest of the three, with no shield. Learns Fire, Frost and Arcane talents.',
     // the lightest: she pays for her reach and her crowds in health
     hp: 125,
+    // her spells are her weapon: the most mana, and it grows fastest
+    mp: 50,
+    mpLevel: 10,
     aa: { range: 200, period: 1.7, dmg: 4, ranged: true },
     starter: { weapon: 'gnarled_staff', legs: 'cloth_trousers' },
     presets: {
