@@ -1,5 +1,5 @@
 import { FLAT_OBJECTS } from '../data/regions/types';
-import type { ObjectKind } from '../data/regions/types';
+import type { ObjectKind, RegionSpawn } from '../data/regions/types';
 import { KINDS, RESPAWN } from '../data/enemies';
 import type { EnemyDef, EnemyKind, CreatureSounds, CastDef } from '../data/enemies';
 import { DIFFICULTIES, partyScale } from '../data/difficulty';
@@ -142,6 +142,8 @@ export class Region {
   } | null = null;
   private sceneQueue: string[] = [];
   private storyT = 0;
+  /** The `live` spawns already out (by index in `def.spawns`). */
+  private livePlaced = new Set<number>();
   private wasNight = false;
   /** A night being held (RegionDef.hold): under way, and seconds to the next one out of the dark. */
   private holdOn = false;
@@ -416,16 +418,32 @@ export class Region {
 
   /** The creatures this region starts with (those whose condition holds). */
   spawns(): Enemy[] {
-    return this.def.spawns
-      .filter(sp => this.game.check(sp.when))
-      .map(sp => {
-        const e = this.spawnEnemy(sp.kind, sp.at[0] * T + T / 2, sp.at[1] * T + T / 2);
-        if (sp.to) {
-          e.lx = sp.to[0] * T + T / 2;
-          e.ly = sp.to[1] * T + T / 2;
-        }
-        return e;
-      });
+    this.livePlaced.clear();
+    return this.def.spawns.flatMap((sp, i) => {
+      if (!this.game.check(sp.when)) return [];
+      if (sp.live) this.livePlaced.add(i);
+      return [this.placeSpawn(sp)];
+    });
+  }
+
+  private placeSpawn(sp: RegionSpawn): Enemy {
+    const e = this.spawnEnemy(sp.kind, sp.at[0] * T + T / 2, sp.at[1] * T + T / 2);
+    if (sp.to) {
+      e.lx = sp.to[0] * T + T / 2;
+      e.ly = sp.to[1] * T + T / 2;
+    }
+    return e;
+  }
+
+  /** A `live` spawn whose condition has come to hold climbs out of the ground now (the Old Briar once Cobb asks). */
+  private syncSpawns(): void {
+    this.def.spawns.forEach((sp, i) => {
+      if (!sp.live || this.livePlaced.has(i) || !this.game.check(sp.when)) return;
+      this.livePlaced.add(i);
+      const e = this.placeSpawn(sp);
+      this.enemies.push(e);
+      this.burst(e.x, e.y + 2, 14, '#3e3236', 70, 0.6, 3, -20);
+    });
   }
 
   // ---------- drops ----------
@@ -673,6 +691,7 @@ export class Region {
     this.syncFixed();
     this.syncNpcs();
     this.syncProps();
+    this.syncSpawns();
     const heroes = this.heroes();
     for (const on of this.def.onEnter ?? [])
       if (!this.game.flags['scene:' + on.scene] && this.game.check(on.when, heroes[0], this))
@@ -1338,12 +1357,12 @@ export class Region {
     for (const c of this.game.companionsIn(this.id)) c.bark('ambush');
   }
 
-  /** It noticed `f` (or was hit by them): every creature that howls within reach comes too. */
+  /** It noticed `f` (or was hit by them): every creature that howls (or that it calls) within reach comes too. */
   private howl(e: Enemy, f: Foe): void {
     const hw = e.def.howl;
     if (!hw) return;
     for (const o of this.enemies) {
-      if (o === e || !o.alive || o.aggro || o.hid || !o.def.howl || o.homeT > 0) continue;
+      if (o === e || !o.alive || o.aggro || o.hid || !(o.def.howl || hw.calls?.includes(o.kind)) || o.homeT > 0) continue;
       if (Math.hypot(o.x - e.x, o.y - e.y) > hw.r) continue;
       o.aggro = true;
       o.foe = f.id;

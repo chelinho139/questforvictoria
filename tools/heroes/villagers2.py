@@ -1,6 +1,6 @@
 """The new people of Act II, hand-placed at the HD scale beside the Millbrook villagers
 (villagers.py): Wren Ashdown, Hesketh and Ada Coll of Kilnholt, Grandad Pell, Mother Dunn,
-Bess Tanner, Sir Garrick's ghost and the grey lantern. Each is one drawing (frame 0); the idle
+Bess Tanner, Sir Garrick's ghost and the grey lantern (and, for Act I later, Old Cobb the hedger). Each is one drawing (frame 0); the idle
 frames move the head and body down a pixel (breathing) and sway hems, a braid tie and a candle
 (the grey lantern has two frames instead: it swings on its ring). Face right, 3/4 view, in
 natural colours (the game recolours them); Garrick's ghost is washed out to pale blue-greys.
@@ -358,6 +358,52 @@ LANT = [
 LANT_SWAY = {17: '...gGGGGGGLLIiI.', 18: '...gGGGGGGLIyYyI', 19: '...gGGGGGGLIYYYI',
              20: '...gGGGGGGLIyYyI', 21: '...gGGGGGGLIyoyI', 22: '...gGGGGGGLLIII.'}
 
+# ---------------------------------------------------------------- Old Cobb, the hedger
+# (Act I, later: he lays the hedges north of the square, and the hedges have started walking)
+COBB_PAL = dict(SKIN, S='#eab892', s='#c9946c', k='#a86e4a',
+                b='#dcd8d0', B='#a8a49c',
+                h='#dcbc72', H='#b08c48', n='#6e5226',
+                j='#8a5a34', J='#64401f', q='#46301a',
+                g='#9aa07a', G='#747a58', l='#5e3c1e',
+                t='#6e604e', T='#504538', d='#3e2a1a',
+                o='#b08a5a', O='#7a5a36', i='#d0d4dc', I='#8a909c')
+COBB = [
+    '......................',
+    '......................',
+    '......................',
+    '......................',
+    '......................',
+    '.....................I',
+    '..........hhhh......iI',
+    '.........hhhhhH.....ii',
+    '.........nnnnnnn....iI',
+    '......HhhhhhhhhhhH..O.',
+    '.........SSSSSSs....O.',
+    '.........SESSSES....O.',
+    '.........SSSSSkSk...O.',
+    '.........bBbbbbbB...O.',
+    '..........bbbbbB....O.',
+    '.......jjjjbbBjjj...O.',
+    '......jJjjjjjjjjjJ..O.',
+    '.....gjJjjjjjjjjjJG.O.',
+    '.....gGjjjjqjjjjJJGgO.',
+    '.....gGjjjjqjjjjJJGgO.',
+    '.....gGJjjjqjjjJJJGlO.',
+    '.....lJnnnnnnnnnJJ.lO.',
+    '.....llJjjjjjjjJJJ..O.',
+    '......gGGGGGGGGGGG..O.',
+    '......gGGGGGGGGGGG..O.',
+    '......G.GG.GGG.GG...O.',
+    '.......tTT..tTT.....O.',
+    '.......tTT..tTT.....O.',
+    '.......tTT..tTT.....O.',
+    '.......tTT...tTT....O.',
+    '......dddd...dddd...O.',
+    '......dddd...dddd...O.',
+]
+COBB_SWAY = {25: '......G.GG.GGG.GGG..O.'}
+
+
 VILLAGERS2 = {
     'wren': (WREN, WREN_PAL, 11, WREN_SWAY),
     'hesketh': (HESK, HESK_PAL, 18, HESK_SWAY),
@@ -365,6 +411,7 @@ VILLAGERS2 = {
     'pell': (PELL, PELL_PAL, 18, PELL_SWAY),
     'dunn': (DUNN, DUNN_PAL, 11, DUNN_SWAY),
     'bess': (BESS, BESS_PAL, 12, BESS_SWAY),
+    'cobb': (COBB, COBB_PAL, 19, COBB_SWAY),
     'garrick_ghost': (GARR, GARR_PAL, 21, GARR_SWAY),
     'lantern': (LANT, LANT_PAL, None, LANT_SWAY),
 }

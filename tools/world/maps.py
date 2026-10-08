@@ -296,6 +296,9 @@ def millbrook():
         m.prop('fence_x', c, 34, 1, 1)
     for c in range(45, 59):
         m.prop('fence_x', c, 34, 1, 1)
+    # Old Cobb's new hedge-line, laid against the ash field north of the square
+    for c in range(24, 29):
+        m.prop('fence_x', c, 13, 1, 1)
     # the thorns across the north road, and on along the north edge to the river, which runs
     # under them through a low arch of thorn (the river path goes under it too)
     for c in (9, 13, 23, 27):
@@ -316,7 +319,10 @@ def millbrook():
                  (51, 10), (55, 10), (53, 13), (57, 13), (48, 40), (50, 42), (53, 39), (56, 43), (6, 42), (9, 45), (12, 40),
                  (8, 12), (12, 8), (26, 46),
                  # Act II: Wren on the mill step and by the river at the thorn wall, a letter at the mill, Bess
-                 (12, 27), (14, 27), (22, 6), (24, 38)]:
+                 (12, 27), (14, 27), (22, 6), (24, 38),
+                 # later in Act I: Old Cobb, the thornlings and the Old Briar in the ash field, the
+                 # King's lead hound, the grey postman's tracks on the north road
+                 (30, 13), (26, 5), (30, 7), (34, 5), (24, 9), (28, 10), (32, 9), (36, 10), (30, 3), (52, 44), (40, 6)]:
         m.spot(c, r)
     # scatter
     # trees in the outskirts only; the village itself is kept clear

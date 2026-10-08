@@ -28,6 +28,7 @@ write are generated: change the art here, then regenerate.
   (Kilnholt's kiln, smouldering and cold) → `structureArt.ts`. All through `gen_itemart.py`. The
   Act II gear on the heroes (steel, the Warden set, the jerkin, the leggings, the mantle, the greaves,
   the recurve) is in `cast2.py`'s tables.
+- Act I's later art: `creatures3.py` (the thornling and the Old Briar, grown from a seeded tangle of stems at any size, and the King's lead hound, the bone hound in an iron collar) → `creatureArt.ts`; Old Cobb the hedger is in `villagers2.py` → `npcArt.ts`. Both through `gen_itemart.py`.
 - `gearpreview.py [hero…]` / `gearpreview.py anim [hero…]` — magnified preview sheets of every item
   (or walk/attack/jump with full kits) for review.
 - `tool.py` — the shared grid, render (HD auto outline) and sheet helpers.

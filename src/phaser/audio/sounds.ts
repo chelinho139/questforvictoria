@@ -422,6 +422,8 @@ const SPEAKERS: Record<NpcId | 'bellringer' | 'thane', Speaker> = {
   tobin: { f: 165, mouth: 1.05, syl: 0.068, lilt: 0.2, breath: 0.18 },
   // Bram the smith: big, deep, few words
   bram: { f: 84, mouth: 0.94, syl: 0.1, lilt: 0.05, rough: 0.35, breath: 0.25, drive: 1.5 },
+  // Old Cobb the hedger: slow, warm, an old country drawl
+  cobb: { f: 108, mouth: 0.99, syl: 0.12, lilt: 0.11, rough: 0.2, breath: 0.32, fall: 0.1 },
   // Wren Ashdown: young, quick, clipped, a temper under it
   wren: { f: 232, mouth: 1.17, syl: 0.075, lilt: 0.1, breath: 0.22, fall: 0.16 },
   // Hesketh Coll: slow, low, as if every word costs charcoal
@@ -2540,6 +2542,40 @@ export const SOUNDS: Record<SoundId, Recipe> = {
       voice(s, { at: 0, d: 0.45, f: 96, peak: 104, f1: 82, mouth: AH, v: 1.4, rough: 0.35, roughHz: 28, breath: 0.4, a: 0.02 });
       for (let i = 0; i < 5; i++) clack(s, 0.5 + i * 0.05, 0.3, 700 + 300 * s.random());
       s.reverb(0.45, 1.4);
+    },
+  },
+  // the thornlings of Millbrook's north field: the Blackthorn, walking
+  thornRustle: {
+    len: 0.8,
+    loud: 0.5,
+    takes: 2,
+    make: s => {
+      // dry stems dragging over each other, and a creak like a branch bent too far
+      crackle(s, 0, 0.6, 0.55, 90, 2600, 1400, 0.8);
+      s.tone({ at: 0.08, f: 190, f1: 120, v: 0.35, a: 0.05, d: 0.45, wave: 'saw', vib: [11, 0.04] });
+      s.noise({ at: 0.05, v: 0.3, a: 0.1, d: 0.4, filter: 'bandpass', f: 900, f1: 500, q: 2 });
+    },
+  },
+  thornSnap: {
+    len: 0.35,
+    loud: 0.5,
+    gap: 0.2,
+    make: s => {
+      // a green stick snapping
+      s.noise({ v: 0.8, a: 0.001, d: 0.04, filter: 'highpass', f: 2200 });
+      crunch(s, 0.01, 0.5, 0.08, 1700);
+      crackle(s, 0.02, 0.2, 0.3, 120, 3000, 1800, 0.6);
+    },
+  },
+  thornDie: {
+    len: 1.1,
+    loud: 0.6,
+    make: s => {
+      // the tangle tearing itself apart and settling into a heap
+      crackle(s, 0, 0.9, 0.8, 110, 2400, 900, 0.9);
+      for (let i = 0; i < 4; i++) crunch(s, 0.05 + i * 0.12, 0.45 - i * 0.07, 0.07, 1500 - i * 200);
+      s.tone({ at: 0.1, f: 160, f1: 70, v: 0.3, a: 0.02, d: 0.7, wave: 'saw' });
+      s.reverb(0.25, 0.8);
     },
   },
   // ------------------------------------------------------------ the weather
