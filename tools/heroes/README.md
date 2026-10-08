@@ -5,7 +5,10 @@ write are generated: change the art here, then regenerate.
 
 - `cast2.py` — the eight HD heroes built from tagged parts (head, torso, belt, arm, legs, boots, cape…),
   with every equippable item: helmets fitted per head, armour/trousers re-shading the parts they cover,
-  boots, shields, the amulet and each weapon in every pose.
+  boots, shields, the amulet and each weapon in every pose. The sorceress's staves (gnarled, ashwood,
+  runed, Warden, willow: `STAVES`, `item_staff`; the shot frames are her cast, the staff's head
+  lighting up) and her off hands (the hedge grimoire and the crystal orb: `FOCI`) are there too;
+  `gearpreview.py sorc [hero…]` shows them in every pose.
 - `emit3.py` — writes `src/phaser/render/hdHeroes.ts`: bare frames per hero plus one pixel layer per
   item per frame. `python3 emit3.py --check` also verifies that stacking layers matches drawing
   random kits directly (0 mismatched pixels expected).
