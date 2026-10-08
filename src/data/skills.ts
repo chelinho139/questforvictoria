@@ -231,7 +231,7 @@ export const ACTIONS: Record<ActionKey, ActionDef> = {
   rapidfire: { n: 'Rapid Fire', col: '#c8d2e0', cd: 10, c: 9, desc: '3 arrows × 4 · 10 s' },
   deadeye: { n: 'Deadeye', col: '#e0504b', cd: 20, c: 28, desc: '26 · resets on a kill · 20 s' },
   beartrap: { n: 'Bear Trap', col: '#c8a05a', cd: 20, c: 11, desc: 'trap: 8 + held 3 s · 20 s' },
-  predator: { n: 'Predator', col: '#ff8c42', cd: 45, desc: '+50% shots, +20% dmg 10 s · 45 s' },
+  predator: { n: 'Predator', col: '#ff8c42', cd: 45, desc: '+25% shots, +20% dmg 10 s · 45 s' },
   disengage: { n: 'Disengage', col: '#6ccf6a', cd: 12, c: 6, desc: 'leap back · 12 s' },
   camouflage: { n: 'Camouflage', col: '#6ccf6a', cd: 60, desc: 'vanish, heal 20% · 60 s' },
   counterspell: { n: 'Counterspell', col: '#c08aff', cd: 15, desc: 'cuts the cast · far · 15 s' },
@@ -240,7 +240,7 @@ export const ACTIONS: Record<ActionKey, ActionDef> = {
   scorch: { n: 'Scorch', col: '#ff9a4a', cd: 10, c: 10, desc: '6 · +20% taken 10 s · 10 s' },
   pyroblast: { n: 'Pyroblast', col: '#e0504b', cd: 20, c: 31, desc: '26 · resets on a kill · 20 s' },
   frostnova: { n: 'Frost Nova', col: '#8ad4ff', cd: 20, c: 12, desc: '4 around you + frozen 3 s · 20 s' },
-  icyveins: { n: 'Icy Veins', col: '#8ad4ff', cd: 45, desc: '+50% bolts, +20% dmg 10 s · 45 s' },
+  icyveins: { n: 'Icy Veins', col: '#8ad4ff', cd: 45, desc: '+25% bolts, +20% dmg 10 s · 45 s' },
   blink: { n: 'Blink', col: '#c08aff', cd: 12, c: 6, desc: 'vanish and step back · 12 s' },
   barrier: { n: 'Arcane Barrier', col: '#c08aff', cd: 60, desc: 'heal 30%, −30% damage 8 s · 60 s' },
 };

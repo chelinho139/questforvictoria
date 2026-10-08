@@ -39,7 +39,7 @@ Each sorceress spell mirrors an archer spell's level, cost and cooldown.
 | Fire | **Scorch** | Rapid Fire / Sunder | 6 damage; the target takes 20% more damage for 10 s · 10 mana · 10 s |
 | Fire | **Pyroblast** (capstone) | Deadeye | 26 damage; ready again at once if it kills · 31 mana · 20 s |
 | Frost | **Frost Nova** | Bear Trap | every enemy within 70 of her takes 4 and is frozen where it stands for 3 s (it can still swing) · 12 mana · 20 s |
-| Frost | **Icy Veins** (capstone) | Predator | 10 s: her staff's bolts come 50% faster, 20% more damage · 45 s |
+| Frost | **Icy Veins** (capstone) | Predator | 10 s: her staff's bolts come 25% faster, 20% more damage · 45 s |
 | Arcane | **Blink** | Disengage | vanish and step out up to 90 back from the target, untouchable for half a second · 6 mana · 12 s |
 | Arcane | **Arcane Barrier** (capstone) | Camouflage / Last Stand | heal 30% and take 30% less damage for 8 s · 60 s |
 
@@ -117,6 +117,8 @@ The bands: for each pair, average time between 0.95 and 1.10 and average cost be
 - Mana: each class has its own pool, small at first and growing every level so each level makes room for its new spells: the warrior 40 and 8 more a level, the archer 45 and 10, the sorceress 50 and 10. It comes back at 0.5 a second in a fight and 3 out of one (it was 3 always). The first spells cost twice what they did (the warrior's Thrust 8, Slash 10, Rend 12), and the archer's and the sorceress's cost in proportion to their pools (×1.125 and ×1.25: Quick Shot 9, Spark 10; Volley 22, Flamestrike 25), so a bigger pool doesn't buy free damage. A fight at level 1 now affords about four spells (a slime leaves you near empty); in the middle levels you end fights at 0–50%; late fights run the defensive builds dry (`npx tsx tests/mana-report.ts` prints the table). To keep the ranged scouts standing against the two ogres at level 25: the archer has 135 health (was 130), the Ranger's Endurance and the Arcane Fortitude give 10 health a rank (was 6), the archer bot raises Camouflage when hurt as the others raise Last Stand and Arcane Barrier, and the sorceress's Firestorm is +5 wider a rank (was +10).
 - Incinerate (like Execute and Kill Shot) have a 20 s cooldown (they had none).
 - Normal now hits 30% harder and has 15% more health than the creatures' own numbers. Fairness between the classes is still measured on the creatures' own numbers (`fight` in `tests/fight.ts`), since the difficulty scales every class's fights; `npx tsx tests/balance-report.ts --normal` fights them at Normal. There, only the Blade warrior falls (two goblins at level 6, an ogre and two goblins at 21): it has no healing and the bot never eats or steps back. The ranged builds get through everything.
+
+**Damage, plainly:** on a training dummy (`npx tsx tests/damage-report.ts`) she deals 0.93–1.05× the warrior's damage a second at every level and build, and exactly what the archer deals but for her talents' small differences; the table and the level-1 sums are in `docs/archer.md` (*Damage, plainly*). Icy Veins makes her staff's bolts 25% faster (it was 50%: with Quickened Casting she out-damaged the Fury warrior by a tenth at level 25).
 
 **What the simulation doesn't capture:** player skill (perfect-timed crits, kiting with Frostbolt, Blink), the Bell-Ringer's rings, and friends in multi player. The numbers to adjust are in `src/data/classes.ts`, `skills.ts`, `talents.ts` and `items.ts`.
 

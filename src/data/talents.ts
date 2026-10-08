@@ -987,7 +987,7 @@ Object.assign(TALENTS, {
     1,
     1,
     () =>
-      'Teaches Predator: for 10 s your auto-shots come 50% faster and you deal 20% more damage. 45 s cooldown.',
+      'Teaches Predator: for 10 s your auto-shots come 25% faster and you deal 20% more damage. 45 s cooldown.',
     {},
     { grants: 'predator' }
   ),
@@ -1419,7 +1419,7 @@ Object.assign(TALENTS, {
     1,
     1,
     () =>
-      'Teaches Icy Veins: for 10 s your staff casts its bolts 50% faster and you deal 20% more damage. 45 s cooldown.',
+      'Teaches Icy Veins: for 10 s your staff casts its bolts 25% faster and you deal 20% more damage. 45 s cooldown.',
     {},
     { grants: 'icyveins' }
   ),

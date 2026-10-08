@@ -185,7 +185,7 @@ export const SPELLS: Record<SpellKey, SpellInfo> = {
     cls: 'archer',
     talent: 'predator',
     instant: true,
-    long: 'For 10 s your auto-shots come 50% faster and you deal 20% more damage.',
+    long: 'For 10 s your auto-shots come 25% faster and you deal 20% more damage.',
   },
   disengage: {
     cls: 'archer',
@@ -270,7 +270,7 @@ export const SPELLS: Record<SpellKey, SpellInfo> = {
     cls: 'sorceress',
     talent: 'icy_veins',
     instant: true,
-    long: 'For 10 s your staff casts its bolts 50% faster and you deal 20% more damage.',
+    long: 'For 10 s your staff casts its bolts 25% faster and you deal 20% more damage.',
   },
   blink: {
     cls: 'sorceress',

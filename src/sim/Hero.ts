@@ -80,6 +80,12 @@ export const REVIVE_HP = 0.4;
  * never a bag of meat through a fight. A bandage isn't food: BANDAGE_CD seconds between two.
  */
 export const MEAL = 45;
+/**
+ * Predator and Icy Veins: how much faster the auto-shots come (Berserk's swings come 50%
+ * faster, but the scouts' Swift Hands and Quickened Casting already give 45% to Flurry's 30%,
+ * so their capstone gives less, or they out-damage the Fury warrior by a tenth at level 25).
+ */
+export const PREDATOR_SPEED = 0.25;
 export const BANDAGE_CD = 30;
 export const JUMP_DUR = 0.38;
 export const JUMP_HEIGHT = 16;
@@ -3183,7 +3189,7 @@ export class Hero implements Foe {
       if (shoots && d < this.reach(aa.range) && this.planted && this.hiddenT <= 0) {
         this.aaT -= dt;
         if (this.aaT <= 0) {
-          this.aaT = aa.period / (1 + this.tal.aaSpeed) / (this.predatorT > 0 ? 1.5 : 1);
+          this.aaT = aa.period / (1 + this.tal.aaSpeed) / (this.predatorT > 0 ? 1 + PREDATOR_SPEED : 1);
           const crit = this.game.rng.next() < this.tal.crit;
           const far = d > 150 ? 1 + this.tal.farShot : 1;
           this.loose(

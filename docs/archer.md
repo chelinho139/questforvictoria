@@ -38,7 +38,7 @@ Each archer spell mirrors a warrior spell's level, cost and cooldown. The archer
 | Marksman | **Rapid Fire** | Sunder | three arrows, 4 each · 9 mana · 10 s |
 | Marksman | **Deadeye** (capstone) | Deathblow | 26 damage; ready again at once if it kills · 28 mana · 20 s |
 | Hunter | **Bear Trap** | Bloodrage | a trap at your feet: the first creature on it takes 8 and is held 3 s (it can still swing) · 11 mana · 20 s |
-| Hunter | **Predator** (capstone) | Berserk | 10 s: auto-shots 50% faster, 20% more damage · 45 s |
+| Hunter | **Predator** (capstone) | Berserk | 10 s: auto-shots 25% faster, 20% more damage · 45 s |
 | Ranger | **Disengage** | Shield Bash | leap back up to 90 from your target · 6 mana · 12 s |
 | Ranger | **Camouflage** (capstone) | Last Stand | 6 s: creatures lose track of you, heal 20%, your next shot crits; shooting ends it · 60 s |
 
@@ -137,6 +137,39 @@ The fights (level, gear tier, creatures): L1 slime · L3 goblin · L6 two goblin
 - Mana: each class has its own pool, small at first and growing every level so each level makes room for its new spells: the warrior 40 and 8 more a level, the archer 45 and 10, the sorceress 50 and 10. It comes back at 0.5 a second in a fight and 3 out of one (it was 3 always). The first spells cost twice what they did (the warrior's Thrust 8, Slash 10, Rend 12), and the archer's and the sorceress's cost in proportion to their pools (×1.125 and ×1.25: Quick Shot 9, Spark 10; Volley 22, Flamestrike 25), so a bigger pool doesn't buy free damage. A fight at level 1 now affords about four spells (a slime leaves you near empty); in the middle levels you end fights at 0–50%; late fights run the defensive builds dry (`npx tsx tests/mana-report.ts` prints the table). To keep the ranged scouts standing against the two ogres at level 25: the archer has 135 health (was 130), the Ranger's Endurance and the Arcane Fortitude give 10 health a rank (was 6), the archer bot raises Camouflage when hurt as the others raise Last Stand and Arcane Barrier, and the sorceress's Firestorm is +5 wider a rank (was +10).
 - Execute, Kill Shot and Incinerate have a 20 s cooldown (they had none).
 - Normal now hits 30% harder and has 15% more health than the creatures' own numbers. Fairness between the classes is still measured on the creatures' own numbers (`fight` in `tests/fight.ts`), since the difficulty scales every class's fights; `npx tsx tests/balance-report.ts --normal` fights them at Normal. There, only the Blade warrior falls (two goblins at level 6, an ogre and two goblins at 21): it has no healing and the bot never eats or steps back. The ranged builds get through everything.
+
+### Damage, plainly
+
+`npx tsx tests/damage-report.ts` puts each class on a training dummy, by the game's own rules: one target that never moves or falls below 25% (so the finishers stay out of it), every spell cast as soon as it is ready, at each level in that level's gear and talent build. It gives damage a second three ways: auto-attacks alone, everything with endless mana, and everything within the class's own mana over a 30 s fight. `tests/balance.test.ts` keeps every class within 15% of the warrior at every level.
+
+Level 1 by hand (the first weapon adds 2 to every hit):
+
+| | Warrior | Archer, sorceress |
+|---|---|---|
+| Auto-attack | (3 + 2) ÷ 1.3 s = 3.85 a second | (4 + 2) ÷ 1.7 s = 3.53 a second |
+| First spell | (5 + 2) ÷ 6 s = 1.17 | the same |
+| Second spell, after the first (×1.5) | (8 × 1.5 + 2) ÷ 9 s = 1.56 | the same |
+| Together, endless mana | 6.6 (dummy: 7.0) | 6.3 (dummy: 6.6) |
+| Mana for 30 s, against what the spells want | 40 + 0.5 × 30 = 55 of 73 | archer 60 of 82, sorceress 65 of 90 |
+
+The spells hit exactly alike; the whole difference is the auto-attack, which the ranged classes pay for their reach. Every class is short of mana by about the same share, so mana costs each of them about 15% of their damage at level 1 (dummy: 5.9, 5.5, 5.5).
+
+Damage a second with each class's own mana, 30 s, against the warrior's (archer / sorceress):
+
+| Level | Blade · Marksman · Fire | Fury · Hunter · Frost | Warden · Ranger · Arcane |
+|---|---|---|---|
+| 1 | 5.9 · 0.93 · 0.93 | 5.9 · 0.93 · 0.93 | 5.9 · 0.93 · 0.93 |
+| 3 | 6.6 · 0.94 · 0.94 | 8.2 · 0.90 · 0.90 | 6.6 · 0.94 · 0.94 |
+| 6 | 9.3 · 1.04 · 1.04 | 13.4 · 0.93 · 0.93 | 9.0 · 1.02 · 1.02 |
+| 10 | 10.2 · 1.05 · 1.05 | 17.0 · 1.00 · 1.00 | 9.8 · 1.02 · 1.02 |
+| 15 | 15.5 · 1.00 · 1.00 | 23.1 · 0.98 · 0.98 | 13.8 · 0.98 · 0.98 |
+| 20 | 20.3 · 0.96 · 0.98 | 23.1 · 0.98 · 0.98 | 13.8 · 0.98 · 0.98 |
+| 25 | 22.1 · 0.96 · 0.98 | 26.5 · 1.05 · 1.04 | 13.8 · 0.98 · 0.98 |
+
+- All within 10% at every level, most within 5%. The ranged classes are 6–10% behind at levels 1–6, as the auto-attack sum shows; in a real fight they make it up shooting creatures on the way in (fight time about 1.00, above).
+- Mana holds damage back only up to level 6: from level 10 a 30 s fight on one target no longer runs anyone dry. It bites in long fights and with the area spells (`tests/mana-report.ts`).
+- The one gap the sums found: at level 25 the Hunter and Frost builds did 10% more than Fury, since Predator and Icy Veins made auto-shots 50% faster on top of Swift Hands' and Quickened Casting's 45% (Flurry gives 30%). Their capstones now give 25% (`PREDATOR_SPEED` in `src/sim/Hero.ts`): 1.04–1.05.
+- What's left is by design: the quiver and the orb add 1 to every hit where the warrior's shield adds armour.
 
 **What the simulation doesn't capture.**
 - Player skill: perfect-timing crits, kiting with Concussive Shot, and using Disengage and Bear Trap well.

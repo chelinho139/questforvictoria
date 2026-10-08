@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MIRROR } from './fight';
 import { SCENARIOS, measure, cost } from './balance-report';
+import { dps, LEVELS } from './damage-report';
 import type { ClassId } from '../src/data/classes';
 
 /**
@@ -46,3 +47,22 @@ for (const [cls, col] of [
     });
   }
 }
+
+/**
+ * Damage, plainly: on a training dummy (tests/damage-report.ts), one target, every spell
+ * cast when it's ready and mana no object, the archer and the sorceress deal within 15% of
+ * the warrior's damage a second at every level, build for mirrored build.
+ */
+test('on a training dummy every class deals about the same damage, at every level', () => {
+  for (const trees of MIRROR)
+    for (const [level, tier] of LEVELS) {
+      const w = dps('warrior', trees[0], level, tier, { endless: true });
+      for (const [cls, i] of [
+        ['archer', 1],
+        ['sorceress', 2],
+      ] as [ClassId, number][]) {
+        const r = dps(cls, trees[i], level, tier, { endless: true }) / w;
+        assert.ok(r > 0.85 && r < 1.15, `level ${level}, ${trees[i]} ${cls}: ${r.toFixed(2)}× the ${trees[0]} warrior's damage`);
+      }
+    }
+});
