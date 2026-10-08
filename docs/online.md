@@ -124,7 +124,7 @@ The groundwork. Today the simulation assumes one player, one region and one map 
   - `npm run bot` lists the open rooms;
   - `npm run bot -- host "Bot room"` opens a room and plays in it;
   - `npm run bot -- join ABCD --name Botty --look k2 --secs 60` joins room ABCD;
-  - `--cls archer` makes the bot's character an archer (the first time that name is used);
+  - `--cls archer` (or `--cls sorceress`) makes the bot's character an archer (or a sorceress) the first time that name is used;
   - a bot takes up any duel it's challenged to and fights back; `--challenge` has it challenge whoever comes near.
 
   Add `--url ws://<address>:3000/ws` to send it to another computer's server.

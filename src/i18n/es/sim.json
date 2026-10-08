@@ -294,5 +294,25 @@
   "YIELDS": "SE RINDE",
   "STUNNED": "ATURDIDO",
   "You are stunned!": "¡Te aturden!",
-  "You're stunned!": "¡No puedes, te aturdieron!"
+  "You're stunned!": "¡No puedes, te aturdieron!",
+
+  "Rev": "Rev",
+  "Nothing to counter.": "No hay nada que contrarrestar.",
+  "{0} needs a target below {1}%.": "{0} requiere un objetivo por debajo del {1}%.",
+  "You need a staff to cast.": "Necesitas un bastón para lanzar hechizos.",
+  "Stand still to cast.": "No te muevas para lanzar hechizos.",
+  "COUNTERED": "CONTRARRESTADO",
+  "INCINERATE!": "¡INCINERAR!",
+  "SCORCHED": "CHAMUSCADO",
+  "{0} is scorched: it takes 20% more damage for 10 s.": "{0}: chamuscado, recibe un 20% más de daño durante 10 s.",
+  "Pyroblast! It is ready again.": "¡Piroexplosión! Está lista otra vez.",
+  "Frost Nova.": "Nova de escarcha.",
+  "Frost Nova froze nothing.": "Nova de escarcha no congeló nada.",
+  "ICY VEINS": "VENAS HELADAS",
+  "Arcane Barrier: a shell of light closes round you.": "Barrera arcana: un caparazón de luz se cierra a tu alrededor.",
+  "Chain Lightning.": "Cadena de rayos.",
+  "You are frozen!": "¡El hielo te atrapa!",
+  "{0} is a sorceress's spell.": "{0} es un hechizo de hechicera.",
+  "That's for sorceresses.": "Eso es para hechiceras.",
+  "Only a sorceress can use the {0}.": "Solo una hechicera puede usar esto: {0}."
 }

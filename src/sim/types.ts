@@ -203,7 +203,10 @@ export interface Fx {
     | 'fireball'
     | 'hit'
     | 'swing'
-    | 'arrow';
+    | 'arrow'
+    | 'orb'
+    | 'zap'
+    | 'pillar';
   t: number;
   dur: number;
   x?: number;
@@ -397,6 +400,7 @@ export type SoundId = SpellKey | FollowSound | WorldSound | CreatureSound | UiSo
 export type WorldSound =
   | 'autoSwing'
   | 'autoShot'
+  | 'autoCast'
   | 'heroHurt'
   | 'chop'
   | 'treeFall'
@@ -424,6 +428,13 @@ export type FollowSound =
   | 'hitVolley'
   | 'hitPierce'
   | 'hitDeadeye'
+  | 'hitBolt'
+  | 'hitFire'
+  | 'hitFrost'
+  | 'hitCounter'
+  | 'hitFlamestrike'
+  | 'hitLightning'
+  | 'hitPyroblast'
   | 'trapSnap';
 /** What only the hero it happens to hears: the game telling them something. */
 export type UiSound =

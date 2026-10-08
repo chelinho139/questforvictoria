@@ -168,12 +168,12 @@ export class Sim {
     this.game.setDifficulty(d);
   }
 
-  /** Warrior or archer. */
+  /** Warrior, archer or sorceress. */
   get cls(): ClassId {
     return this.hero.cls;
   }
 
-  /** How far the auto-attack reaches (a bowshot for an archer). */
+  /** How far the auto-attack reaches (a bowshot for an archer or a sorceress). */
   get aaReach(): number {
     return this.hero.aaReach;
   }

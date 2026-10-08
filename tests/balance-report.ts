@@ -1,10 +1,12 @@
 /**
- * Prints the balance tables in docs/archer.md: every scenario, each mirrored pair of builds,
- * warrior against archer, averaged over several seeds. Run: npx tsx tests/balance-report.ts
+ * Prints the balance tables in docs/archer.md and docs/sorceress.md: every scenario, each
+ * mirrored pair of builds, the warrior against the archer and against the sorceress, averaged
+ * over several seeds. Run: npx tsx tests/balance-report.ts
  */
 import { fight, MIRROR } from './fight';
 import type { Tier } from './fight';
 import type { EnemyKind } from '../src/data/enemies';
+import type { ClassId } from '../src/data/classes';
 
 export const SCENARIOS: { name: string; level: number; tier: Tier; foes: EnemyKind[] }[] = [
   { name: 'L1 slime', level: 1, tier: 0, foes: ['slime'] },
@@ -26,7 +28,7 @@ export function cost(m: { time: number; lost: number }): number {
   return m.time * (1 + 2 * m.lost);
 }
 
-export function measure(cls: 'warrior' | 'archer', build: string, sc: (typeof SCENARIOS)[number]) {
+export function measure(cls: ClassId, build: string, sc: (typeof SCENARIOS)[number]) {
   let time = 0;
   let lost = 0;
   let deaths = 0;
@@ -41,45 +43,50 @@ export function measure(cls: 'warrior' | 'archer', build: string, sc: (typeof SC
 
 if (process.argv[1]?.endsWith('balance-report.ts')) {
   const pad = (v: string, w: number) => v.padEnd(w);
-  let tw = 0;
-  let tc = 0;
-  for (const [wb, ab] of MIRROR) {
-    console.log(`\n${wb} vs ${ab}`);
-    console.log(
-      pad('scenario', 22),
-      pad('warrior s', 10),
-      pad('archer s', 10),
-      pad('time ×', 8),
-      pad('w hp lost', 10),
-      pad('a hp lost', 10),
-      pad('cost ×', 8),
-      'deaths w/a'
-    );
-    for (const sc of SCENARIOS) {
-      const w = measure('warrior', wb, sc);
-      const a = measure('archer', ab, sc);
+  const only = process.argv[2] as ClassId | undefined;
+  for (const [cls, col] of [['archer', 1], ['sorceress', 2]] as [ClassId, 1 | 2][]) {
+    if (only && only !== cls) continue;
+    for (const pair of MIRROR) {
+      const wb = pair[0];
+      const rb = pair[col];
+      let tw = 0;
+      let tc = 0;
+      console.log(`\n${wb} warrior vs ${rb} ${cls}`);
       console.log(
-        pad(sc.name, 22),
-        pad(w.time.toFixed(1), 10),
-        pad(a.time.toFixed(1), 10),
-        pad((a.time / w.time).toFixed(2), 8),
-        pad((w.lost * 100).toFixed(0) + '%', 10),
-        pad((a.lost * 100).toFixed(0) + '%', 10),
-        pad((cost(a) / cost(w)).toFixed(2), 8),
-        `${w.deaths}/${a.deaths}`
+        pad('scenario', 22),
+        pad('warrior s', 10),
+        pad(`${cls.slice(0, 5)} s`, 10),
+        pad('time ×', 8),
+        pad('w hp lost', 10),
+        pad('r hp lost', 10),
+        pad('cost ×', 8),
+        'deaths w/r'
       );
-      tw += a.time / w.time;
-      tc += cost(a) / cost(w);
+      for (const sc of SCENARIOS) {
+        const w = measure('warrior', wb, sc);
+        const a = measure(cls, rb, sc);
+        console.log(
+          pad(sc.name, 22),
+          pad(w.time.toFixed(1), 10),
+          pad(a.time.toFixed(1), 10),
+          pad((a.time / w.time).toFixed(2), 8),
+          pad((w.lost * 100).toFixed(0) + '%', 10),
+          pad((a.lost * 100).toFixed(0) + '%', 10),
+          pad((cost(a) / cost(w)).toFixed(2), 8),
+          `${w.deaths}/${a.deaths}`
+        );
+        tw += a.time / w.time;
+        tc += cost(a) / cost(w);
+      }
+      console.log(
+        pad('average', 22),
+        pad('', 10),
+        pad('', 10),
+        pad((tw / SCENARIOS.length).toFixed(2), 8),
+        pad('', 10),
+        pad('', 10),
+        (tc / SCENARIOS.length).toFixed(2)
+      );
     }
-    console.log(
-      pad('average', 22),
-      pad('', 10),
-      pad('', 10),
-      pad((tw / SCENARIOS.length).toFixed(2), 8),
-      pad('', 10),
-      pad('', 10),
-      (tc / SCENARIOS.length).toFixed(2)
-    );
-    tw = tc = 0;
   }
 }

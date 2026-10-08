@@ -136,7 +136,7 @@ export class NewCharacter {
     this.sel = Math.max(0, HD_HERO_IDS.indexOf(opts.hero));
   }
 
-  /** Warrior or archer: the class card picked. */
+  /** Warrior, archer or sorceress: the class card picked. */
   private cls: ClassId = 'warrior';
   /** Normal, hard or nightmare (when asked). */
   private readonly diff = new DifficultyPick();
@@ -224,7 +224,7 @@ export class NewCharacter {
     this.raf = requestAnimationFrame(tick);
   }
 
-  /** Warrior or archer: the cards and the preview show the class's starting kit. */
+  /** Warrior, archer or sorceress: the cards and the preview show the class's starting kit. */
   private pickClass(cls: ClassId): void {
     this.cls = cls;
     if (!this.root) return;

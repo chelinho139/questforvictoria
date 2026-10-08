@@ -750,15 +750,16 @@ export class NetSim extends Sim {
   }
 
   /**
-   * An archer's shot: like single player, the feet must be planted (a click-walk stops; keys
-   * held down refuse), and the hero holds still for the draw. The server takes our word on it.
+   * An archer's shot (or a sorceress's bolt): like single player, the feet must be planted (a
+   * click-walk stops; keys held down refuse), and the hero holds still for the draw. The
+   * server takes our word on it.
    */
   private readyToShoot(k: Key): boolean {
     const h = this.hero;
-    if (h.cls !== 'archer' || !isShot(k)) return true;
+    if (h.cls === 'warrior' || !isShot(k)) return true;
     if (h.path) h.stopMoving();
     if (h.moving) {
-      h.log('Stand still to shoot.', 'h');
+      h.log(h.cls === 'sorceress' ? 'Stand still to cast.' : 'Stand still to shoot.', 'h');
       return false;
     }
     h.aimT = AIM_HOLD;

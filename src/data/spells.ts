@@ -194,9 +194,94 @@ export const SPELLS: Record<SpellKey, SpellInfo> = {
     instant: true,
     long: 'Melt into the wild for 6 s: creatures lose track of you and you heal 20% of your health. Your next shot within that time is a critical hit. Shooting ends it.',
   },
+  // ------------------------------------------------------------ the sorceress's
+  spark: {
+    cls: 'sorceress',
+    level: 1,
+    long: 'A quick spark from your staff for 5 damage. Firebolt right after it burns much hotter.',
+  },
+  firebolt: {
+    cls: 'sorceress',
+    level: 1,
+    long: 'A bolt of fire for 8 damage, ×1.5 when it follows a Spark.',
+  },
+  ignite: {
+    cls: 'sorceress',
+    level: 2,
+    long: 'Set your target alight for 3 damage: it burns for 2 every second for 8 s.',
+  },
+  frostbolt: {
+    cls: 'sorceress',
+    level: 3,
+    long: 'A bolt of ice for 4 damage that slows the target by half for 6 s: cast it as they come for you.',
+  },
+  arcanepower: {
+    cls: 'sorceress',
+    level: 5,
+    long: 'Draw on the old power: you deal 20% more damage for 15 s. It needs no target, so you can cast it on the move.',
+  },
+  counterspell: {
+    cls: 'sorceress',
+    level: 6,
+    instant: true,
+    long: "Unweave an enemy's spell from afar: it is cut short, and the caster is stunned for 1 s.",
+  },
+  incinerate: {
+    cls: 'sorceress',
+    level: 7,
+    instant: true,
+    long: 'Burn away a target below 25% health, from range: 30% of the health it has left, plus 8.',
+  },
+  flamestrike: {
+    cls: 'sorceress',
+    level: 9,
+    long: 'Call down a pillar of flame on your target: every enemy within 70 of it takes 7.',
+  },
+  chainlightning: {
+    cls: 'sorceress',
+    level: 11,
+    instant: true,
+    long: 'Lightning for 12 damage that leaps from your target to the two nearest enemies around it.',
+  },
+  scorch: {
+    cls: 'sorceress',
+    talent: 'scorch',
+    instant: true,
+    long: 'Sear your target for 6: for 10 s it takes 20% more damage from you.',
+  },
+  pyroblast: {
+    cls: 'sorceress',
+    talent: 'pyroblast',
+    instant: true,
+    long: 'A great ball of fire for 26 damage. If it kills, Pyroblast is ready again at once.',
+  },
+  frostnova: {
+    cls: 'sorceress',
+    talent: 'frost_nova',
+    instant: true,
+    long: 'A ring of frost bursts from you: every enemy within 70 takes 4 and is frozen where it stands for 3 s (it can still swing at you).',
+  },
+  icyveins: {
+    cls: 'sorceress',
+    talent: 'icy_veins',
+    instant: true,
+    long: 'For 10 s your staff casts its bolts 50% faster and you deal 20% more damage.',
+  },
+  blink: {
+    cls: 'sorceress',
+    talent: 'blink',
+    instant: true,
+    long: 'Vanish and step out again a little way back from your target, out of its reach.',
+  },
+  barrier: {
+    cls: 'sorceress',
+    talent: 'arcane_barrier',
+    instant: true,
+    long: 'Wrap yourself in a shell of light: heal 30% of your maximum health and take 30% less damage for 8 s.',
+  },
 };
 
-/** Spellbook order: class spells by level, then talent spells by tree (the warrior's, the archer's, then Mount). */
+/** Spellbook order: class spells by level, then talent spells by tree (the warrior's, the archer's, the sorceress's). */
 export const SPELL_ORDER: SpellKey[] = [
   'thrust',
   'slash',
@@ -229,6 +314,21 @@ export const SPELL_ORDER: SpellKey[] = [
   'predator',
   'disengage',
   'camouflage',
+  'spark',
+  'firebolt',
+  'ignite',
+  'frostbolt',
+  'arcanepower',
+  'counterspell',
+  'incinerate',
+  'flamestrike',
+  'chainlightning',
+  'scorch',
+  'pyroblast',
+  'frostnova',
+  'icyveins',
+  'blink',
+  'barrier',
 ];
 
 /** Where a spell goes on the bar when you learn it, if that slot is free (else the first free one). */
@@ -252,4 +352,13 @@ export const HOME_SLOT: Partial<Record<SpellKey, number>> = {
   silence: 6,
   killshot: 7,
   pierce: 9,
+  spark: 0,
+  firebolt: 1,
+  ignite: 2,
+  flamestrike: 3,
+  arcanepower: 4,
+  frostbolt: 5,
+  counterspell: 6,
+  incinerate: 7,
+  chainlightning: 9,
 };

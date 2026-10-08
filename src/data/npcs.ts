@@ -379,8 +379,8 @@ export const NPCS: Record<NpcId, NpcDef> = {
     greeting: 'Buying or selling? Both, I hope.',
     shop: {
       name: "Tobin's stall",
-      sells: ['bread', 'bandage', 'cooked_meat', 'leather_cap', 'leather_tunic', 'leather_trousers', 'leather_boots', 'wooden_shield', 'woodcutter_axe', 'pickaxe', 'hunting_bow', 'leather_quiver'],
-      more: [{ when: { flag: 'silk_sold' }, sells: ['smoked_venison', 'silk_recurve'] }],
+      sells: ['bread', 'bandage', 'cooked_meat', 'leather_cap', 'leather_tunic', 'leather_trousers', 'leather_boots', 'wooden_shield', 'woodcutter_axe', 'pickaxe', 'hunting_bow', 'leather_quiver', 'ashwood_staff', 'hedge_grimoire'],
+      more: [{ when: { flag: 'silk_sold' }, sells: ['smoked_venison', 'silk_recurve', 'willow_staff'] }],
     },
     topics: [
       {
@@ -399,7 +399,7 @@ export const NPCS: Record<NpcId, NpcDef> = {
     greeting: 'Hm.',
     shop: {
       name: "Bram's smithy",
-      sells: ['iron_bar', 'iron_sword', 'iron_shield', 'yew_longbow', 'hunters_quiver', 'iron_helm', 'chainmail', 'iron_greaves'],
+      sells: ['iron_bar', 'iron_sword', 'iron_shield', 'yew_longbow', 'hunters_quiver', 'runed_staff', 'crystal_orb', 'iron_helm', 'chainmail', 'iron_greaves'],
       more: [{ when: { flag: 'steel_taught' }, sells: ['steel_bar', 'steel_sword', 'steel_shield', 'steel_helm', 'thornback_jerkin'] }],
     },
     greetings: [{ when: { flag: 'steel_taught' }, text: 'Steel. Good charcoal makes good steel. Hm.' }],

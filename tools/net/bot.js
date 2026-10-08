@@ -6,7 +6,7 @@
 //   node tools/net/bot.js                     list the rooms
 //   node tools/net/bot.js host "Bot room"     open a room and play in it
 //   node tools/net/bot.js join ABCD           join room ABCD
-//   options: --url ws://host:3000/ws  --name Botty  --look k2  --cls archer  --secs 30  --quiet
+//   options: --url ws://host:3000/ws  --name Botty  --look k2  --cls archer|sorceress  --secs 30  --quiet
 //            --difficulty hard (or nightmare: the room a bot opens; else its campaign's own)
 //            --challenge (challenge whoever comes near to a duel)
 // Each bot name is its own account with one character of that name, kept on the server
@@ -22,7 +22,7 @@ const opt = (name, def) => {
 const url = opt('url', 'ws://localhost:3000/ws');
 const name = opt('name', 'Botty');
 const look = opt('look', 'k2');
-/** Warrior or archer: the class of the bot's character when it's first made. */
+/** Warrior, archer or sorceress: the class of the bot's character when it's first made. */
 const cls = opt('cls', 'warrior');
 /** Normal, hard or nightmare: the room the bot opens (left out, the server uses the bot's campaign's). */
 const difficulty = opt('difficulty', undefined);
@@ -124,11 +124,18 @@ ws.on('message', data => {
 });
 ws.on('close', () => process.exit(0));
 
+/** Each class's first spells (the first one opens a fight). */
+const SPELLS = {
+  warrior: ['thrust', 'slash', 'rend', 'charge'],
+  archer: ['quickshot', 'aimedshot', 'barbed', 'concussive'],
+  sorceress: ['spark', 'firebolt', 'ignite', 'frostbolt'],
+};
+
 /** In a duel: keep at a fighting distance from the other one, and hit them now and then. */
 function duelStep() {
   const o = heroes.find(h => h[0] === duel.id);
   if (!o) return;
-  const want = myCls === 'archer' ? 150 : 30;
+  const want = myCls === 'warrior' ? 30 : 150;
   const dx = o[3] - me.x;
   const dy = o[4] - me.y;
   const d = Math.hypot(dx, dy) || 1;
@@ -136,8 +143,7 @@ function duelStep() {
   castT -= 0.05;
   if (castT <= 0 && d < want + 40) {
     castT = 1.3;
-    const spells =
-      myCls === 'archer' ? ['quickshot', 'aimedshot', 'barbed', 'concussive'] : ['thrust', 'slash', 'rend', 'charge'];
+    const spells = SPELLS[myCls] || SPELLS.warrior;
     // -1: the duel opponent (RIVAL_TARGET)
     if (me.target !== -1) send({ t: 'cmd', c: 'targetRival', a: [] });
     send({ t: 'cmd', c: 'castKey', a: [spells[Math.floor(Math.random() * spells.length)]] });
@@ -166,7 +172,7 @@ setInterval(() => {
       )[0];
     if (near && Math.hypot(near[2] - me.x, near[3] - me.y) < 200) {
       send({ t: 'cmd', c: 'setTarget', a: [near[0]] });
-      send({ t: 'cmd', c: 'castKey', a: [myCls === 'archer' ? 'quickshot' : 'thrust'] });
+      send({ t: 'cmd', c: 'castKey', a: [(SPELLS[myCls] || SPELLS.warrior)[0]] });
     }
   }
   const dx = goal.x - me.x;

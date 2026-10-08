@@ -1,6 +1,6 @@
 import { CLASSES } from './classes';
 
-/** Spells on the global cooldown (the warrior's first, then the archer's). */
+/** Spells on the global cooldown (the warrior's first, then the archer's, then the sorceress's). */
 export type SkillKey =
   | 'thrust'
   | 'slash'
@@ -13,7 +13,13 @@ export type SkillKey =
   | 'barbed'
   | 'concussive'
   | 'mark'
-  | 'volley';
+  | 'volley'
+  | 'spark'
+  | 'firebolt'
+  | 'ignite'
+  | 'frostbolt'
+  | 'arcanepower'
+  | 'flamestrike';
 /** Instant spells, off the global cooldown. */
 export type ActionKey =
   | 'interrupt'
@@ -37,7 +43,17 @@ export type ActionKey =
   | 'beartrap'
   | 'predator'
   | 'disengage'
-  | 'camouflage';
+  | 'camouflage'
+  // the sorceress's
+  | 'counterspell'
+  | 'incinerate'
+  | 'chainlightning'
+  | 'scorch'
+  | 'pyroblast'
+  | 'frostnova'
+  | 'icyveins'
+  | 'blink'
+  | 'barrier';
 export type Key = SkillKey | ActionKey;
 /** Anything that can sit in a wheel, including the Rev toggle item. */
 export type WheelKey = Key | 'rev';
@@ -50,7 +66,7 @@ export interface SkillDef {
   col: string;
   range: number; // 0 = no target needed
   aoe?: number;
-  /** Shot from a bow: the arrow flies there, and the archer stands still to shoot. */
+  /** Shot from a bow (or cast from a staff): it flies there, and the archer (or sorceress) stands still to shoot. */
   shot?: boolean;
   desc: string;
 }
@@ -132,6 +148,67 @@ export const SKILLS: Record<SkillKey, SkillDef> = {
     shot: true,
     desc: '7 to all near the target · 14 s',
   },
+  // the sorceress's: each mirrors an archer spell's cost and cooldown, cast from a staff
+  spark: {
+    n: 'Spark',
+    d: 5,
+    c: 4,
+    cd: 6,
+    col: '#ffd27a',
+    range: 220,
+    shot: true,
+    desc: '5 dmg · 6 s',
+  },
+  firebolt: {
+    n: 'Firebolt',
+    d: 8,
+    c: 5,
+    cd: 9,
+    col: '#ff7a3a',
+    range: 220,
+    shot: true,
+    desc: '8 · ×1.5 after Spark · 9 s',
+  },
+  ignite: {
+    n: 'Ignite',
+    d: 3,
+    c: 10,
+    cd: 15,
+    col: '#e0504b',
+    range: 220,
+    shot: true,
+    desc: '3 + burn 8 s · 15 s',
+  },
+  frostbolt: {
+    n: 'Frostbolt',
+    d: 4,
+    c: 10,
+    cd: 20,
+    col: '#8ad4ff',
+    range: 220,
+    shot: true,
+    desc: '4 + slow 50% 6 s · 20 s',
+  },
+  arcanepower: {
+    n: 'Arcane Power',
+    d: 0,
+    c: 15,
+    cd: 40,
+    col: '#c08aff',
+    range: 0,
+    desc: '+20% 15 s · 40 s',
+  },
+  flamestrike: {
+    n: 'Flamestrike',
+    d: 7,
+    c: 20,
+    cd: 14,
+    col: '#ff8c42',
+    range: 220,
+    aoe: 70,
+    shot: true,
+    desc: '7 to all near the target · 14 s',
+  },
 };
 
 export const ACTIONS: Record<ActionKey, ActionDef> = {
@@ -155,6 +232,15 @@ export const ACTIONS: Record<ActionKey, ActionDef> = {
   predator: { n: 'Predator', col: '#ff8c42', cd: 45, desc: '+50% shots, +20% dmg 10 s · 45 s' },
   disengage: { n: 'Disengage', col: '#6ccf6a', cd: 12, c: 5, desc: 'leap back · 12 s' },
   camouflage: { n: 'Camouflage', col: '#6ccf6a', cd: 60, desc: 'vanish, heal 20% · 60 s' },
+  counterspell: { n: 'Counterspell', col: '#c08aff', cd: 15, desc: 'cuts the cast · far · 15 s' },
+  incinerate: { n: 'Incinerate', col: '#e0504b', cd: 0, desc: 'target < 25% · far' },
+  chainlightning: { n: 'Chain Lightning', col: '#bfe4ff', cd: 30, desc: '12, leaps to 2 more · 30 s' },
+  scorch: { n: 'Scorch', col: '#ff9a4a', cd: 10, c: 8, desc: '6 · +20% taken 10 s · 10 s' },
+  pyroblast: { n: 'Pyroblast', col: '#e0504b', cd: 20, c: 25, desc: '26 · resets on a kill · 20 s' },
+  frostnova: { n: 'Frost Nova', col: '#8ad4ff', cd: 20, c: 10, desc: '4 around you + frozen 3 s · 20 s' },
+  icyveins: { n: 'Icy Veins', col: '#8ad4ff', cd: 45, desc: '+50% bolts, +20% dmg 10 s · 45 s' },
+  blink: { n: 'Blink', col: '#c08aff', cd: 12, c: 5, desc: 'vanish and step back · 12 s' },
+  barrier: { n: 'Arcane Barrier', col: '#c08aff', cd: 60, desc: 'heal 30%, −30% damage 8 s · 60 s' },
 };
 
 /** The Rev sequencer's presets (each class has its own: data/classes.ts). */
@@ -163,10 +249,21 @@ export const PRESETS: Record<string, SkillKey[]> = CLASSES.warrior.presets;
 export const DEFAULT_WHEEL_1: ActionKey[] = CLASSES.warrior.wheel1;
 export const DEFAULT_WHEEL_2: SkillKey[] = CLASSES.warrior.wheel2;
 
-/** The archer's instant spells that loose an arrow (they need a bow and planted feet). */
-const SHOT_ACTIONS = new Set<string>(['silence', 'killshot', 'pierce', 'rapidfire', 'deadeye']);
+/** The instant spells that loose an arrow or a bolt (they need a bow or a staff, and planted feet). */
+const SHOT_ACTIONS = new Set<string>([
+  'silence',
+  'killshot',
+  'pierce',
+  'rapidfire',
+  'deadeye',
+  'counterspell',
+  'incinerate',
+  'chainlightning',
+  'scorch',
+  'pyroblast',
+]);
 
-/** A spell that looses an arrow: the archer needs a bow and has to stand still. */
+/** A spell that looses an arrow or a bolt: the archer needs a bow (the sorceress a staff) and has to stand still. */
 export function isShot(k: string): boolean {
   return (k in SKILLS && !!SKILLS[k as SkillKey].shot) || SHOT_ACTIONS.has(k);
 }

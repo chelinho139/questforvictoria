@@ -1088,7 +1088,7 @@ export class WorldRenderer {
   }
 }
 
-/** The animation a hero attacks with: an archer with a bow shoots, everyone else swings. */
-function hitAnim(h: { hasBow: boolean }): 'shoot' | 'attack' {
-  return h.hasBow ? 'shoot' : 'attack';
+/** The animation a hero attacks with: an archer with a bow shoots, a sorceress with a staff casts (her 'shoot' frames), everyone else swings. */
+function hitAnim(h: { ranged: boolean }): 'shoot' | 'attack' {
+  return h.ranged ? 'shoot' : 'attack';
 }

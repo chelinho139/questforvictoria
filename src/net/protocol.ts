@@ -34,7 +34,7 @@ import type { Work } from '../sim/types';
 import type { DuelView, DuelFlag } from '../sim/Duel';
 
 /** Bump when a message changes shape: the server turns away a browser that speaks another. */
-export const PROTOCOL = 7;
+export const PROTOCOL = 8;
 
 /** Players a room takes. */
 export const ROOM_MAX = 8;
@@ -54,7 +54,7 @@ export interface CharInfo {
   name: string;
   /** Which hero they look like (an HD hero id). */
   look: string;
-  /** Warrior or archer. */
+  /** Warrior, archer or sorceress. */
   cls: ClassId;
   level: number;
   /** What they wear, by slot (to draw them). */

@@ -19,7 +19,7 @@ export interface CharRecord {
   account: string;
   name: string;
   look: string;
-  /** Warrior or archer (characters from before classes: warriors). */
+  /** Warrior, archer or sorceress (characters from before classes: warriors). */
   cls?: ClassId;
   created: number;
   /** The hero and the story they know; null until first played. */

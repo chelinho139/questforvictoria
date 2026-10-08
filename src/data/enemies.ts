@@ -48,7 +48,8 @@ export type EnemyKind =
 export type Behavior = 'hostile' | 'neutral' | 'passive' | 'inert';
 
 /** What holds a hero still: a spider's web, a goblin's net or snare, roots out of the ground. */
-export type HeldKind = 'web' | 'net' | 'snare' | 'roots';
+/** What holds a hero still: a web, a net, a snare, roots, or (a sorceress's Frost Nova, in a duel) ice. */
+export type HeldKind = 'web' | 'net' | 'snare' | 'roots' | 'ice';
 
 /**
  * A spell a creature casts: a cast bar you can interrupt (Interrupt, Silence, Shield Bash or

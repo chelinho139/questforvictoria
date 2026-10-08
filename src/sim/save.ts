@@ -16,7 +16,7 @@ export interface SaveData {
   v: number;
   /** When it was saved (ms since 1970). */
   at: number;
-  /** Warrior or archer (saves from before classes have none: warriors). */
+  /** Warrior, archer or sorceress (saves from before classes have none: warriors). */
   cls?: ClassId;
   region: string;
   x: number;

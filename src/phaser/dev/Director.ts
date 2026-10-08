@@ -567,7 +567,7 @@ export class Director {
     const tg = h.target;
     if (!tg) return;
     const d = Math.hypot(tg.x - h.x, tg.y - h.y);
-    const reach = b.reach ?? (h.cls === 'archer' ? 170 : 30);
+    const reach = b.reach ?? (h.cls !== 'warrior' ? 170 : 30);
     b.repathT = (b.repathT ?? 0) - dt;
     // charge closes the gap at once
     if (h.cls === 'warrior' && d > 70 && b.spells.includes('charge') && !h.canDo('charge')) {
@@ -579,7 +579,7 @@ export class Director {
         b.repathT = 0.3;
         h.moveTo(tg.x, tg.y, false);
       }
-      if (d < reach + 12 && h.cls === 'archer') h.stopMoving();
+      if (d < reach + 12 && h.cls !== 'warrior') h.stopMoving();
       return;
     }
     if (h.path) h.stopMoving();

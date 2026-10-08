@@ -38,7 +38,8 @@ const isoAt: At = (x, y, h) => ({ x: isoX(x, y), y: isoY(x, y) - h, k: 1 });
  * Ground-plane effects (rings, slashes, particles) are drawn in world coordinates on a
  * Graphics object nested in two containers: the inner one rotates 45°, the outer one
  * scales (√2, √2/2). Together that is exactly the isometric projection, so circles
- * come out as ground ellipses. Billboard effects (dash ghosts, bolts, fireballs) are
+ * come out as ground ellipses. Billboard effects (dash ghosts, bolts, fireballs, a
+ * sorceress's orbs, lightning and pillars of flame) are
  * drawn directly in screen space.
  */
 export class Effects {
@@ -277,6 +278,72 @@ export class Effects {
           b.fillRect(Math.round(x - dx * 7) - 1, Math.round(y - dy * 7) - 1, 2, 2);
           break;
         }
+        case 'orb': {
+          // a sorceress's bolt: a glowing ball in the spell's colour, a fading tail behind it
+          const lift = ghosts ? 0 : 12;
+          const col = hex(f.col ?? '#c08aff');
+          const fly = (q: number) => at(f.x0! + (f.x1! - f.x0!) * q, f.y0! + (f.y1! - f.y0!) * q, lift + Math.sin(q * Math.PI) * 6);
+          for (let k = 4; k >= 1; k--) {
+            const t = fly(Math.max(0, p - k * 0.05));
+            b.fillStyle(col, 0.5 - k * 0.1);
+            b.fillCircle(t.x, t.y, (4.5 - k * 0.6) * t.k);
+          }
+          const t = fly(p);
+          b.fillStyle(col, 0.35);
+          b.fillCircle(t.x, t.y, 6 * t.k);
+          b.fillStyle(col, 1);
+          b.fillCircle(t.x, t.y, 3.5 * t.k);
+          b.fillStyle(WHITE, 1);
+          b.fillCircle(t.x - 0.5 * t.k, t.y - 0.5 * t.k, 1.5 * t.k);
+          break;
+        }
+        case 'zap': {
+          // lightning from one to the next: a jagged line that flickers, white at its heart
+          const a0 = at(f.x0!, f.y0!, 14);
+          const a1 = at(f.x1!, f.y1!, 14);
+          const n = 6;
+          const pts: [number, number][] = [[a0.x, a0.y]];
+          for (let i = 1; i < n; i++) {
+            const q = i / n;
+            pts.push([
+              a0.x + (a1.x - a0.x) * q + (Math.random() * 10 - 5) * a1.k,
+              a0.y + (a1.y - a0.y) * q + (Math.random() * 10 - 5) * a1.k,
+            ]);
+          }
+          pts.push([a1.x, a1.y]);
+          const draw = (w: number, col: number, alpha: number) => {
+            b.lineStyle(w * a1.k, col, alpha);
+            b.beginPath();
+            b.moveTo(pts[0][0], pts[0][1]);
+            for (const q of pts) b.lineTo(q[0], q[1]);
+            b.strokePath();
+          };
+          draw(4, hex(f.col ?? '#bfe4ff'), (1 - p) * 0.8);
+          draw(1.5, WHITE, 1 - p * 0.6);
+          b.fillStyle(WHITE, (1 - p) * 0.8);
+          b.fillCircle(a1.x, a1.y, (3 + p * 6) * a1.k);
+          break;
+        }
+        case 'pillar': {
+          // a pillar of flame: scorched ground, and tongues of fire licking up and fading
+          const col = hex(f.col ?? '#ff8c42');
+          const r = f.r ?? 30;
+          g.fillStyle(col, 0.3 * (1 - p));
+          g.fillCircle(f.x!, f.y!, r * (0.6 + 0.4 * p));
+          const tongues = Math.max(4, Math.round(r / 6));
+          for (let i = 0; i < tongues; i++) {
+            const a = (i / tongues) * Math.PI * 2 + i * 0.7;
+            const d = r * 0.65 * ((i * 37) % 10) / 10;
+            const foot = at(f.x! + Math.cos(a) * d, f.y! + Math.sin(a) * d, 0);
+            const h = (18 + ((i * 53) % 24)) * Math.sin(Math.min(1, p * 1.6) * Math.PI * 0.9 + 0.2);
+            const top = at(f.x! + Math.cos(a) * d, f.y! + Math.sin(a) * d, h);
+            b.lineStyle(5 * foot.k, col, 0.8 * (1 - p));
+            b.lineBetween(foot.x, foot.y, top.x, top.y);
+            b.lineStyle(2 * foot.k, hex('#ffe690'), 0.9 * (1 - p));
+            b.lineBetween(foot.x, foot.y, (foot.x + top.x) / 2, (foot.y + top.y) / 2);
+          }
+          break;
+        }
         case 'fireball': {
           const fly = (q: number) => at(f.x0! + (f.x1! - f.x0!) * q, f.y0! + (f.y1! - f.y0!) * q, Math.sin(q * Math.PI) * 24);
           for (let k = 3; k >= 0; k--) {
@@ -306,6 +373,23 @@ export class Effects {
    */
   private holding(g: Gfx, b: Gfx, at: At, x: number, y: number, by: string): void {
     const t = this.scene.time.now / 1000;
+    if (by === 'ice') {
+      // frozen: a pale ring of frost, and shards of ice up the legs
+      g.fillStyle(hex('#d8f0ff'), 0.35);
+      g.fillCircle(x, y, 10);
+      g.lineStyle(1.5, hex('#8ad4ff'), 0.9);
+      g.strokeCircle(x, y, 10);
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 + 0.3;
+        const lo = at(x + Math.cos(a) * 7, y + Math.sin(a) * 7, 0);
+        const hi = at(x + Math.cos(a) * 4, y + Math.sin(a) * 4, 9 + (i % 3) * 3);
+        b.lineStyle(3 * lo.k, hex('#bfe4ff'), 0.85);
+        b.lineBetween(lo.x, lo.y, hi.x, hi.y);
+        b.lineStyle(1 * lo.k, WHITE, 0.9);
+        b.lineBetween(lo.x, lo.y, hi.x, hi.y);
+      }
+      return;
+    }
     if (by === 'roots') {
       g.lineStyle(2, hex('#2a2020'), 0.95);
       for (let i = 0; i < 5; i++) {

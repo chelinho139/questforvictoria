@@ -1,8 +1,9 @@
 /**
  * A fight simulator for balancing the classes: the real game code, a hero of a class played
  * by a simple bot against real creatures, timed. The warrior walks in and fights; the archer
- * plants its feet once in range and shoots (no kiting: archers stand still to shoot). Neither
- * bot times the GCD perfectly (no perfect-tap crits), so the comparison is about the classes.
+ * and the sorceress plant their feet once in range and shoot (no kiting: they stand still to
+ * shoot). No bot times the GCD perfectly (no perfect-tap crits), so the comparison is about
+ * the classes.
  */
 import { Game } from '../src/sim/Game';
 import { Rng } from '../src/sim/rng';
@@ -81,13 +82,42 @@ export const KITS: Record<ClassId, Record<Tier, Partial<Record<Slot, ItemId>>>> 
       trinket: 'fang_necklace',
     },
   },
+  sorceress: {
+    0: { weapon: 'gnarled_staff', legs: 'cloth_trousers' },
+    1: {
+      weapon: 'ashwood_staff',
+      offhand: 'hedge_grimoire',
+      head: 'leather_cap',
+      body: 'leather_tunic',
+      legs: 'leather_trousers',
+      feet: 'leather_boots',
+    },
+    2: {
+      weapon: 'runed_staff',
+      offhand: 'crystal_orb',
+      head: 'iron_helm',
+      body: 'chainmail',
+      legs: 'iron_greaves',
+      feet: 'leather_boots',
+      trinket: 'vigour_amulet',
+    },
+    3: {
+      weapon: 'willow_staff',
+      offhand: 'crystal_orb',
+      head: 'warden_hood',
+      body: 'thornback_jerkin',
+      legs: 'broodsilk_leggings',
+      feet: 'warden_boots',
+      trinket: 'fang_necklace',
+    },
+  },
 };
 
 const n = (id: string, k: number) => Array<string>(k).fill(id);
 
 /**
  * Talent builds, as the order points are spent (the first allowed one each level). The
- * archer's mirror the warrior's tree for tree.
+ * archer's and the sorceress's mirror the warrior's tree for tree.
  */
 export const BUILDS: Record<ClassId, Record<string, string[]>> = {
   warrior: {
@@ -167,13 +197,52 @@ export const BUILDS: Record<ClassId, Record<string, string[]>> = {
       'camouflage',
     ],
   },
+  sorceress: {
+    fire: [
+      ...n('burning_soul', 5),
+      ...n('searing_focus', 5),
+      ...n('kindling', 2),
+      ...n('bright_spark', 3),
+      ...n('combustion', 3),
+      'scorch',
+      ...n('storm_caller', 3),
+      ...n('pyre', 2),
+      'frostfire',
+      'pyroblast',
+    ],
+    frost: [
+      ...n('staff_lore', 5),
+      ...n('quickened_casting', 3),
+      ...n('lingering_power', 2),
+      ...n('empowered', 3),
+      ...n('leeching_bolts', 3),
+      'frost_nova',
+      'rampant_power',
+      'permafrost',
+      ...n('searing_flames', 3),
+      'icy_veins',
+      ...n('smouldering', 2),
+    ],
+    arcane: [
+      ...n('shimmer', 5),
+      ...n('fortitude', 5),
+      ...n('soul_harvest', 3),
+      ...n('firestorm', 3),
+      'blink',
+      ...n('meditation', 2),
+      'inferno',
+      ...n('spellbreaker', 2),
+      ...n('wayfarer', 2),
+      'arcane_barrier',
+    ],
+  },
 };
 
-/** The warrior and archer builds that face each other (tree for tree). */
-export const MIRROR: [string, string][] = [
-  ['blade', 'marksman'],
-  ['fury', 'hunter'],
-  ['warden', 'ranger'],
+/** The warrior, archer and sorceress builds that face each other (tree for tree). */
+export const MIRROR: [string, string, string][] = [
+  ['blade', 'marksman', 'fire'],
+  ['fury', 'hunter', 'frost'],
+  ['warden', 'ranger', 'arcane'],
 ];
 
 export interface Setup {
@@ -223,6 +292,7 @@ const WARRIOR_INSTANT: Key[] = [
   'berserk',
 ];
 const ARCHER_INSTANT: Key[] = ['killshot', 'pierce', 'deadeye', 'rapidfire', 'predator'];
+const SORCERESS_INSTANT: Key[] = ['incinerate', 'chainlightning', 'pyroblast', 'scorch', 'icyveins'];
 
 /** One fight: the hero against these creatures, which wait `gap` px away in a loose group. */
 export function fight(
@@ -263,7 +333,8 @@ export function fight(
     const d = h.dist(h, tg);
     pathT -= dt;
     if (s.cls === 'warrior') warrior(h, tg, d, alive);
-    else archer(h, tg, d, alive);
+    else if (s.cls === 'archer') archer(h, tg, d, alive);
+    else sorceress(h, tg, d, alive);
     function warrior(hero: Hero, e: Enemy, dist: number, all: Enemy[]): void {
       if (dist > 42) {
         if (hero.canDo('charge') === null && dist > 70 && hero.t >= GCD)
@@ -312,6 +383,33 @@ export function fight(
       gcd.push('quickshot');
       if (hero.bleedT <= 0) gcd.push('barbed');
       gcd.push('aimedshot');
+      tryCast(hero, gcd);
+    }
+    function sorceress(hero: Hero, e: Enemy, dist: number, all: Enemy[]): void {
+      const reach = hero.reach(200) - 10;
+      if (dist > reach) {
+        if (pathT <= 0) {
+          hero.moveTo(e.x, e.y, false);
+          pathT = 0.3;
+        }
+        return;
+      }
+      if (hero.path) hero.stopMoving();
+      if (hero.hp < hero.hpMax * 0.35) tryCast(hero, ['barrier']);
+      // the frost nova when they reach her (the archer lays her trap in their path)
+      if (dist < 60) tryCast(hero, ['frostnova']);
+      tryCast(hero, SORCERESS_INSTANT);
+      const near = all.filter(
+        x => Math.hypot(x.x - e.x, x.y - e.y) < 70 + hero.tal.volleyReach
+      ).length;
+      const gcd: Key[] = [];
+      if (hero.buffT <= 0) gcd.push('arcanepower');
+      if (e.slowT <= 0 && dist > 70) gcd.push('frostbolt');
+      if (near >= 2) gcd.push('flamestrike');
+      if (hero.last === 'spark') gcd.push('firebolt');
+      gcd.push('spark');
+      if (hero.bleedT <= 0) gcd.push('ignite');
+      gcd.push('firebolt');
       tryCast(hero, gcd);
     }
     game.tick(dt);
