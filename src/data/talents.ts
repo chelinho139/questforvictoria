@@ -16,8 +16,8 @@ export const MAX_LEVEL = 25;
 /** Extra maximum health per level above 1. */
 export const HP_PER_LEVEL = 5;
 /** Mana at level 1, and more per level above it: early fights are tight, late ones have room. */
-export const MP_BASE = 100;
-export const MP_PER_LEVEL = 5;
+export const MP_BASE = 60;
+export const MP_PER_LEVEL = 8;
 
 /** Experience needed to go from `level` to the next (quick at first, slower later). */
 export function xpToNext(level: number): number {

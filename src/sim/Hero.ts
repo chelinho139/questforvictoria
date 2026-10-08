@@ -64,8 +64,8 @@ export const AA_RANGE = 48;
  * Mana comes back slowly in a fight and quickly out of one: a hero is in combat for
  * IN_COMBAT seconds after casting, striking or being struck.
  */
-export const MANA_COMBAT = 1.5;
-export const MANA_REST = 4;
+export const MANA_COMBAT = 1;
+export const MANA_REST = 3;
 export const IN_COMBAT = 5;
 /**
  * A fallen hero lies where they fell while anyone else in the region is still up, until a
@@ -3146,7 +3146,7 @@ export class Hero implements Foe {
         // nobody was left standing: everyone else down here wakes at camp too
         for (const h of this.region.heroes()) if (h !== this && h.dead > 0) h.wake = true;
         this.hp = this.hpMax;
-        this.mp = 60;
+        this.mp = Math.round(this.mpMax / 2);
         this.heldT = this.slowT = this.stunT = 0;
         this.heldBy = '';
         this.target = null;

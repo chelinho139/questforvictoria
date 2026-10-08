@@ -103,7 +103,7 @@ Measured exactly as the archer was (see `docs/archer.md`): `tests/fight.ts` runs
 |---|---|---|---|
 | Blade warrior / Fire sorceress | 0.97 | 0.96 | none |
 | Fury warrior / Frost sorceress | 0.98 | 0.95 | none |
-| Warden warrior / Arcane sorceress | 0.96 | 1.07 | none |
+| Warden warrior / Arcane sorceress | 0.95 | 1.07 | none |
 
 The bands: for each pair, average time between 0.95 and 1.10 and average cost between 0.90 and 1.10; no single fight outside 0.75–1.35 in time; nobody dies.
 
@@ -114,7 +114,7 @@ The bands: for each pair, average time between 0.95 and 1.10 and average cost be
 - Her health was set at 125 from the start ("the lightest of the three"), and the first measurement already sat inside every band, so nothing else was tuned.
 
 **Mana, Execute and a harder Normal** (8 October 2026, from playtesting: mana never ran short, Execute was too strong, Normal too easy):
-- Mana comes back at 1.5 a second in a fight and 4 out of one (it was 3 always), the first spells cost twice as much (Thrust, Quick Shot and Spark 8; Slash, Aimed Shot and Firebolt 10; Rend, Barbed Arrow and Ignite 12), and the pool grows with you: 100 at level 1, 5 more a level, 220 at 25. With the old costs a fight never took you below 93% at level 1 or 57% up to level 8; now a slime takes you to about 74%, a goblin to half, two goblins at level 6 to about a third, and the late fights run the defensive builds dry (`npx tsx tests/mana-report.ts` prints the table). At 1 a second in a fight, or with the costs but a fixed pool of 100, the ranged bots ran dry against the two ogres at level 25 and fell. To keep them standing there the archer went from 130 to 135 health, and the sorceress's Firestorm from +10 to +5 wider a rank.
+- Mana: the pool starts small and grows with you, 60 at level 1 and 8 more a level (252 at 25), so each level makes room for its new spells. It comes back at 1 a second in a fight and 3 out of one (it was 3 always), and the first spells cost twice what they did (Thrust, Quick Shot and Spark 8; Slash, Aimed Shot and Firebolt 10; Rend, Barbed Arrow and Ignite 12). With the old numbers a fight never took you below 93% at level 1 or 57% up to level 8; now a slime at level 1 takes you to about 47%, a goblin at level 3 to 13–31%, two goblins at level 6 nearly to empty, and the late fights run the defensive builds dry (`npx tsx tests/mana-report.ts` prints the table). With a pool fixed at 100, the ranged bots ran dry against the two ogres at level 25 and fell; the growing pool keeps them standing, with the archer at 135 health (was 130) and the sorceress's Firestorm at +5 wider a rank (was +10).
 - Incinerate (like Execute and Kill Shot) have a 20 s cooldown (they had none).
 - Normal now hits 30% harder and has 15% more health than the creatures' own numbers. Fairness between the classes is still measured on the creatures' own numbers (`fight` in `tests/fight.ts`), since the difficulty scales every class's fights; `npx tsx tests/balance-report.ts --normal` fights them at Normal. There, only the Blade warrior falls (two goblins at level 6, an ogre and two goblins at 21): it has no healing and the bot never eats or steps back. The ranged builds get through everything.
 
