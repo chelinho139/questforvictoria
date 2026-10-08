@@ -56,7 +56,7 @@ npm run i18n     # strings in the source still missing a Spanish translation (se
 
 ## Controls (PC)
 
-Action bar (bottom): twelve slots on `1`–`6`, `Q`, `E`, `R`, `F`, `G`, `M`; each key casts whatever you put in its slot (drag spells there from the spellbook, `P`). Clicking a slot casts it too; hover for a tooltip. Keys: `src/data/actionBar.ts`; spells: `src/data/spells.ts`.
+Action bar (bottom): twelve slots on `1`–`6`, `Q`, `E`, `R`, `F`, `G`, `M`; each key casts whatever you put in its slot (drag spells there from the spellbook, `P`). Clicking a slot casts it too; hover over it for what the spell does in full (its mana and cooldown, the spellbook's description, and in red why it can't be cast right now). Keys: `src/data/actionBar.ts`; spells: `src/data/spells.ts`.
 
 Rev (one-button rotation) is an advanced option for higher levels: off by default and not on the bar. Turn it on in the ⚙ panel under **Advanced** ("Rev on the action bar"); then `C` fires the next step of the sequence (turns Rev on), `Z` toggles Rev, `X` toggles Rev auto, and the next step is outlined in orange on the bar.
 

@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import type { Sim } from '../../sim/Sim';
 import { SKILLS, ACTIONS, isSkill } from '../../data/skills';
-import { SPELLS, SPELL_ORDER } from '../../data/spells';
+import { SPELLS, SPELL_ORDER, spellMeta } from '../../data/spells';
 import type { SpellKey } from '../../data/spells';
 import { TALENTS, TREES, TIER_POINTS, treesOf } from '../../data/talents';
 import { BAR_KEYS, PC_KEYS } from '../../data/actionBar';
@@ -71,12 +71,7 @@ export class SpellbookWindow {
 
   /** Cost and cooldown, as talents have them now. */
   private meta(k: SpellKey): string {
-    const s = this.sim;
-    const cost = isSkill(k) ? SKILLS[k].c : (ACTIONS[k].c ?? 0);
-    const cd = s.info(k).cd;
-    const parts = [cost ? `${cost} mana` : 'no mana', cd ? `${cd} s cooldown` : 'no cooldown'];
-    if (SPELLS[k].instant) parts.push('instant');
-    return parts.join(' · ');
+    return spellMeta(k, this.sim.info(k).cd);
   }
 
   private row(k: SpellKey): HTMLElement {

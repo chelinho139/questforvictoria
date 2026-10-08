@@ -1,4 +1,5 @@
 import type { Key } from './skills';
+import { SKILLS, ACTIONS, isSkill } from './skills';
 import type { ClassId } from './classes';
 
 /**
@@ -369,3 +370,14 @@ export const HOME_SLOT: Partial<Record<SpellKey, number>> = {
   incinerate: 7,
   chainlightning: 9,
 };
+
+/**
+ * What a spell asks of you, in one line: its mana, its cooldown (`cd`: after your talents) and
+ * whether it is instant. The spellbook and the action bar's tooltip both show it.
+ */
+export function spellMeta(k: SpellKey, cd: number): string {
+  const cost = isSkill(k) ? SKILLS[k].c : (ACTIONS[k].c ?? 0);
+  const parts = [cost ? `${cost} mana` : 'no mana', cd ? `${cd} s cooldown` : 'no cooldown'];
+  if (SPELLS[k].instant) parts.push('instant');
+  return parts.join(' · ');
+}

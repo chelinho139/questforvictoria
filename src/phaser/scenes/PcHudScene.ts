@@ -7,6 +7,7 @@ import { isSkill } from '../../data/skills';
 import type { Key, WheelKey } from '../../data/skills';
 import { BAR_KEYS, PC_KEYS } from '../../data/actionBar';
 import type { SpellKey } from '../../data/spells';
+import { SPELLS, spellMeta } from '../../data/spells';
 import { dragSpell } from '../ui/spellDrag';
 import { isoX, isoY, fromIso } from '../../sim/map';
 import { Colors, Fonts, hex, PIXEL_SCALE, TOUCH, logicalSize } from '../config';
@@ -35,6 +36,8 @@ const LOG_LINES = 6;
 const PANEL_H = 64;
 
 // draw order, back to front
+/** How wide a spell's tooltip runs before its description wraps (px). */
+const TIP_WRAP = 260;
 const D = { panel: 10, slot: 11, bars: 12, art: 13, sweep: 14, ring: 15, text: 16, list: 50, tipPanel: 60, tipText: 61, floater: 80, banner: 90, overlay: 100, dead: 110 };
 /** The touch menu button's size. */
 const MENU_BTN = 34;
@@ -135,6 +138,8 @@ export class PcHudScene extends Phaser.Scene {
   private tipPanel!: NineSlice;
   private tipName!: Text;
   private tipDesc!: Text;
+  /** Why a spell can't be cast right now (under its description, in red). */
+  private tipWhy!: Text;
   private hover: WheelKey | null = null;
   private pressed: WheelKey | null = null;
   /** The bar slot under the pointer (it may be empty), and the one a dragged spell is over. */
@@ -278,6 +283,7 @@ export class PcHudScene extends Phaser.Scene {
     this.tipPanel = panel(this, UI.panel, 0, 0, 10, 10).setDepth(D.tipPanel).setVisible(false);
     this.tipName = this.text(0, 0, '', 12, Ink.dark, { bold: true }).setDepth(D.tipText).setVisible(false);
     this.tipDesc = this.text(0, 0, '', 10, Ink.mid).setDepth(D.tipText).setVisible(false);
+    this.tipWhy = this.text(0, 0, '', 10, Ink.red).setDepth(D.tipText).setVisible(false);
 
     for (let i = 0; i < LOG_LINES; i++) this.logTexts.push(this.text(0, 0, '', 11, '#ffffff', { stroke: true }).setWordWrapWidth(330));
     this.bannerText = this.text(0, 0, '', 26, Colors.gold, { stroke: true, bold: true, font: Fonts.title }).setOrigin(0.5).setDepth(D.banner).setAlpha(0);
@@ -1225,6 +1231,8 @@ export class PcHudScene extends Phaser.Scene {
   }
 
   private drawTooltip(): void {
+    this.tipWhy.setVisible(false);
+    this.tipDesc.setWordWrapWidth(null);
     const k = this.hover;
     if (k === null && this.xpHover) {
       const s = this.sim;
@@ -1304,20 +1312,25 @@ export class PcHudScene extends Phaser.Scene {
       let bind = at ? BAR_KEYS[at.index].bind : '';
       if (at && this.viewMode() === 'pov' && this.turnKey(at.index)) bind = `click · ${bind} turns the view`;
       this.tipName.setText(inf.n + '  [' + bind + ']');
-      this.tipDesc.setText(why ?? inf.desc).setColor(why ? Ink.red : Ink.mid);
+      // what it costs, then what it does in full (the spellbook's words); why not, in red, under it
+      const long = k in SPELLS ? `${spellMeta(k as SpellKey, inf.cd)}\n${SPELLS[k as SpellKey].long}` : inf.desc;
+      this.tipDesc.setWordWrapWidth(TIP_WRAP).setText(long).setColor(Ink.mid);
+      this.tipWhy.setWordWrapWidth(TIP_WRAP).setText(why ?? '').setVisible(!!why);
     }
     const sl = k === 'rev' ? this.revSlot : this.slots.find(x => x.key === k);
     if (sl) this.placeTip(sl);
   }
 
   private placeTip(sl: SlotView): void {
-    const w = Math.ceil(Math.max(this.tipName.width, this.tipDesc.width)) + 22;
-    const h = Math.ceil(this.tipName.height + this.tipDesc.height) + 18;
+    const why = this.tipWhy.visible ? this.tipWhy.height + 4 : 0;
+    const w = Math.ceil(Math.max(this.tipName.width, this.tipDesc.width, why ? this.tipWhy.width : 0)) + 22;
+    const h = Math.ceil(this.tipName.height + this.tipDesc.height + why) + 18;
     const x = Math.round(Math.max(8, Math.min(this.W - w - 8, sl.x + this.slotSize / 2 - w / 2)));
     const y = Math.round(sl.y - 10 - h - 6);
     this.tipPanel.setPosition(x, y).setSize(w, h);
     this.tipName.setPosition(x + 11, y + 8);
     this.tipDesc.setPosition(x + 11, y + 9 + this.tipName.height);
+    this.tipWhy.setPosition(x + 11, y + 13 + this.tipName.height + this.tipDesc.height);
   }
 
   private drawOverlays(): void {
