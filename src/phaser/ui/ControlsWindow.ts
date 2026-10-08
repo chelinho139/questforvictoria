@@ -48,7 +48,7 @@ export class ControlsWindow {
         ${row(k(PC_KEYS.view.bind), 'Isometric, 3D diorama, or point of view')}
         ${row(`${k(PC_KEYS.turnLeft.bind)}${k(PC_KEYS.turnRight.bind)}`, 'Turn the 3D view')}
         ${row('Right-drag', 'Turn and tilt the 3D view (a right-click still walks)')}
-        ${row('Wheel', 'Zoom the 3D view')}
+        ${row('Wheel', 'Zoom in and out')}
         ${row(`${k(PC_KEYS.povTurnLeft.bind)}${k(PC_KEYS.povTurnRight.bind)}`, 'Point of view: turn (those bar slots then cast with a click)')}
         ${row(`${k('A')}${k('D')}`, 'Point of view: step sideways')}
       </ul></section>

@@ -236,8 +236,10 @@ export class MobileHudScene extends Phaser.Scene {
 
   /** World coordinates to HUD (logical screen) coordinates via the game camera. */
   private worldToHud(wx: number, wy: number): { x: number; y: number } {
-    const wv = this.scene.get(SceneKeys.Game).cameras.main.worldView;
-    return { x: isoX(wx, wy) - wv.x, y: isoY(wx, wy) - wv.y };
+    const cam = this.scene.get(SceneKeys.Game).cameras.main;
+    const k = cam.zoom / this.cameras.main.zoom;
+    const wv = cam.worldView;
+    return { x: (isoX(wx, wy) - wv.x) * k, y: (isoY(wx, wy) - wv.y) * k };
   }
 
   private inCircle(p: { x: number; y: number }, c: { cx: number; cy: number; r: number }): boolean {

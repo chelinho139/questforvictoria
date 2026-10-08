@@ -435,26 +435,24 @@ export class PcHudScene extends Phaser.Scene {
   }
 
   /** World coordinates to HUD (logical screen) coordinates via the game camera. */
-  private worldToHud(wx: number, wy: number): { x: number; y: number } {
+  private worldToHud(wx: number, wy: number): { x: number; y: number; k: number } {
     const v = this.view3d();
     if (v) return v.toScreen(wx, wy);
-    const wv = this.scene.get(SceneKeys.Game).cameras.main.worldView;
-    return { x: isoX(wx, wy) - wv.x, y: isoY(wx, wy) - wv.y };
+    // `k`: art px to HUD px (the 2D view may be zoomed with the wheel)
+    const cam = this.scene.get(SceneKeys.Game).cameras.main;
+    const k = cam.zoom / this.cameras.main.zoom;
+    const wv = cam.worldView;
+    return { x: (isoX(wx, wy) - wv.x) * k, y: (isoY(wx, wy) - wv.y) * k, k };
   }
 
   /**
    * Point `p` relative to something standing at world (wx, wy), in art px: across from it, and
    * up from its feet. The hit boxes below are in art px, so in a 3D view (where nearer is
-   * bigger) they still fit the sprites.
+   * bigger) or a zoomed 2D view they still fit the sprites.
    */
   private local(p: { x: number; y: number }, wx: number, wy: number): { x: number; y: number } {
-    const v = this.view3d();
-    if (v) {
-      const s = v.toScreen(wx, wy);
-      return { x: (p.x - s.x) / s.k, y: (s.y - p.y) / s.k };
-    }
     const s = this.worldToHud(wx, wy);
-    return { x: p.x - s.x, y: s.y - p.y };
+    return { x: (p.x - s.x) / s.k, y: (s.y - p.y) / s.k };
   }
 
   // ---------- sim events ----------

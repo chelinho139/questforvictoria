@@ -124,7 +124,7 @@
   "Right-drag": "Arrastrar con clic der.",
   "Turn and tilt the 3D view (a right-click still walks)": "Girar e inclinar la vista 3D (un clic derecho sigue sirviendo para caminar)",
   "Wheel": "Rueda",
-  "Zoom the 3D view": "Acercar o alejar la vista 3D",
+  "Zoom in and out": "Acercar o alejar",
   "Point of view: turn (those bar slots then cast with a click)": "Punto de vista: girar (esas casillas de la barra se lanzan entonces con un clic)",
   "Point of view: step sideways": "Punto de vista: paso lateral",
   "Rev: next step, on/off, auto (turn Rev on in Settings)": "Rev: siguiente paso, activar/desactivar, auto (activa Rev en Ajustes)",
