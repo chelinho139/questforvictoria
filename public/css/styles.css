@@ -437,7 +437,9 @@ html, body { height: 100%; margin: 0; background: #0c1018; overflow: hidden; }
   color: #fce6b4; background: #a8622a; border: 2px solid #4a2410; box-shadow: inset 0 2px 0 #d08a44, inset 0 -2px 0 #6a3616; text-shadow: 0 1px 0 #3b1f0e;
 }
 .talk-choices button:hover { background: #bc7236; }
-.talk-choices button.new, .talk-choices button.ready { background: #c8901e; box-shadow: inset 0 2px 0 #f2c14e, inset 0 -2px 0 #8a5a10; }
+/* quests in quest yellow with dark lettering; talk (topics) keeps the copper */
+.talk-choices button.quest { color: #3b1a08; background: #f2c14e; box-shadow: inset 0 2px 0 #fce49a, inset 0 -2px 0 #b8861a; text-shadow: none; }
+.talk-choices button.quest:hover { background: #f8d470; }
 .talk-choices button.bye { background: #8a7a64; box-shadow: inset 0 2px 0 #b0a088, inset 0 -2px 0 #5a4a38; }
 
 /* ---------- quest tracker (under the day dial); J opens it into a journal ---------- */

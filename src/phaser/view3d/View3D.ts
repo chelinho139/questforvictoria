@@ -430,8 +430,9 @@ export class View3D {
     this.dragging = v;
   }
 
+  /** The wheel zooms, inverted: rolling down pulls in, rolling up backs away. `k` > 1 is farther. */
   private wheel(e: WheelEvent): void {
-    const k = Math.exp(Math.sign(e.deltaY) * 0.12);
+    const k = Math.exp(-Math.sign(e.deltaY) * 0.12);
     if (this.mode === 'diorama') this.zoom = Math.max(0.35, Math.min(4, this.zoom / k));
     else this.dist = Math.max(0, Math.min(320, this.dist < 6 && k > 1 ? 12 : this.dist * k));
     if (this.mode === 'pov' && this.dist < 6) this.dist = 0;
