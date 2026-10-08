@@ -29,6 +29,8 @@ import { SPELLS, SPELL_ORDER } from '../../data/spells';
 import type { SpellKey } from '../../data/spells';
 import { SKILLS, ACTIONS, isSkill } from '../../data/skills';
 import { CLASS_IDS, CLASSES } from '../../data/classes';
+import { DIFFICULTIES, DIFFICULTY_IDS } from '../../data/difficulty';
+import type { Difficulty } from '../../data/difficulty';
 import { LANGS, LANG_NAMES, getLang, setLang, onLang } from '../../i18n';
 
 /** Everything the panel can change that is worth keeping across reloads. */
@@ -532,6 +534,23 @@ export class DevMenu {
     );
     loot.append(lBtns);
 
+    // ---- difficulty: the campaign's own (kept in its save; online, the whole room's)
+    const hard = this.section('Difficulty');
+    const hardSeg = el('div', 'dev-seg');
+    for (const d of DIFFICULTY_IDS) {
+      const b = this.button(DIFFICULTIES[d].name, () => {
+        this.sim.setDifficulty(d);
+        this.syncDifficulty();
+      });
+      b.dataset.diff = d;
+      this.diffBtns.push(b);
+      hardSeg.append(b);
+    }
+    hard.append(hardSeg);
+    this.diffLabel = el('p', 'dev-note');
+    hard.append(this.diffLabel);
+    this.syncDifficulty();
+
     // ---- world
     const world = this.section('Enemies');
     world.append(this.switchRow('Freeze enemies', 'freezeEnemies'));
@@ -582,6 +601,18 @@ export class DevMenu {
   }
 
   private readonly viewBtns: HTMLButtonElement[] = [];
+  private readonly diffBtns: HTMLButtonElement[] = [];
+  private diffLabel: HTMLParagraphElement | null = null;
+  private shownDiff: Difficulty | null = null;
+
+  /** Mark the game's difficulty (online it can change under us: someone else's panel). */
+  private syncDifficulty(): void {
+    const d = this.sim.difficulty;
+    if (d === this.shownDiff) return;
+    this.shownDiff = d;
+    for (const b of this.diffBtns) b.setAttribute('aria-pressed', String(b.dataset.diff === d));
+    if (this.diffLabel) this.diffLabel.textContent = DIFFICULTIES[d].blurb;
+  }
 
   /** Mark the view in use. */
   syncViewButtons(): void {
@@ -763,6 +794,7 @@ export class DevMenu {
       this.syncMusic();
       // U changes the view outside the menu
       this.syncViewButtons();
+      this.syncDifficulty();
     }
     // the V key changes the style outside the menu
     if (this.shownStyle !== spriteStyle() || this.shownHero !== hdHeroId()) this.syncStyleButtons();

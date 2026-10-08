@@ -18,6 +18,7 @@ import type { StructureKind } from '../data/crafting';
 import { T } from '../sim/map';
 import type { SaveData } from '../sim/save';
 import type { WeatherKind } from '../sim/weather';
+import type { Difficulty } from '../data/difficulty';
 import type { Enemy, ButtonId, Stack, QuestProgress, SceneLine } from '../sim/types';
 import type { Connection } from './Connection';
 import type { Tick, RoomInfo, EnemySnap, HeroSnap, CompanionSnap } from './protocol';
@@ -105,6 +106,8 @@ export class NetSim extends Sim {
       g.day.day = t.dy[1];
     }
     if (t.wx) g.weather.follow(t.wx);
+    // (the server tells everyone it changed; the creatures' health comes in their snapshots)
+    if (t.df) g.difficulty = t.df;
     if (t.rg !== h.regionId) this.enter(t);
     const R = this.R;
     if (t.mf) {
@@ -644,6 +647,9 @@ export class NetSim extends Sim {
   }
   override setWeather(kind: WeatherKind | null): void {
     this.cmd('setWeather', [kind]);
+  }
+  override setDifficulty(d: Difficulty): void {
+    this.cmd('setDifficulty', [d]);
   }
   override sceneNext(): void {
     this.cmd('sceneNext');

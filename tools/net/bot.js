@@ -6,6 +6,7 @@
 //   node tools/net/bot.js host "Bot room"     open a room and play in it
 //   node tools/net/bot.js join ABCD           join room ABCD
 //   options: --url ws://host:3000/ws  --name Botty  --look k2  --cls archer  --secs 30  --quiet
+//            --difficulty hard (or nightmare: the room a bot opens; else its campaign's own)
 // Each bot name is its own account with one character of that name, kept on the server
 // like a player's, so a bot comes back with the level and gear it had.
 const crypto = require('crypto');
@@ -21,6 +22,8 @@ const name = opt('name', 'Botty');
 const look = opt('look', 'k2');
 /** Warrior or archer: the class of the bot's character when it's first made. */
 const cls = opt('cls', 'warrior');
+/** Normal, hard or nightmare: the room the bot opens (left out, the server uses the bot's campaign's). */
+const difficulty = opt('difficulty', undefined);
 // the protocol this checkout speaks (read from the game's own code, so it can't drift)
 const PROTOCOL = Number(
   require('fs')
@@ -57,7 +60,7 @@ let lastPing = 0;
 let myCls = 'warrior';
 const go = char => {
   myCls = char.cls || 'warrior';
-  if (action === 'host') send({ t: 'host', name: arg || `${name}'s room`, char: char.id });
+  if (action === 'host') send({ t: 'host', name: arg || `${name}'s room`, char: char.id, difficulty });
   else send({ t: 'join', room: arg, char: char.id });
 };
 

@@ -127,6 +127,7 @@ import { SPELLS } from '../src/data/spells';
 import { SKILLS, ACTIONS } from '../src/data/skills';
 import { TALENTS, TREES } from '../src/data/talents';
 import { CLASSES } from '../src/data/classes';
+import { DIFFICULTIES } from '../src/data/difficulty';
 import { COMPANIONS } from '../src/data/companions';
 import { STRUCTURES } from '../src/data/crafting';
 
@@ -232,6 +233,7 @@ test('every name, line, description and document of the game has its Spanish', (
     ACTIONS,
     TREES,
     CLASSES,
+    DIFFICULTIES,
     COMPANIONS,
     STRUCTURES,
   ])

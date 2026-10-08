@@ -6,6 +6,8 @@ import type { SaveData } from '../sim/save';
 import { REGIONS, START_REGION } from '../data/regions';
 import { QUESTS } from '../data/quests';
 import { CLASSES, isClass } from '../data/classes';
+import { isDifficulty } from '../data/difficulty';
+import type { Difficulty } from '../data/difficulty';
 import { PROTOCOL, ROOM_MAX, TICK_HZ } from '../net/protocol';
 import type { C2S, S2C, RoomInfo, CharInfo } from '../net/protocol';
 import { COMMANDS, DEV_COMMANDS } from '../net/commands';
@@ -62,6 +64,7 @@ class Room {
       max: ROOM_MAX,
       place: REGIONS[heroes[0]?.regionId || this.lastRegion]?.name ?? '',
       story: lastMain ? QUESTS[lastMain].name : 'Just beginning',
+      difficulty: this.game.difficulty,
     };
   }
 }
@@ -199,8 +202,11 @@ export class GameServer {
         if (!ch) return;
         const room = new Room(this.roomId(), clean(m.name, 24) || `${ch.name}'s room`, ch.id);
         this.rooms.set(room.id, room);
-        console.log(`[game] ${ch.name} opens room ${room.id} "${room.name}"`);
-        return this.enter(c, room, ch, true);
+        // as hard as asked; else as hard as their campaign
+        const own = ch.save?.difficulty;
+        const difficulty = isDifficulty(m.difficulty) ? m.difficulty : isDifficulty(own) ? own : 'normal';
+        console.log(`[game] ${ch.name} opens room ${room.id} "${room.name}" (${difficulty})`);
+        return this.enter(c, room, ch, true, difficulty);
       }
       case 'join': {
         const room = this.rooms.get(String(m.room));
@@ -280,6 +286,7 @@ export class GameServer {
         place: s ? (REGIONS[s.region]?.name ?? '') : 'The lakeshore',
         at: s?.at ?? 0,
         busy: this.playing.has(ch.id),
+        difficulty: isDifficulty(s?.difficulty) ? s.difficulty : 'normal',
       };
     });
   }
@@ -313,10 +320,10 @@ export class GameServer {
 
   /**
    * Put a character in a room. The one who opened it brings the whole campaign (their story,
-   * where they stood, what they built); anyone joining brings themselves and arrives where
-   * the party is.
+   * where they stood, what they built), at the difficulty they chose for the room; anyone
+   * joining brings themselves and arrives where the party is.
    */
-  private enter(c: Client, room: Room, ch: CharRecord, opening: boolean): void {
+  private enter(c: Client, room: Room, ch: CharRecord, opening: boolean, difficulty?: Difficulty): void {
     this.leave(c);
     const game = room.game;
     const where = game.heroes[0]?.regionId || room.lastRegion;
@@ -332,6 +339,7 @@ export class GameServer {
       hero.resetHero();
       game.shareQuests(hero);
     }
+    if (opening && difficulty) game.setDifficulty(difficulty);
     hero.log(`You join ${room.name}.`, 't');
     for (const o of game.heroes) if (o !== hero) o.log(`${hero.name} joins the room.`, 't');
     c.room = room;
@@ -365,7 +373,7 @@ export class GameServer {
   /**
    * Write a character as they are now: the hero, where they stand, and the story. The room's
    * owner takes the room's whole campaign; anyone else adds what they saw happen to the story
-   * they already knew, and keeps their own campfires and clock.
+   * they already knew, and keeps their own campfires, clock and difficulty.
    */
   private saveChar(c: Client): void {
     const ch = c.char;
@@ -373,10 +381,13 @@ export class GameServer {
     if (!ch || !room || !c.session) return;
     const now = room.game.toSave(c.session.hero);
     const before = ch.save;
+    const guest = ch.id !== room.owner;
     const save: SaveData =
-      before && ch.id !== room.owner
+      before && guest
         ? { ...now, ...mergeStory(before, now), built: before.built, day: before.day }
         : now;
+    // a guest's campaign stays as hard as they had it (a new character's: normal)
+    if (guest) save.difficulty = before?.difficulty;
     const key = JSON.stringify({ ...save, at: 0 });
     if (key === c.savedKey) return;
     c.savedKey = key;

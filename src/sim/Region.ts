@@ -1,7 +1,8 @@
 import { FLAT_OBJECTS } from '../data/regions/types';
 import type { ObjectKind } from '../data/regions/types';
 import { KINDS, RESPAWN } from '../data/enemies';
-import type { EnemyKind, CreatureSounds, CastDef } from '../data/enemies';
+import type { EnemyDef, EnemyKind, CreatureSounds, CastDef } from '../data/enemies';
+import { DIFFICULTIES } from '../data/difficulty';
 import { T, Tile, rockCentre, RegionMap, parseLayout, isoX, isoSpeedFactor, faceToward } from './map';
 import { findPath } from './pathfind';
 import { propSolidTiles } from '../data/props';
@@ -359,6 +360,7 @@ export class Region {
 
   spawnEnemy(kind: EnemyKind, x: number, y: number, temp = false): Enemy {
     const k = KINDS[kind];
+    const hp = this.maxHp(k);
     const e: Enemy = {
       id: this.nextEnemy++,
       kind,
@@ -368,8 +370,8 @@ export class Region {
       y,
       sx: x,
       sy: y,
-      hp: k.hp,
-      hpMax: k.hp,
+      hp,
+      hpMax: hp,
       aggro: false,
       wanderT: 0,
       wx: 0,
@@ -772,7 +774,7 @@ export class Region {
         const d = Math.hypot(h.x - hz.x, h.y - hz.y);
         if (!hz.hit && !h.dead && !h.airborne && Math.abs(d - hz.r) < 9) {
           hz.hit = true;
-          h.hurt(hz.dmg, hz.what);
+          this.strike(h, hz.dmg, hz.what);
         }
       }
     }
@@ -874,7 +876,7 @@ export class Region {
           for (const f of this.foes())
             if (!f.dead && Math.hypot(f.x - (e.x + L.dx * 24), f.y - (e.y + L.dy * 24)) < 34) {
               L.hit = true;
-              f.hurt(Math.round(e.def.atk * 2), "Sir Garrick's lunge");
+              this.strike(f, Math.round(e.def.atk * 2), "Sir Garrick's lunge");
             }
         return true;
       }
@@ -1242,6 +1244,26 @@ export class Region {
     return [...this.heroes(), ...this.game.companionsIn(this.id)];
   }
 
+  /** A creature's blow (a hit, a bolt, a leap, a fireball, the toll) lands: as hard as the game's difficulty makes it. */
+  private strike(f: Foe, v: number, src: string): void {
+    f.hurt(v * DIFFICULTIES[this.game.difficulty].dmg, src);
+  }
+
+  /** A creature of this kind's health at the game's difficulty (cows and deer are as they are). */
+  private maxHp(k: EnemyDef): number {
+    return k.behavior === 'passive' ? k.hp : Math.round(k.hp * DIFFICULTIES[this.game.difficulty].hp);
+  }
+
+  /** The difficulty changed: every creature here takes its new health, as hurt as it was. */
+  rescaleEnemies(): void {
+    for (const e of this.enemies) {
+      const max = this.maxHp(e.def);
+      if (max === e.hpMax) continue;
+      if (e.hp > 0) e.hp = Math.max(1, Math.round((e.hp * max) / e.hpMax));
+      e.hpMax = max;
+    }
+  }
+
   /** Whether `f` stands in front of a creature (on the side it faces). */
   inFront(e: Enemy, f: { x: number; y: number }): boolean {
     return faceToward(e.x, e.y, f.x, f.y, e.face) === e.face;
@@ -1503,7 +1525,7 @@ export class Region {
     e.atkT = k.per * 0.5;
     this.burst(e.x, e.y + 2, 14, '#8a7a5a', 80, 0.5, 3, -30);
     this.events.emit('shake', { s: 0.2 });
-    for (const f of foes) if (!f.dead && !f.airborne && Math.hypot(f.x - e.x, f.y - e.y) < 30) f.hurt(k.leap!.dmg, `${e.n}'s leap`);
+    for (const f of foes) if (!f.dead && !f.airborne && Math.hypot(f.x - e.x, f.y - e.y) < 30) this.strike(f, k.leap!.dmg, `${e.n}'s leap`);
   }
 
   /** Whether a creature's spell has something to do right now (its foe `d` away). */
@@ -1529,7 +1551,7 @@ export class Region {
         this.sound('fireballHit', tx, ty);
         this.burst(tx, ty - 8, 12, '#a78bfa', 100, 0.4, 3, 60);
         this.fx({ type: 'ring', x: tx, y: ty - 8, r0: 6, r1: 34, col: '#a78bfa', dur: 0.3 });
-        if (!far && foe.regionId === this.id) foe.hurt(c.dmg, 'the fireball');
+        if (!far && foe.regionId === this.id) this.strike(foe, c.dmg, 'the fireball');
         else foe.log('The fireball misses.', 't');
       });
     } else if (c.what === 'heal') {
@@ -1596,7 +1618,7 @@ export class Region {
     this.fx({ type: 'arrow', x0: e.x + e.face * 6, y0: e.y - 10, x1: tx, y1: ty - 6, col: m.col, dur: t });
     this.after(t, () => {
       if (foe.regionId !== this.id || foe.dead || Math.hypot(foe.x - tx, foe.y - ty) > 28) return;
-      foe.hurt(e.def.atk, `the ${e.n}'s ${m.slow ? 'bolt' : 'arrow'}`);
+      this.strike(foe, e.def.atk, `the ${e.n}'s ${m.slow ? 'bolt' : 'arrow'}`);
       if (m.slow) foe.slow(m.slow.t, m.slow.k);
     });
   }
@@ -1701,7 +1723,7 @@ export class Region {
       e.z = Math.max(0, (e.z ?? 0) - DROP_SPEED * dt);
       if (e.z === 0) {
         this.burst(e.x, e.y + 2, 10, '#5a4a3a', 60, 0.4, 3, -20);
-        for (const f of foes) if (!f.dead && Math.hypot(f.x - e.x, f.y - e.y) < 26) f.hurt(k.atk, `the falling ${e.n.toLowerCase()}`);
+        for (const f of foes) if (!f.dead && Math.hypot(f.x - e.x, f.y - e.y) < 26) this.strike(f, k.atk, `the falling ${e.n.toLowerCase()}`);
       }
       return;
     }
@@ -1864,7 +1886,7 @@ export class Region {
           this.cry(e, 'attack');
           if (k.missile) this.shoot(e, foe);
           else if (Math.hypot(foe.x - e.x, foe.y - e.y) < k.range + 14)
-            foe.hurt(k.atk, 'the ' + e.n + "'s hit");
+            this.strike(foe, k.atk, 'the ' + e.n + "'s hit");
           else foe.log(e.n + ' hits the air.', 't');
           e.atkT = k.per;
           e.tele = false;

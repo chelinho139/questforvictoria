@@ -149,6 +149,7 @@ export class Session {
     );
     part('sc', R.scene);
     part('sy', { flags: h.game.flags, quests: h.game.quests, journal: h.game.journal });
+    part('df', h.game.difficulty);
     this.dayT -= dt;
     if (this.dayT <= 0 || this.sent.dy === undefined) {
       this.dayT = 1;

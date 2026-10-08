@@ -8,7 +8,7 @@
  *   newChar make a character (name, look)
  *   delChar delete one of my characters
  *   list    the open rooms, please
- *   host    open a room with this name, and put this character of mine in it
+ *   host    open a room with this name and difficulty, and put this character of mine in it
  *   join    put this character of mine in this room
  *   leave   take me out of my room
  *   move    where my hero is now (20 a second while it moves; my browser walks it)
@@ -28,10 +28,11 @@
 
 import type { ItemId, Slot } from '../data/items';
 import type { ClassId } from '../data/classes';
+import type { Difficulty } from '../data/difficulty';
 import type { Work } from '../sim/types';
 
 /** Bump when a message changes shape: the server turns away a browser that speaks another. */
-export const PROTOCOL = 5;
+export const PROTOCOL = 6;
 
 /** Players a room takes. */
 export const ROOM_MAX = 8;
@@ -62,6 +63,8 @@ export interface CharInfo {
   at: number;
   /** Playing right now (in another tab or browser). */
   busy: boolean;
+  /** How hard their campaign is (online: the last room they opened). */
+  difficulty: Difficulty;
 }
 
 export interface RoomInfo {
@@ -73,6 +76,7 @@ export interface RoomInfo {
   place: string;
   /** How far the story has come (a short line). */
   story: string;
+  difficulty: Difficulty;
 }
 
 export type C2S =
@@ -81,7 +85,8 @@ export type C2S =
   | { t: 'newChar'; name: string; look: string; cls: ClassId }
   | { t: 'delChar'; id: string }
   | { t: 'list' }
-  | { t: 'host'; name: string; char: string }
+  /** Without a difficulty, the room is as hard as the character's campaign. */
+  | { t: 'host'; name: string; char: string; difficulty?: Difficulty }
   | { t: 'join'; room: string; char: string }
   | { t: 'leave' }
   | {
@@ -146,6 +151,8 @@ export interface Tick {
   dy?: [number, number];
   /** The weather (with the day): [clock, seed, rain, storm, wind, forced] (Weather.snapshot). */
   wx?: [number, number, number, number, number, number];
+  /** How hard the room is (when it changes). */
+  df?: Difficulty;
   ev?: NetEvent[];
 }
 

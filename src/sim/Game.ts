@@ -10,6 +10,8 @@ import { ITEMS, lootFor } from '../data/items';
 import type { ItemId } from '../data/items';
 import { SAVE_VERSION, readableSave } from './save';
 import { isClass } from '../data/classes';
+import { DIFFICULTIES, isDifficulty } from '../data/difficulty';
+import type { Difficulty } from '../data/difficulty';
 import { SPELLS } from '../data/spells';
 import type { SaveData } from './save';
 import { T } from './map';
@@ -65,6 +67,8 @@ export class Game {
   timeScale = 1;
   /** Dev switches for the whole game. */
   readonly cheats = { freezeEnemies: false };
+  /** How hard the creatures are (data/difficulty.ts): chosen when the campaign starts, kept in its save. */
+  difficulty: Difficulty = 'normal';
   private readonly lastStatus = new Map<string, QuestStatus>();
 
   /** The live region with this id (built if nobody was in it). */
@@ -221,6 +225,18 @@ export class Game {
     const shop = NPCS[npc].shop;
     if (!shop) return [];
     return [...shop.sells, ...(shop.more ?? []).filter(m => this.check(m.when, hero)).flatMap(m => m.sells)];
+  }
+
+  /**
+   * Make the game harder or easier. The creatures already out take their new health at once,
+   * as hurt as they were; everyone in the game is told.
+   */
+  setDifficulty(d: Difficulty): void {
+    if (d === this.difficulty) return;
+    this.difficulty = d;
+    for (const r of this.regions.values()) r.rescaleEnemies();
+    for (const h of this.heroes) h.log(`Difficulty: ${DIFFICULTIES[d].name}. ${DIFFICULTIES[d].blurb}`, 't');
+    this.events.emit('difficulty', { d });
   }
 
   // ---------- quests ----------
@@ -460,6 +476,7 @@ export class Game {
       journal: this.journal.slice(),
       day: { t: this.day.t, day: this.day.day },
       built: JSON.parse(JSON.stringify(built)) as SaveData['built'],
+      difficulty: this.difficulty,
     };
   }
 
@@ -497,6 +514,8 @@ export class Game {
     this.journal = d.journal.slice();
     this.day.t = d.day.t;
     this.day.day = d.day.day;
+    // before anyone arrives: the creatures are made for it
+    this.difficulty = isDifficulty(d.difficulty) ? d.difficulty : 'normal';
     let next = 1;
     for (const [id, list] of Object.entries(d.built)) {
       this.regionMemory.set(id, { structures: list, drops: [] });
@@ -571,7 +590,7 @@ export class Game {
     h.events.emit('talents', {});
   }
 
-  /** Start over: a fresh campaign, the hero new on the lakeshore. */
+  /** Start over: a fresh campaign (as hard as this one was), the hero new on the lakeshore. */
   reset(h: Hero): void {
     for (const r of this.regions.values()) r.clearScene();
     this.regions.clear();

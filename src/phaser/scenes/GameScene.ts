@@ -31,6 +31,7 @@ import type { MobileHudScene } from './MobileHudScene';
 import { readSave, writeSave } from '../saveStore';
 import type { NetSim } from '../../net/NetSim';
 import type { ClassId } from '../../data/classes';
+import type { Difficulty } from '../../data/difficulty';
 import { OnlineBadge } from '../ui/OnlineBadge';
 import { SceneBox } from '../ui/SceneBox';
 import { BossBar } from '../ui/BossBar';
@@ -105,8 +106,12 @@ export class GameScene extends Phaser.Scene {
     if (charId) {
       const save = readSave(charId);
       if (save) this.sim.loadSave(save);
-      // a new character starts their adventure as their class
-      else this.sim.startAs((this.registry.get('localClass') as ClassId | undefined) ?? 'warrior');
+      // a new character starts their adventure as their class, as hard as they chose
+      else
+        this.sim.startAs(
+          (this.registry.get('localClass') as ClassId | undefined) ?? 'warrior',
+          (this.registry.get('localDifficulty') as Difficulty | undefined) ?? 'normal'
+        );
     }
     // the hero wears what the sim has equipped: redraw them whenever the gear changes
     this.wearGear();
@@ -419,7 +424,7 @@ export class GameScene extends Phaser.Scene {
       window.clearTimeout(pending);
       pending = window.setTimeout(saveNow, 800);
     };
-    for (const ev of ['quests', 'level', 'region', 'bag', 'talents', 'flags', 'loadout'] as const) this.sim.events.on(ev, soon);
+    for (const ev of ['quests', 'level', 'region', 'bag', 'talents', 'flags', 'loadout', 'difficulty'] as const) this.sim.events.on(ev, soon);
     const timer = window.setInterval(saveNow, 30_000);
     const onHide = () => {
       if (document.visibilityState === 'hidden') saveNow();

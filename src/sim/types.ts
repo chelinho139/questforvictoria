@@ -7,6 +7,7 @@ import type { SkillKey, ActionKey, Key, WheelKey } from '../data/skills';
 import type { ObjectKind } from '../data/regions/types';
 import type { SpellKey } from '../data/spells';
 import type { TreeKind } from '../data/trees';
+import type { Difficulty } from '../data/difficulty';
 
 export interface Enemy {
   /** Unique in its region (the network names creatures by it). */
@@ -468,6 +469,8 @@ export interface RoomEvents extends Record<string, unknown> {
   quests: Record<string, never>;
   flags: { name: string };
   journal: { doc: string };
+  /** The game was made harder or easier. */
+  difficulty: { d: Difficulty };
 }
 
 export interface SimEvents extends Record<string, unknown> {
@@ -498,6 +501,8 @@ export interface SimEvents extends Record<string, unknown> {
   flags: { name: string };
   /** A document went into the journal. */
   journal: { doc: string };
+  /** The game was made harder or easier. */
+  difficulty: { d: Difficulty };
   /** You bought or sold something. */
   trade: Record<string, never>;
   /** A scene started, showed a line, moved the camera or ended (read Sim.scene for the state). */

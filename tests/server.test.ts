@@ -292,3 +292,34 @@ test('an archer online: the class comes through, and the arrows fly for everyone
   );
   a.close();
 });
+
+test('a room is as hard as its host asks (else as their campaign), the list says so, and a guest keeps their own', async () => {
+  const a = await Browser.open(port);
+  const b = await Browser.open(port);
+  const ca = await a.character(unique('Jo'));
+  const cb = await b.character(unique('Kit'), 'k2');
+  a.send({ t: 'host', name: 'Hard room', char: ca, difficulty: 'hard' });
+  const joined = await a.next('joined');
+  assert.equal(joined.room.difficulty, 'hard');
+  b.send({ t: 'list' });
+  const rooms = await b.next('rooms');
+  assert.equal(rooms.rooms.find(r => r.id === joined.room.id)?.difficulty, 'hard');
+  b.send({ t: 'join', room: joined.room.id, char: cb });
+  await b.next('joined');
+  // the dev command, for the whole room
+  b.send({ t: 'cmd', c: 'setDifficulty', a: ['nightmare'] });
+  await a.next('tick', m => m.df === 'nightmare');
+  for (const x of [a, b]) {
+    x.send({ t: 'leave' });
+    await x.next('left');
+  }
+  assert.equal(saved(ca).save.difficulty, 'nightmare', "the host's campaign is the room's");
+  assert.equal(saved(cb).save.difficulty, undefined, 'the guest keeps their own (normal)');
+  const chars = await a.next('chars', m => m.chars.some(c => c.id === ca && !c.busy));
+  assert.equal(chars.chars.find(c => c.id === ca)?.difficulty, 'nightmare', 'the character screen says it');
+  // opening a room without saying: as hard as the campaign
+  a.send({ t: 'host', name: 'Again', char: ca });
+  assert.equal((await a.next('joined')).room.difficulty, 'nightmare');
+  a.close();
+  b.close();
+});
