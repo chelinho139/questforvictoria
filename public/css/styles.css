@@ -262,6 +262,49 @@ html, body { height: 100%; margin: 0; background: #0c1018; overflow: hidden; }
   border: 1px solid #3b1f0e; padding: 2px 8px;
 }
 .net-badge button:hover { background: #a0582a; }
+
+/* ---------- online: duels (another player's card; the bar at the top while a duel is on) ---------- */
+.duel-card {
+  position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); width: min(340px, calc(100vw - 32px)); z-index: 16;
+  padding: 12px 14px; background: #f4dba8; color: #4a2410; border: 4px solid #9a5626;
+  box-shadow: 0 0 0 2px #3b1f0e, inset 0 0 0 2px #5a2e12, inset 2px 2px 0 2px #fcecc4, 0 14px 30px rgba(0, 0, 0, 0.45);
+  font: 15px/1.3 'Pixelify Sans', VT323, monospace; user-select: none;
+}
+.duel-card[hidden], .duel-bar[hidden], .duel-card [hidden], .duel-bar [hidden] { display: none; }
+.duel-card > .inv-x { position: absolute; top: 8px; right: 8px; }
+.duel-card header { display: flex; gap: 8px; align-items: baseline; margin-right: 26px; }
+.duel-card header b { font: 700 13px Silkscreen, 'Courier New', monospace; }
+.duel-card header span { color: #9a6a40; font-size: 13px; }
+.duel-card p { margin: 6px 0; }
+.duel-tally { color: #5a2e12; }
+.duel-why { color: #9a3a2a; font-size: 13px; }
+.duel-choices { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.duel-choices button {
+  font: 700 11px 'Pixelify Sans', monospace; letter-spacing: 0.03em; cursor: pointer; padding: 5px 10px;
+  color: #fce6b4; background: #a8622a; border: 2px solid #4a2410; box-shadow: inset 0 2px 0 #d08a44, inset 0 -2px 0 #6a3616; text-shadow: 0 1px 0 #3b1f0e;
+}
+.duel-choices button:hover { background: #bc7236; }
+.duel-choices button.duel-go { background: #b8392f; box-shadow: inset 0 2px 0 #e86a5a, inset 0 -2px 0 #7a1e1a; }
+.duel-choices button.duel-go:hover { background: #c84a3f; }
+.duel-choices button.new { background: #c8901e; box-shadow: inset 0 2px 0 #f2c14e, inset 0 -2px 0 #8a5a10; }
+.duel-choices button.bye { background: #8a7a64; box-shadow: inset 0 2px 0 #b0a088, inset 0 -2px 0 #5a4a38; }
+.duel-choices button:disabled { background: #8a7a6a; color: #d8c8a8; cursor: default; box-shadow: none; }
+.duel-bar {
+  position: fixed; top: 40px; left: 50%; transform: translateX(-50%); width: min(380px, calc(100vw - 32px)); z-index: 16;
+  padding: 8px 12px; text-align: center; color: #fce6b4; background: rgba(20, 14, 10, 0.86);
+  border: 2px solid #5a2e12; box-shadow: 0 0 0 2px #3b1f0e; font: 14px 'Pixelify Sans', VT323, monospace; user-select: none;
+}
+.duel-bar.asked { border-color: #f2c14e; animation: duel-call 0.9s ease-in-out infinite alternate; }
+.duel-bar.fight { border-color: #b8392f; }
+@keyframes duel-call { to { box-shadow: 0 0 0 2px #3b1f0e, 0 0 16px rgba(242, 193, 78, 0.75); } }
+.duel-head { display: flex; justify-content: center; align-items: baseline; gap: 10px; }
+.duel-head b { font: 700 12px Silkscreen, 'Courier New', monospace; letter-spacing: 0.04em; }
+.duel-time { color: #f2c14e; font: 700 13px Silkscreen, 'Courier New', monospace; }
+.duel-bar.count .duel-time { font-size: 22px; }
+.duel-track { height: 6px; margin: 6px 0 2px; background: #2a1406; border: 1px solid #5a2e12; }
+.duel-fill { height: 100%; background: linear-gradient(180deg, #f2c14e, #a8701e); }
+.duel-warn { margin: 4px 0 0; color: #ff8a80; font-weight: 700; }
+.duel-bar .duel-choices { margin-top: 6px; }
 @media (max-width: 620px) {
   .select-body { grid-template-columns: 1fr; }
   .select-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -406,7 +449,9 @@ html, body { height: 100%; margin: 0; background: #0c1018; overflow: hidden; }
   color: #fce6b4; background: #a8622a; border: 2px solid #4a2410; box-shadow: inset 0 2px 0 #d08a44, inset 0 -2px 0 #6a3616; text-shadow: 0 1px 0 #3b1f0e;
 }
 .talk-choices button:hover { background: #bc7236; }
-.talk-choices button.new, .talk-choices button.ready { background: #c8901e; box-shadow: inset 0 2px 0 #f2c14e, inset 0 -2px 0 #8a5a10; }
+/* quests in quest yellow with dark lettering; talk (topics) keeps the copper */
+.talk-choices button.quest { color: #3b1a08; background: #f2c14e; box-shadow: inset 0 2px 0 #fce49a, inset 0 -2px 0 #b8861a; text-shadow: none; }
+.talk-choices button.quest:hover { background: #f8d470; }
 .talk-choices button.bye { background: #8a7a64; box-shadow: inset 0 2px 0 #b0a088, inset 0 -2px 0 #5a4a38; }
 
 /* ---------- quest tracker (under the day dial); J opens it into a journal ---------- */

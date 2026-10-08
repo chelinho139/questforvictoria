@@ -12,7 +12,8 @@
  *   join    put this character of mine in this room
  *   leave   take me out of my room
  *   move    where my hero is now (20 a second while it moves; my browser walks it)
- *   cmd     do this (a command from the whitelist in net/commands.ts, with its arguments)
+ *   cmd     do this (a command from the whitelist in net/commands.ts, with its arguments;
+ *           duels too: challenge, accept, quit, target my opponent)
  *   ping    are you there (the answer gives the round trip)
  *
  * Server → browser
@@ -30,9 +31,10 @@ import type { ItemId, Slot } from '../data/items';
 import type { ClassId } from '../data/classes';
 import type { Difficulty } from '../data/difficulty';
 import type { Work } from '../sim/types';
+import type { DuelView, DuelFlag } from '../sim/Duel';
 
 /** Bump when a message changes shape: the server turns away a browser that speaks another. */
-export const PROTOCOL = 6;
+export const PROTOCOL = 7;
 
 /** Players a room takes. */
 export const ROOM_MAX = 8;
@@ -153,6 +155,10 @@ export interface Tick {
   wx?: [number, number, number, number, number, number];
   /** How hard the room is (when it changes). */
   df?: Difficulty;
+  /** My duel, or the challenge I made or was made (null: none), when it changes. */
+  du?: DuelView | null;
+  /** The duels with a flag in my region (when they change). */
+  dl?: DuelFlag[];
   ev?: NetEvent[];
 }
 
@@ -169,6 +175,8 @@ export interface MeSnap {
   heldBy: string;
   slowT: number;
   slowK: number;
+  /** Stunned (by a duel opponent). */
+  stunT: number;
   /** Keepsakes waiting before they can be used again (by item id). */
   itemCd: Record<string, number>;
   hp: number;
@@ -193,6 +201,7 @@ export interface MeSnap {
   mountT: number;
   /** Chopping, mining or making something, and how far along (the progress bar). */
   work: Work | null;
+  /** My target: a creature's id, RIVAL_TARGET (sim/Duel.ts) for my duel opponent, 0 for none. */
   target: number;
   cds: Record<string, number>;
   acd: Record<string, number>;
@@ -219,6 +228,8 @@ export interface MeFull {
   met: string[];
   /** My own quests: on them, or handed in (the room's progress is in `sy`). */
   quests: Record<string, 'active' | 'done'>;
+  /** Duels won and lost. */
+  duels: [won: number, lost: number];
 }
 
 export type EnemySnap = [
@@ -279,6 +290,9 @@ export type HeroSnap = [
   cls: ClassId,
   /** What holds them still ('' while nothing does). */
   heldBy: string,
+  /** Duels won and lost. */
+  won: number,
+  lost: number,
 ];
 
 export type DropSnap = [

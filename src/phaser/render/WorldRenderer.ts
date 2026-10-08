@@ -572,14 +572,21 @@ export class WorldRenderer {
     }
   }
 
-  /** Another player's name and level over their head (at screen y `top`), with a small health bar under it. */
+  /**
+   * Another player's name and level over their head (at screen y `top`), with a small health bar
+   * under it: red for the one you are about to fight, or fighting, in a duel.
+   */
   private nameAndHealth(o: Hero, name: Phaser.GameObjects.Text, g: Phaser.GameObjects.Graphics, qx: number, top: number): void {
+    const d = this.sim.duel;
+    const foe = !!d && d.st !== 'ask' && d.id === o.id;
+    const col = foe ? '#ff8a80' : '#bfe0ff';
+    if (name.style.color !== col) name.setColor(col);
     keepAsIs(name).setText(`${o.name} · ${o.level}`).setPosition(Math.round(qx), Math.round(top - 6)).setVisible(true);
     const w = 22;
     const x0 = Math.round(qx - w / 2);
     const y0 = Math.round(top - 4);
     g.fillStyle(hex('#0a0d14')).fillRect(x0 - 1, y0 - 1, w + 2, 4);
-    g.fillStyle(hex('#5fc46a')).fillRect(x0, y0, Math.round((w * Math.max(0, o.hp)) / Math.max(1, o.hpMax)), 2);
+    g.fillStyle(hex(foe ? '#e0504b' : '#5fc46a')).fillRect(x0, y0, Math.round((w * Math.max(0, o.hp)) / Math.max(1, o.hpMax)), 2);
   }
 
   /** The grey postman: walking his round, fading as you come near. */

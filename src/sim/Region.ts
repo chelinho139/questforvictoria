@@ -1197,22 +1197,31 @@ export class Region {
     this.traps.push({ id: this.nextTrap++, x: h.x, y: h.y, owner: h.id, t: 60, hold });
   }
 
-  /** Traps spring on the first creature to step on them; unsprung ones rust away after a minute. */
+  /**
+   * Traps spring on the first creature to step on them (or the archer's duel opponent);
+   * unsprung ones rust away after a minute.
+   */
   private updateTraps(dt: number): void {
     if (!this.traps.length) return;
     for (const tr of this.traps) {
       tr.t -= dt;
-      const e = this.enemies.find(
-        x => x.alive && x.riseT <= 0 && Math.hypot(x.x - tr.x, x.y - tr.y) < 12 * x.def.scale
-      );
+      const owner = this.heroes().find(h => h.id === tr.owner);
+      const rival = owner?.rival;
+      const e =
+        this.enemies.find(
+          x => x.alive && x.riseT <= 0 && Math.hypot(x.x - tr.x, x.y - tr.y) < 12 * x.def.scale
+        ) ?? (rival && rival.alive && Math.hypot(rival.x - tr.x, rival.y - tr.y) < 12 ? rival : undefined);
       if (!e) continue;
       tr.t = 0;
-      e.rootT = Math.max(e.rootT, tr.hold);
       this.fx({ type: 'ring', x: tr.x, y: tr.y, r0: 4, r1: 22, col: '#c8a05a', lw: 3, dur: 0.35 });
       this.sound('trapSnap', tr.x, tr.y);
       this.burst(tr.x, tr.y - 4, 10, '#c8a05a', 80, 0.4, 2, 80);
-      this.floater(e.x + 10, e.y - 14 * e.def.scale - 8, 'CAUGHT', 'name', '#c8a05a');
-      const owner = this.heroes().find(h => h.id === tr.owner);
+      // a hero caught is snared (and says so); a creature is held fast where it stands
+      if (e === rival) rival.hero.hold(tr.hold, 'snare');
+      else {
+        e.rootT = Math.max(e.rootT, tr.hold);
+        this.floater(e.x + 10, e.y - 14 * e.def.scale - 8, 'CAUGHT', 'name', '#c8a05a');
+      }
       if (owner) owner.dmgEnemy(e, 8, '');
     }
     this.traps = this.traps.filter(t => t.t > 0);

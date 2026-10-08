@@ -175,5 +175,10 @@
   "FPS counter": "Contador de FPS",
   "Skip loading screen": "Saltar la pantalla de carga",
   "{0} FPS": "{0} FPS",
-  "O or ` toggles this panel · T cycles time · L lighting": "O o ` abre y cierra este panel · T cambia la hora · L iluminación"
+  "O or ` toggles this panel · T cycles time · L lighting": "O o ` abre y cierra este panel · T cambia la hora · L iluminación",
+
+  "Challenged to a duel": "Te desafían a un duelo",
+  "Duel: the count": "Duelo: la cuenta",
+  "Duel won": "Duelo ganado",
+  "A duel begins": "Empieza un duelo"
 }

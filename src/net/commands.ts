@@ -101,6 +101,14 @@ export const COMMANDS: Record<string, Command> = {
   setBarSlot: (h, [i, k]) => int(i, 0, 11) && (k === null || isSpell(k)) && h.setBarSlot(i, k),
   learnTalent: (h, [id]) => str(id) && has(TALENTS, id) && void h.learnTalent(id),
   resetTalents: h => h.resetTalents(),
+  // duels (sim/Duel.ts: the duel checks who, where and when)
+  duelChallenge: (h, [id]) => str(id) && h.game.duels.challenge(h, id),
+  duelAccept: h => h.game.duels.accept(h),
+  duelQuit: h => h.game.duels.quit(h),
+  targetRival: h => {
+    const r = h.rival;
+    if (r && r.alive && !r.hid) h.setTarget(r);
+  },
 };
 
 /** Dev commands: only in rooms opened with the dev tools on (the server's choice). */

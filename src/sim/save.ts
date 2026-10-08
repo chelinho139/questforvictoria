@@ -41,6 +41,8 @@ export interface SaveData {
   built: Record<string, Structure[]>;
   /** How hard the campaign is (saves from before difficulty have none: normal). */
   difficulty?: Difficulty;
+  /** Duels won and lost (saves from before duels have none). */
+  duels?: { won: number; lost: number };
 }
 
 /** A save this version of the game can read. */

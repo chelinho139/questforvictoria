@@ -35,6 +35,7 @@ import type { Difficulty } from '../../data/difficulty';
 import { OnlineBadge } from '../ui/OnlineBadge';
 import { SceneBox } from '../ui/SceneBox';
 import { BossBar } from '../ui/BossBar';
+import { DuelWindow } from '../ui/DuelWindow';
 import { Sfx } from '../audio/Sfx';
 import { Music } from '../audio/Music';
 import { WeatherAudio } from '../audio/WeatherAudio';
@@ -74,6 +75,8 @@ export class GameScene extends Phaser.Scene {
   private spellbook!: SpellbookWindow;
   private sceneBox!: SceneBox;
   private bossBar!: BossBar;
+  /** Duels: another player's card, and the bar while a duel is on. */
+  private duel!: DuelWindow;
   private sfx!: Sfx;
   private music!: Music;
   /** Rain, storms and lightning on screen, and their sound. */
@@ -161,6 +164,8 @@ export class GameScene extends Phaser.Scene {
     this.quests = new QuestTracker(this.sim, () => this.questLog.toggle(true));
     this.sceneBox = new SceneBox(this.sim, this.sfx);
     this.bossBar = new BossBar(this.sim);
+    this.duel = new DuelWindow(this.sim, () => (this.registry.get('hudTop') as number | undefined) ?? 40);
+    this.registry.set('duel', this.duel);
     this.shown = this.windows().map(w => w.isOpen);
     // a scene's fades win over any fade already running (a new game's opening scene starts in
     // black while the fade up from the loading screen is still going: Phaser would ignore it)
@@ -227,6 +232,8 @@ export class GameScene extends Phaser.Scene {
       this.sceneBox.destroy();
       document.body.classList.remove('in-scene');
       this.bossBar.destroy();
+      this.duel.destroy();
+      this.registry.remove('duel');
       this.sim.events.clear();
     });
   }
@@ -689,6 +696,7 @@ export class GameScene extends Phaser.Scene {
       this.view3d.update(time, dt, at);
     } else this.lighting.update(dt);
     this.bossBar.update();
+    this.duel.update();
     this.dev.update();
   }
 }

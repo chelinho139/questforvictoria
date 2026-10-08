@@ -393,7 +393,7 @@ export interface HeroEvents extends Record<string, unknown> {
  * the world's sounds and the creatures' (data/enemies.ts) too.
  */
 export type SoundId = SpellKey | FollowSound | WorldSound | CreatureSound | UiSound | VoiceSound | WeatherSound;
-/** Out in the world, heard nearby: the auto-attacks, a blow landing on a hero, felling a tree, breaking a rock, the shaman's fireball, the bell, a fire smothered, a Warden's whistle. */
+/** Out in the world, heard nearby: the auto-attacks, a blow landing on a hero, felling a tree, breaking a rock, the shaman's fireball, the bell, a fire smothered, a Warden's whistle, a duel's horn. */
 export type WorldSound =
   | 'autoSwing'
   | 'autoShot'
@@ -406,7 +406,8 @@ export type WorldSound =
   | 'fireballHit'
   | 'bellToll'
   | 'fireOut'
-  | 'wardenCall';
+  | 'wardenCall'
+  | 'duelStart';
 /** Thunder after lightning: a strike close by, one out of sight, one far off (the screen plays it, delayed, for everyone). */
 export type WeatherSound = 'thunderNear' | 'thunder' | 'thunderFar';
 /** Someone talking, in a conversation or a scene: each a voice of their own. */
@@ -446,7 +447,11 @@ export type UiSound =
   | 'died'
   | 'respawn'
   | 'open'
-  | 'close';
+  | 'close'
+  // duels: challenged, the count, won
+  | 'duelAsk'
+  | 'duelCount'
+  | 'duelWin';
 
 /** What everyone in a region sees and hears: damage numbers, effects, sounds, scenes, bosses. */
 export interface RegionEvents extends Record<string, unknown> {

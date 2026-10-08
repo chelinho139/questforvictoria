@@ -150,6 +150,8 @@ export class Session {
     part('sc', R.scene);
     part('sy', { flags: h.game.flags, quests: h.game.quests, journal: h.game.journal });
     part('df', h.game.difficulty);
+    part('du', h.game.duels.view(h));
+    part('dl', h.game.duels.flags(R.id));
     this.dayT -= dt;
     if (this.dayT <= 0 || this.sent.dy === undefined) {
       this.dayT = 1;
@@ -176,6 +178,7 @@ export class Session {
       heldBy: h.heldBy,
       slowT: r1(h.slowT),
       slowK: h.slowK,
+      stunT: r1(h.stunT),
       itemCd: Object.fromEntries(Object.entries(h.itemCd).map(([k, v]) => [k, r1(v ?? 0)])),
       hp: Math.round(h.hp),
       hpMax: h.hpMax,
@@ -233,6 +236,7 @@ export class Session {
       bar: h.bar,
       met: [...h.met],
       quests: Object.fromEntries(h.questLog),
+      duels: [h.duelsWon, h.duelsLost],
     };
   }
 }
@@ -295,10 +299,15 @@ function companionSnap(c: Companion): CompanionSnap {
   ];
 }
 
+/** Another hero as the ones beside them see it. Its flags: 1 mounted, 2 flipping, 4 just hit, 8 camouflaged, 16 stunned. */
 function heroSnap(h: Hero): HeroSnap {
   // camouflaged archers show faintly to their friends
   const flags =
-    (h.mounted ? 1 : 0) | (h.jumpFlip ? 2 : 0) | (h.flash > 0 ? 4 : 0) | (h.hiddenT > 0 ? 8 : 0);
+    (h.mounted ? 1 : 0) |
+    (h.jumpFlip ? 2 : 0) |
+    (h.flash > 0 ? 4 : 0) |
+    (h.hiddenT > 0 ? 8 : 0) |
+    (h.stunT > 0 ? 16 : 0);
   const equip = Object.values(h.equip)
     .map(v => v ?? '')
     .join(',');
@@ -320,6 +329,8 @@ function heroSnap(h: Hero): HeroSnap {
     h.level,
     h.cls,
     h.heldBy,
+    h.duelsWon,
+    h.duelsLost,
   ];
 }
 

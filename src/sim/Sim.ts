@@ -20,6 +20,7 @@ import type { KeyInfo } from './Hero';
 import type { Region } from './Region';
 import type { Enemy, Fx, Particle, ButtonId, SimEvents, Stack, Drop, TreeState, RockState, Structure, NpcState, QuestProgress, QuestStatus, ObjectState, PropState, Hazard, WandererState, LogClass, Trap, Work, Snare } from './types';
 import type { Companion } from './Companion';
+import type { Rival, DuelView, DuelFlag } from './Duel';
 
 export { GCD, WIN, AA_RANGE, JUMP_DUR, JUMP_HEIGHT, FLIP_DUR, FLIP_HEIGHT, FLIP_CHANCE, ATK_ANIM, AA_PERIOD, TALK_REACH } from './Hero';
 export type { KeyInfo } from './Hero';
@@ -578,6 +579,41 @@ export class Sim {
   }
   cycleTarget(): void {
     this.hero.cycleTarget();
+  }
+
+  // ---------- duels (sim/Duel.ts) ----------
+  /** My duel, or the challenge I made or was made (null: none). */
+  get duel(): DuelView | null {
+    return this.game.duels.view(this.hero);
+  }
+  /** The duels with a flag here (the count and the fight): where, and who. */
+  get duelFlags(): DuelFlag[] {
+    return this.game.duels.flags(this.hero.regionId);
+  }
+  /** My duel opponent as a target, while we fight (null otherwise). */
+  get rival(): Rival | null {
+    return this.hero.rival;
+  }
+  /** The target that stands for another hero: them as my duel opponent, or null if they aren't. */
+  rivalOf(o: Hero): Rival | null {
+    const r = this.rival;
+    return r && r.hero === o ? r : null;
+  }
+  /** Duels won and lost. */
+  get duelRecord(): [won: number, lost: number] {
+    return [this.hero.duelsWon, this.hero.duelsLost];
+  }
+  /** Challenge another hero here to a duel. */
+  challenge(o: Hero): void {
+    this.game.duels.challenge(this.hero, o.id);
+  }
+  /** Take up the challenge made to me. */
+  acceptDuel(): void {
+    this.game.duels.accept(this.hero);
+  }
+  /** Say no: decline a challenge (or take mine back), back out of the count, or yield the fight. */
+  quitDuel(): void {
+    this.game.duels.quit(this.hero);
   }
   setRevEnabled(on: boolean): void {
     this.hero.setRevEnabled(on);
