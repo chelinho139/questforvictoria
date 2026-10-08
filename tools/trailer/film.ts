@@ -93,7 +93,7 @@ async function film(page: Page, cdp: CDPSession, name: string, bundle: string): 
       // nothing kept between shots anyway
     }
   });
-  await page.goto(`http://localhost:${PORT}/?director`, { waitUntil: 'load' });
+  await page.goto(`http://localhost:${PORT}/?director`, { waitUntil: 'load', timeout: 300_000 });
   await page.waitForFunction('window.director', { timeout: 90_000 });
   await page.addScriptTag({ content: bundle });
   await page.evaluate(
