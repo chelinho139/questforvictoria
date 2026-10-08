@@ -34,7 +34,7 @@ import type { Work } from '../sim/types';
 import type { DuelView, DuelFlag } from '../sim/Duel';
 
 /** Bump when a message changes shape: the server turns away a browser that speaks another. */
-export const PROTOCOL = 7;
+export const PROTOCOL = 8;
 
 /** Players a room takes. */
 export const ROOM_MAX = 8;
@@ -166,8 +166,9 @@ export interface MeSnap {
   x: number;
   y: number;
   tp: number;
-  /** The archer's: holding still to shoot, Predator, Camouflage. */
+  /** The archer's: holding still to shoot, how many auto-shots loosed so far, Predator, Camouflage. */
   aimT: number;
+  shots: number;
   predatorT: number;
   hiddenT: number;
   /** Held still (and by what), and slowed. */

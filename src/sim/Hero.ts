@@ -1,5 +1,5 @@
 import { SKILLS, ACTIONS, isSkill, isShot } from '../data/skills';
-import { CLASSES, AIM_HOLD, ARROW_SPEED } from '../data/classes';
+import { CLASSES, AIM_HOLD, AA_HOLD, ARROW_SPEED } from '../data/classes';
 import type { ClassId } from '../data/classes';
 import type { Key, SkillKey, ActionKey, WheelKey } from '../data/skills';
 import { T, isoDir, isoSpeedFactor, Tile, faceToward } from './map';
@@ -161,6 +161,8 @@ export class Hero implements Foe {
   cls: ClassId = 'warrior';
   /** An archer holds still this long after loosing an arrow (the draw and release). */
   aimT = 0;
+  /** Auto-shots loosed so far (so a browser hears of each one; not saved). */
+  shots = 0;
   /** Predator: faster auto-shots and harder hits. */
   predatorT = 0;
   /** Camouflage: creatures lose track of you, and your next shot is a critical hit. */
@@ -2843,7 +2845,8 @@ export class Hero implements Foe {
           );
           this.sound('autoShot');
           // a plain auto-shot only holds you still for a moment
-          this.aimT = Math.min(this.aimT, 0.2);
+          this.aimT = Math.min(this.aimT, AA_HOLD);
+          this.shots++;
         }
       } else if (shoots) this.aaT = Math.min(this.aaT, 0.5);
       else if (d < AA_RANGE) {

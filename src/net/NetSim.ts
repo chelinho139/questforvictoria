@@ -26,7 +26,7 @@ import type { HeldKind } from '../data/enemies';
 import type { Companion } from '../sim/Companion';
 import { TICK_HZ } from './protocol';
 import { isShot } from '../data/skills';
-import { AIM_HOLD } from '../data/classes';
+import { AIM_HOLD, AA_HOLD } from '../data/classes';
 import { keepNames } from '../i18n';
 import { Rival, RIVAL_TARGET } from '../sim/Duel';
 import type { DuelView, DuelFlag } from '../sim/Duel';
@@ -55,6 +55,8 @@ export class NetSim extends Sim {
   readonly serverId: string;
   private readonly offConn: () => void;
   private tpSeen = -1;
+  /** The server's count of my auto-shots, to hear of each new one. */
+  private shotsSeen = -1;
   private moveT = 0;
   private sentMove = '';
   private heartbeat = 0;
@@ -187,8 +189,17 @@ export class NetSim extends Sim {
       stunT: me.stunT,
       itemCd: me.itemCd,
     });
-    // holding still to shoot: what the server says, or what this browser started itself
-    h.aimT = Math.max(h.aimT, me.aimT);
+    // holding still to shoot is this browser's to keep, so the ping can't stretch it: a cast's
+    // hold starts here as the key goes down (the server's copy of it comes back a round trip
+    // later; taking it would hold the feet again, mid-step on a slow line). An auto-shot is the
+    // server's, so its short hold starts here when we hear of it, less the time it took to
+    // reach us, and only if the feet are still planted
+    if (me.shots !== this.shotsSeen) {
+      const fresh = this.shotsSeen >= 0;
+      this.shotsSeen = me.shots;
+      if (fresh && !h.moving)
+        h.aimT = Math.max(h.aimT, Math.min(me.aimT, AA_HOLD) - this.rtt / 2000);
+    }
     // the short animations count down here; a fresh one from the server restarts them
     if (me.atkAnimT > h.atkAnimT + 0.06) h.atkAnimT = me.atkAnimT;
     if (me.flash > h.flash + 0.02) h.flash = me.flash;
