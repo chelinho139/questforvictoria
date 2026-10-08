@@ -115,9 +115,10 @@ export class DialogWindow {
     const def = NPCS[id];
     const qs = this.sim.questsOf(id);
     const choices: Choice[] = [];
-    for (const q of qs.filter(x => x.status === 'ready')) choices.push({ label: `? ${QUESTS[q.id].name}`, cls: 'ready', act: () => this.handIn(q.id) });
-    for (const q of qs.filter(x => x.status === 'available')) choices.push({ label: `! ${QUESTS[q.id].name}`, cls: 'new', act: () => this.offer(q.id) });
-    for (const q of qs.filter(x => x.status === 'active')) choices.push({ label: `${QUESTS[q.id].name} (in progress)`, act: () => this.progress(q.id) });
+    // quests in quest yellow, so they stand apart from the talk (topics) below
+    for (const q of qs.filter(x => x.status === 'ready')) choices.push({ label: `? ${QUESTS[q.id].name}`, cls: 'quest', act: () => this.handIn(q.id) });
+    for (const q of qs.filter(x => x.status === 'available')) choices.push({ label: `! ${QUESTS[q.id].name}`, cls: 'quest', act: () => this.offer(q.id) });
+    for (const q of qs.filter(x => x.status === 'active')) choices.push({ label: `${QUESTS[q.id].name} (in progress)`, cls: 'quest', act: () => this.progress(q.id) });
     if (def.shop) choices.push({ label: 'Let me see what you have.', cls: 'trade', act: () => (this.close(), this.onTrade(id)) });
     (def.topics ?? []).forEach((t, i) => {
       const asked = `asked:${id}:${i}`;
@@ -148,7 +149,7 @@ export class DialogWindow {
     const q = QUESTS[id];
     const details = `<div class="talk-quest"><b>${q.name}</b><ul>${q.goals.map(g => `<li>${g.label}${goalTarget(g) > 1 ? ` 0/${goalTarget(g)}` : ''}</li>`).join('')}</ul>${this.rewards(q.reward.gold, q.reward.items, q.reward.xp)}</div>`;
     const accept: Choice[] = [
-      { label: 'Accept', cls: 'new', act: () => (this.sim.acceptQuest(id), this.home('Good. Come back to me when it is done.')) },
+      { label: 'Accept', cls: 'quest', act: () => (this.sim.acceptQuest(id), this.home('Good. Come back to me when it is done.')) },
       { label: 'Not now.', act: () => this.home() },
     ];
     // read through the offer, then decide
