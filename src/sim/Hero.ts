@@ -60,11 +60,13 @@ export const WIN = 0.3;
 export const AA_RANGE = 48;
 /**
  * Mana comes back slowly in a fight and quickly out of one: a hero is in combat for
- * IN_COMBAT seconds after casting, striking or being struck.
+ * IN_COMBAT seconds after casting, striking or being struck, and once nothing is after them
+ * any more (the last foe dead, gone home or lost) the fight is over within OUT_OF_COMBAT.
  */
 export const MANA_COMBAT = 0.5;
 export const MANA_REST = 5;
-export const IN_COMBAT = 5;
+export const IN_COMBAT = 3;
+export const OUT_OF_COMBAT = 1;
 /**
  * A fallen hero lies where they fell while anyone else in the region is still up, until a
  * friend stands over them and casts Revive: REVIVE_TIME seconds standing still within
@@ -3091,6 +3093,9 @@ export class Hero implements Foe {
   tick(dt: number): void {
     this.t += dt;
     this.combatT = Math.max(0, this.combatT - dt);
+    // nothing fighting you: the fight is over (a duel's blows keep it going on their own)
+    if (this.combatT > OUT_OF_COMBAT && !this.region.enemies.some(e => e.alive && e.aggro && e.foe === this.id))
+      this.combatT = OUT_OF_COMBAT;
     this.mp = Math.min(this.mpMax, this.mp + (this.combatT > 0 ? MANA_COMBAT : MANA_REST) * dt);
     if (this.tal.regen && !this.dead && this.hp < this.hpMax)
       this.hp = Math.min(this.hpMax, this.hp + this.tal.regen * dt);

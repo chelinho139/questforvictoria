@@ -155,3 +155,20 @@ test('a bandage is not food: no fuller for it, but one every 30 s', () => {
   use();
   assert.equal(h.count('bandage'), 1);
 });
+
+test('mana: slow in a fight, and the fight is over a moment after the last foe falls', () => {
+  const { game, h } = alone();
+  const e = h.region.spawnEnemy('goblin', h.x + 30, h.y, true);
+  h.region.enemies.push(e);
+  e.aggro = true;
+  e.foe = h.id;
+  h.mp = 0;
+  h.hurt(1, 'a test');
+  game.cheats.freezeEnemies = true;
+  run(game, 2);
+  assert.ok(h.mp < 2, 'slow while it is after you');
+  h.dmgEnemy(e, 9999, '');
+  const mp = h.mp;
+  run(game, 2);
+  assert.ok(h.mp - mp > 4, 'fast again within a second of the kill');
+});
