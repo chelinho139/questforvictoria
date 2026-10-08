@@ -332,5 +332,10 @@
   "{0} brings you back on your feet.": "{0} te pone de pie otra vez.",
   "You revive {0}.": "Revives a {0}.",
   "You are down. A friend can revive you.": "Has caído. Un amigo puede revivirte.",
-  "Nobody is left standing to revive you.": "No queda nadie en pie para revivirte."
+  "Nobody is left standing to revive you.": "No queda nadie en pie para revivirte.",
+
+  "You can use another bandage in {0} s.": "Puedes usar otra venda en {0} s.",
+  "You're too full to eat. You can eat again in {0} s.": "No te cabe nada más. Podrás volver a comer en {0} s.",
+  "You bind your wounds. +{0} health.": "Te vendas las heridas. +{0} de salud.",
+  "You're full.": "Ya no te cabe nada más."
 }

@@ -74,6 +74,13 @@ export const IN_COMBAT = 5;
 export const REVIVE_TIME = 8;
 export const REVIVE_REACH = 40;
 export const REVIVE_HP = 0.4;
+/**
+ * A full stomach: each food fills you for MEAL seconds, and you can eat while there are MEAL
+ * seconds of fullness or less left. So two foods back to back, then one every MEAL seconds,
+ * never a bag of meat through a fight. A bandage isn't food: BANDAGE_CD seconds between two.
+ */
+export const MEAL = 45;
+export const BANDAGE_CD = 30;
 export const JUMP_DUR = 0.38;
 export const JUMP_HEIGHT = 16;
 /** A flip is a slightly bigger, slower jump so the rotation reads. */
@@ -279,6 +286,8 @@ export class Hero implements Foe {
   /** What you are busy with, for the progress bar (worked out each tick; online, from the server). */
   work: Work | null = null;
   private eatCd = 0;
+  /** Seconds until the last meal is digested (more than MEAL: too full to eat). */
+  fullT = 0;
   /** Walking over to talk to this NPC, or to use this object. */
   private talkTarget: NpcId | null = null;
   private useTarget: string | null = null;
@@ -372,6 +381,7 @@ export class Hero implements Foe {
       useTarget: null,
       exiting: null,
       eatCd: 0,
+      fullT: 0,
       aimT: 0,
       predatorT: 0,
       hiddenT: 0,
@@ -2093,14 +2103,33 @@ export class Hero implements Foe {
       this.log("You're not hungry.", 'h');
       return;
     }
+    const bandage = s.id === 'bandage';
+    const wait = bandage ? (this.itemCd.bandage ?? 0) : this.fullT - MEAL;
+    if (wait > 0) {
+      if (!bandage) this.floater(this.x, this.y - 20, 'FULL', 'name', '#e8a060');
+      this.log(
+        bandage
+          ? `You can use another bandage in ${Math.ceil(wait)} s.`
+          : `You're too full to eat. You can eat again in ${Math.ceil(wait)} s.`,
+        'h'
+      );
+      this.hear('error');
+      return;
+    }
     const h = Math.min(Math.round(def.heal * (1 + this.tal.food)), this.hpMax - this.hp);
     this.hp += h;
     this.eatCd = 0.8;
+    if (bandage) this.itemCd.bandage = BANDAGE_CD;
+    else this.fullT = Math.max(0, this.fullT) + MEAL;
     s.n--;
     if (s.n <= 0) this.bag[i] = null;
     this.floater(this.x, this.y - 20, '+' + h, 'heal');
     this.burst(this.x, this.y - 14, 6, '#f49088', 40, 0.5, 2, -30);
-    this.log(`You eat the ${def.name.toLowerCase()}. +${h} health.`, 't');
+    if (bandage) this.log(`You bind your wounds. +${h} health.`, 't');
+    else {
+      this.log(`You eat the ${def.name.toLowerCase()}. +${h} health.`, 't');
+      if (this.fullT > MEAL) this.log("You're full.", 't');
+    }
     this.hear('eat');
     this.events.emit('bag', {});
   }
@@ -3201,6 +3230,7 @@ export class Hero implements Foe {
     }
 
     this.eatCd = Math.max(0, this.eatCd - dt);
+    this.fullT = Math.max(0, this.fullT - dt);
     this.gatherT = Math.max(0, this.gatherT - dt);
     this.updateChop();
     this.updateTalk();

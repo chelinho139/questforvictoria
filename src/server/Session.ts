@@ -182,6 +182,7 @@ export class Session {
       slowK: h.slowK,
       stunT: r1(h.stunT),
       itemCd: Object.fromEntries(Object.entries(h.itemCd).map(([k, v]) => [k, r1(v ?? 0)])),
+      fullT: r1(h.fullT),
       hp: Math.round(h.hp),
       hpMax: h.hpMax,
       mp: r1(h.mp),

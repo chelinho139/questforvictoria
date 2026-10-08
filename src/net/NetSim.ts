@@ -192,6 +192,7 @@ export class NetSim extends Sim {
       slowK: me.slowK,
       stunT: me.stunT,
       itemCd: me.itemCd,
+      fullT: me.fullT,
     });
     // holding still to shoot is this browser's to keep, so the ping can't stretch it: a cast's
     // hold starts here as the key goes down (the server's copy of it comes back a round trip

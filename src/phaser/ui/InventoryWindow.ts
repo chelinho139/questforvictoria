@@ -1,3 +1,4 @@
+import { MEAL } from '../../sim/Hero';
 import type Phaser from 'phaser';
 import type { Sim } from '../../sim/Sim';
 import { ITEMS, SLOTS, SLOT_NAMES, statLines } from '../../data/items';
@@ -224,6 +225,8 @@ export class InventoryWindow {
       compare = worn ? `<p class="inv-cmp">Replaces ${ITEMS[worn].name}${statLines(ITEMS[worn].stats).length ? ' (' + statLines(ITEMS[worn].stats).join(', ') + ')' : ''}</p>` : '';
     }
     const wait = Math.ceil(this.sim.hero.itemCd[id] ?? 0);
+    // food waits for room in your stomach; a bandage, for the last one
+    const full = Math.ceil(this.sim.hero.fullT - MEAL);
     const hint =
       where === 'worn'
         ? 'Click to take off'
@@ -233,9 +236,15 @@ export class InventoryWindow {
             ? wait > 0
               ? `Ready again in ${wait} s`
               : 'Click to use'
-            : d.heal
-              ? 'Click to eat'
-              : '';
+            : id === 'bandage'
+              ? wait > 0
+                ? `Ready again in ${wait} s`
+                : 'Click to use'
+              : d.heal
+                ? full > 0
+                  ? `Too full: eat again in ${full} s`
+                  : 'Click to eat'
+                : '';
     this.tip.innerHTML =
       `<b class="${d.fine ? 'fine' : ''}">${d.name}</b>` +
       (d.slot ? `<small>${SLOT_NAMES[d.slot]}${d.unique ? ' · Unique' : ''}</small>` : '') +

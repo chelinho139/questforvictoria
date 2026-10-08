@@ -184,6 +184,8 @@ export interface MeSnap {
   stunT: number;
   /** Keepsakes waiting before they can be used again (by item id). */
   itemCd: Record<string, number>;
+  /** Seconds until the last meal is digested. */
+  fullT: number;
   hp: number;
   hpMax: number;
   mp: number;
